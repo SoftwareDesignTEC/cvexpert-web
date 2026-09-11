@@ -1,0 +1,49 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main, master, release/**]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-ci-cd.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'apps/mobile/**'
+
+jobs:
+  build-and-distribute:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # TODO: Build de la app (APK / AAB según el stack)
+      # - name: Build APK
+      #   run: ...
+
+      # TODO: Subir a Firebase App Distribution
+      # - name: Upload to Firebase App Distribution
+      #   uses: wzieba/Firebase-Distribution-Github-Action@v1
+      #   with:
+      #     appId: ${{ secrets.FIREBASE_APP_ID }}
+      #     serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_CREDENTIALS }}
+      #     groups: testers
+      #     file: path/to/app.apk
