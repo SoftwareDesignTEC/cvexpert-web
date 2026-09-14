@@ -1,0 +1,86 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.application)
+    // Plugin del compilador de Compose: desde Kotlin 2.0 viene con Kotlin, no con AGP.
+    alias(libs.plugins.kotlin.compose)
+    // KSP genera el codigo de Hilt en tiempo de compilacion (reemplazo moderno de kapt).
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+}
+
+// La URL del APIM NUNCA se hardcodea ni se sube al repo (AGENTS.md seccion 7):
+// se lee de local.properties, que esta en .gitignore, y se expone via BuildConfig.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val apimBaseUrl: String = localProperties.getProperty("APIM_BASE_URL").orEmpty()
+
+android {
+    // namespace = paquete de las clases generadas (R, BuildConfig).
+    namespace = "com.cvpro.app"
+    // Las librerias AndroidX actuales exigen compilar contra API 37.
+    compileSdk = 37
+    compileSdkMinor = 2
+
+    defaultConfig {
+        // Contrato con DevOps (firma del APK + Firebase). No se cambia.
+        applicationId = "com.cvpro.app"
+        minSdk = 26
+        targetSdk = 37
+        versionCode = 1
+        versionName = "0.1.0"
+
+        // Se inyecta como constante en BuildConfig.APIM_BASE_URL.
+        buildConfigField("String", "APIM_BASE_URL", "\"$apimBaseUrl\"")
+    }
+
+    buildTypes {
+        debug {
+            // Sufijo para poder tener debug y release instalados a la vez.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+    }
+
+    compileOptions {
+        // Kotlin hereda este mismo target automaticamente (built-in Kotlin de AGP 9),
+        // por eso no hace falta un bloque kotlin { compilerOptions { jvmTarget } }.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+        // Necesario para generar BuildConfig (version visible + URL del APIM).
+        buildConfig = true
+    }
+}
+
+
+dependencies {
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.activity.compose)
+
+    // El BOM alinea las versiones de todo Compose; por eso las libs de abajo no llevan version.
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    // Solo en debug: motor de los @Preview de Android Studio.
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+}
