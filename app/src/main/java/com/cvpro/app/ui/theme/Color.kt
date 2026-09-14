@@ -3,52 +3,47 @@ package com.cvpro.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Paleta base de la app.
+ * Paleta de CV Pro.
  *
- * TODO: reemplazar por la paleta final del Figma de Samuel (AGENTS.md sección 10).
- * Estos valores son un placeholder coherente con Material 3, no la marca definitiva.
- * Ningún color se escribe suelto en las pantallas: todo se consume desde
+ * Los cuatro colores de marca vienen de la hoja "Colores a utilizar" de Samuel (UX/UI).
+ * Son colores de la paleta estándar de Tailwind, la misma que usa la web de Pérez, por
+ * eso se nombran igual que en Tailwind: así web y móvil hablan de los mismos colores.
+ *
+ * Material 3 necesita más roles que los cuatro de la hoja (fondos de tarjetas, bordes,
+ * errores...). Los que no se definen toman el violeta por defecto de Material, así que
+ * se completan con tonos vecinos de las mismas familias de Tailwind (slate, blue, sky) y
+ * red para errores. Cada par texto/fondo se verificó con contraste WCAG AA (4.5:1).
+ *
+ * Ninguna pantalla usa estas constantes directo: todo se consume desde
  * MaterialTheme.colorScheme (ver Theme.kt).
+ *
+ * OJO: si cambia el azul o el celeste de marca, también hay que cambiarlos en
+ * res/values/colors.xml (el ícono no puede leer este archivo).
  */
 
-// --- Tema claro ---
-val PrimaryLight = Color(0xFF2C5AA0)
-val OnPrimaryLight = Color(0xFFFFFFFF)
-val PrimaryContainerLight = Color(0xFFD8E2FF)
-val OnPrimaryContainerLight = Color(0xFF001A41)
+// --- Colores de marca (hoja de Samuel) ---
+val Blue600 = Color(0xFF2563EB)
+val Slate900 = Color(0xFF0F172A)
+val Sky400 = Color(0xFF38BDF8)
+val Slate500 = Color(0xFF64748B)
 
-val SecondaryLight = Color(0xFF565E71)
-val OnSecondaryLight = Color(0xFFFFFFFF)
-val SecondaryContainerLight = Color(0xFFDAE2F9)
-val OnSecondaryContainerLight = Color(0xFF131B2C)
+// --- Tonos derivados (paleta de Tailwind) ---
+val Slate50 = Color(0xFFF8FAFC)
+val Slate100 = Color(0xFFF1F5F9)
+val Slate200 = Color(0xFFE2E8F0)
+val Slate400 = Color(0xFF94A3B8)
+val Slate700 = Color(0xFF334155)
+val Slate800 = Color(0xFF1E293B)
+val Slate950 = Color(0xFF020617)
 
-val BackgroundLight = Color(0xFFFDFBFF)
-val OnBackgroundLight = Color(0xFF1A1B1F)
-val SurfaceLight = Color(0xFFFDFBFF)
-val OnSurfaceLight = Color(0xFF1A1B1F)
-val SurfaceVariantLight = Color(0xFFE1E2EC)
-val OnSurfaceVariantLight = Color(0xFF44474F)
-val OutlineLight = Color(0xFF74777F)
-val ErrorLight = Color(0xFFBA1A1A)
-val OnErrorLight = Color(0xFFFFFFFF)
+val Blue100 = Color(0xFFDBEAFE)
+val Blue900 = Color(0xFF1E3A8A)
 
-// --- Tema oscuro ---
-val PrimaryDark = Color(0xFFADC6FF)
-val OnPrimaryDark = Color(0xFF002E69)
-val PrimaryContainerDark = Color(0xFF004494)
-val OnPrimaryContainerDark = Color(0xFFD8E2FF)
+val Sky100 = Color(0xFFE0F2FE)
+val Sky800 = Color(0xFF075985)
+val Sky900 = Color(0xFF0C4A6E)
 
-val SecondaryDark = Color(0xFFBEC6DC)
-val OnSecondaryDark = Color(0xFF283042)
-val SecondaryContainerDark = Color(0xFF3E4759)
-val OnSecondaryContainerDark = Color(0xFFDAE2F9)
-
-val BackgroundDark = Color(0xFF1A1B1F)
-val OnBackgroundDark = Color(0xFFE3E2E6)
-val SurfaceDark = Color(0xFF1A1B1F)
-val OnSurfaceDark = Color(0xFFE3E2E6)
-val SurfaceVariantDark = Color(0xFF44474F)
-val OnSurfaceVariantDark = Color(0xFFC4C6D0)
-val OutlineDark = Color(0xFF8E9099)
-val ErrorDark = Color(0xFFFFB4AB)
-val OnErrorDark = Color(0xFF690005)
+val Red100 = Color(0xFFFEE2E2)
+val Red400 = Color(0xFFF87171)
+val Red600 = Color(0xFFDC2626)
+val Red900 = Color(0xFF7F1D1D)
