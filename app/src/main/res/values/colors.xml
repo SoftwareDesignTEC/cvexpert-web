@@ -4,13 +4,14 @@
   MaterialTheme, por eso el hex vive acá y los drawables lo referencian con
   @color/... Los colores de la UI van en ui/theme/Color.kt.
 
-  OJO: al cambiar la paleta por la del Figma de Samuel hay que tocar los DOS
-  lugares — este archivo y ui/theme/Color.kt (PrimaryLight).
+  OJO: son los mismos colores de marca de ui/theme/Color.kt (Blue600 y Sky400).
+  Si Samuel cambia la paleta, hay que tocar los DOS archivos.
 -->
 <resources>
-    <color name="brand_blue">#2C5AA0</color>
+    <color name="brand_blue">#2563EB</color>
+    <color name="brand_sky">#38BDF8</color>
 
     <color name="ic_launcher_background">@color/brand_blue</color>
     <color name="ic_launcher_sheet">#FFFFFF</color>
-    <color name="ic_launcher_fold">#C7D7F5</color>
+    <color name="ic_launcher_fold">@color/brand_sky</color>
 </resources>
