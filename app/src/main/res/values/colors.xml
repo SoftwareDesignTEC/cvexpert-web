@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Colores del icono adaptativo. Los colores de la UI NO van aqui: van en ui/theme/Color.kt. -->
+<!--
+  Colores de los recursos del sistema (ícono, splash). Estos NO pueden leer
+  MaterialTheme, por eso el hex vive acá y los drawables lo referencian con
+  @color/... (AGENTS.md sección 6). Los colores de la UI van en ui/theme/Color.kt.
+
+  OJO: al cambiar la paleta por la del Figma de Samuel hay que tocar los DOS
+  lugares — este archivo y ui/theme/Color.kt (PrimaryLight).
+-->
 <resources>
-    <color name="ic_launcher_background">#2C5AA0</color>
+    <color name="brand_blue">#2C5AA0</color>
+
+    <color name="ic_launcher_background">@color/brand_blue</color>
+    <color name="ic_launcher_sheet">#FFFFFF</color>
+    <color name="ic_launcher_fold">#C7D7F5</color>
 </resources>
