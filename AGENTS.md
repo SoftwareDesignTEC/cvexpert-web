@@ -66,13 +66,14 @@ Yo soy **Andrés Zumbado — Frontend Móvil Nativo**. Este repo/módulo es mío
 | --- | --- | --- |
 | Samuel Fajardo | UX/UI | Figma, mockups claro/oscuro, Material Design 3 |
 | Justin Mayorga | Arquitectura + Doc. | Diagrama draw.io; desde el 19 sep **co-desarrolla Kotlin conmigo** |
-| Gabriel Pérez | Frontend Web | Web responsive; **misma estructura de datos y endpoints que yo** |
+| Gabriel Pérez | Frontend Web | Web responsive con **Tailwind** (confirmado por Pérez); **misma estructura de datos y endpoints que yo** |
 | Gabriel Cabrera | DevOps | Azure, APIM mocks, CI/CD, firma de APK, Firebase |
 
 **Reglas de equipo que afectan el código:**
 
 - **Paridad web–móvil obligatoria.** Los modelos de datos, nombres de campos y endpoints deben
   ser idénticos a los de la app web de Gabriel Pérez. Si cambias un nombre de campo, márcalo.
+  La referencia es [`docs/contract/models.ts`](docs/contract/models.ts), tal como lo entregó Pérez.
 - Los componentes deben seguir **Material Design 3** para respetar el Figma de Samuel.
 - El `applicationId` y el build variant son **contrato con DevOps**. No los cambies nunca sin
   que yo lo apruebe explícitamente.
