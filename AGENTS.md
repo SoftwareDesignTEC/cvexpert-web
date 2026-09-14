@@ -25,7 +25,7 @@ laboral. Funcionalidades del producto completo:
    disponibilidad, habilidades y experiencia; panel de detalle de cada oferta.
 5. **Análisis de brecha de habilidades** — compara el CV contra el mercado objetivo, recomienda
    cursos, y un rastreador de postulaciones tipo Kanban
-   (Aplicado / En proceso / Entrevista / Rechazado).
+   (Aplicado / En proceso / Entrevista / Rechazado / Aceptado).
 
 **Fecha límite de la Fase I: 1 de octubre de 2026, 11:59 p.m.**
 
