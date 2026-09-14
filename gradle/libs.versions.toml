@@ -1,4 +1,4 @@
-# Version catalog: unica fuente de verdad de versiones.
+# Version catalog: única fuente de verdad de versiones.
 # Todas verificadas contra los repos el 13/09/2026, no puestas de memoria.
 [versions]
 agp = "9.4.0"
@@ -15,7 +15,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 
-# El BOM fija de forma coherente las versiones de todas las librerias de Compose.
+# El BOM fija de forma coherente las versiones de todas las librerías de Compose.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }

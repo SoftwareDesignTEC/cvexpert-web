@@ -21,8 +21,8 @@ import com.cvpro.app.ui.theme.CvProTheme
  * Pantalla inicial provisional del scaffold (T1).
  *
  * Es un composable "sin estado" (stateless): no conoce ViewModels ni BuildConfig,
- * solo recibe datos planos. Asi se puede previsualizar y reutilizar.
- * En T2 esta pantalla se reemplaza por el grafo de navegacion real.
+ * solo recibe datos planos. Así se puede previsualizar y reutilizar.
+ * En T2 esta pantalla se reemplaza por el grafo de navegación real.
  */
 @Composable
 fun HomeScreen(
@@ -51,7 +51,7 @@ fun HomeScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp),
         )
-        // Requisito de la rubrica: el numero de version debe verse dentro de la app.
+        // Requisito de la rúbrica: el número de versión debe verse dentro de la app.
         Text(
             text = stringResource(R.string.home_version, versionName, versionCode),
             style = MaterialTheme.typography.labelMedium,
