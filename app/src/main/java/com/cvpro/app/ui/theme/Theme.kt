@@ -49,11 +49,11 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * Tema raiz de la app. Envuelve TODA la UI.
+ * Tema raíz de la app. Envuelve TODA la UI.
  *
- * Decision: NO se usa dynamic color (la paleta que Android saca del fondo de
+ * Decisión: NO se usa dynamic color (la paleta que Android saca del fondo de
  * pantalla del usuario) porque la entrega debe respetar el Figma de Samuel;
- * si el color cambiara por telefono, los mockups no se podrian comparar.
+ * si el color cambiara por teléfono, los mockups no se podrían comparar.
  *
  * @param darkTheme por defecto sigue el ajuste del sistema (claro/oscuro).
  */

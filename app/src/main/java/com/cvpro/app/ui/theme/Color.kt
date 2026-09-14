@@ -5,9 +5,9 @@ import androidx.compose.ui.graphics.Color
 /**
  * Paleta base de la app.
  *
- * TODO: reemplazar por la paleta final del Figma de Samuel (AGENTS.md seccion 10).
+ * TODO: reemplazar por la paleta final del Figma de Samuel (AGENTS.md sección 10).
  * Estos valores son un placeholder coherente con Material 3, no la marca definitiva.
- * Ningun color se escribe suelto en las pantallas: todo se consume desde
+ * Ningún color se escribe suelto en las pantallas: todo se consume desde
  * MaterialTheme.colorScheme (ver Theme.kt).
  */
 

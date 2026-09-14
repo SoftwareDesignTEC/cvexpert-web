@@ -7,10 +7,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Escala tipografica de la app.
+ * Escala tipográfica de la app.
  *
- * TODO: reemplazar por la tipografia final del Figma de Samuel (AGENTS.md seccion 10).
- * Por ahora usa la fuente por defecto del sistema con los tamanos de Material 3.
+ * TODO: reemplazar por la tipografía final del Figma de Samuel (AGENTS.md sección 10).
+ * Por ahora usa la fuente por defecto del sistema con los tamaños de Material 3.
  */
 val CvProTypography = Typography(
     headlineLarge = TextStyle(

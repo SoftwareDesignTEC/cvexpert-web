@@ -13,7 +13,7 @@ import com.cvpro.app.ui.theme.CvProTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
- * Unica Activity de la app: toda la UI es Compose y la navegacion sera
+ * Única Activity de la app: toda la UI es Compose y la navegación será
  * interna con Navigation Component (T2).
  *
  * @AndroidEntryPoint permite que Hilt inyecte dependencias en esta Activity
@@ -23,7 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Dibuja detras de las barras de sistema (comportamiento estandar en Android 15+).
+        // Dibuja detrás de las barras de sistema (comportamiento estándar en Android 15+).
         enableEdgeToEdge()
         setContent {
             CvProTheme {
@@ -31,8 +31,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    // El numero de version sale de BuildConfig, que Gradle genera
-                    // a partir del versionName. Requisito de la rubrica: version visible.
+                    // El número de versión sale de BuildConfig, que Gradle genera
+                    // a partir del versionName. Requisito de la rúbrica: versión visible.
                     HomeScreen(
                         versionName = BuildConfig.VERSION_NAME,
                         versionCode = BuildConfig.VERSION_CODE,

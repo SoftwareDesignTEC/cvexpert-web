@@ -1,4 +1,4 @@
-// Configuracion del build: aqui se declara de donde salen los plugins y las dependencias.
+// Configuración del build: aquí se declara de dónde salen los plugins y las dependencias.
 pluginManagement {
     repositories {
         google()
@@ -8,7 +8,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    // Ningun modulo puede declarar sus propios repositorios: todos usan estos.
+    // Ningún módulo puede declarar sus propios repositorios: todos usan estos.
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
@@ -16,6 +16,6 @@ dependencyResolutionManagement {
     }
 }
 
-// TODO: confirmar nombre comercial de la app (AGENTS.md seccion 10).
+// TODO: confirmar nombre comercial de la app (AGENTS.md sección 10).
 rootProject.name = "cvpro-app"
 include(":app")
