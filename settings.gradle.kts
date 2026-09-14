@@ -7,6 +7,13 @@ pluginManagement {
     }
 }
 
+plugins {
+    // Permite que Gradle descargue solo el JDK 17 que exige gradle/gradle-daemon-jvm.properties;
+    // sin este plugin, Gradle 8.14 no sabe de dónde bajarlo (AGENTS.md sección 4).
+    // La versión va escrita acá porque el version catalog no está disponible en settings.
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 dependencyResolutionManagement {
     // Ningún módulo puede declarar sus propios repositorios: todos usan estos.
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)

@@ -84,7 +84,7 @@ Yo soy **Andrés Zumbado — Frontend Móvil Nativo**. Este repo/módulo es mío
 
 | Área | Decisión |
 | --- | --- |
-| Lenguaje | Kotlin (última estable) |
+| Lenguaje | Kotlin 2.3.x (ver "Configuración de build ya cerrada") |
 | UI | Jetpack Compose + Material 3 (`androidx.compose.material3`) |
 | Navegación | Navigation Component para Compose (`navigation-compose`) |
 | Arquitectura | MVVM + Repository, capas `ui` / `domain` / `data` |
@@ -106,23 +106,31 @@ valor, y los paquetes cuelgan de `com.cvpro.app`.
 
 ### Configuración de build ya cerrada (NO la vuelvas a discutir)
 
-Decisiones tomadas durante T1. Quedan fijas salvo que yo diga lo contrario:
+Decisiones tomadas durante T1 y ajustadas el 14 sep a pedido de DevOps (Gabriel Cabrera).
+Quedan fijas salvo que yo diga lo contrario:
 
 - `minSdk` 26.
-- `compileSdk` / `targetSdk` **37.2** — exigido por las librerías AndroidX en uso.
-- **AGP 9.x**, sin el plugin `kotlin-android` (AGP 9 no compila con él).
+- `compileSdk` / `targetSdk` **35** — pedido por DevOps.
+- **AGP 8.13.x** con **Gradle 8.14.x** y el plugin `kotlin-android` (con AGP 8 es obligatorio;
+  el Kotlin integrado es solo de AGP 9).
+- **Kotlin 2.3.x**: Hilt 2.58 no sabe leer los metadatos que genera Kotlin 2.4.
+- **Librerías ancladas** a la última versión compatible con compileSdk 35 y AGP 8: Hilt 2.58,
+  lifecycle 2.10, core-ktx 1.16, activity-compose 1.10 y BOM de Compose 2026.06.01.
+  **No las actualices** aunque Android Studio lo sugiera: el build falla. El motivo de cada
+  una está anotado en `gradle/libs.versions.toml`.
 - `applicationIdSuffix = ".debug"` en el build type debug. El release mantiene
   `com.cvpro.app` intacto, que es el que se firma y se sube a Firebase.
 - **Sin dynamic color.** La paleta la define el Figma de Samuel; dynamic color la
   sobrescribiría en Android 12+ y rompería la paridad con la web.
-- **Daemon de Gradle fijado en Java 25** vía `gradle/gradle-daemon-jvm.properties`
-  (`toolchainVersion=25`). Lo genera Android Studio con su JBR. Está commiteado a propósito:
-  es el mecanismo para que todo el equipo compile con el mismo JVM. **No lo borres** — Studio
-  lo regenera en el siguiente sync y entrás en un loop.
+- **Daemon de Gradle fijado en Java 17** vía `gradle/gradle-daemon-jvm.properties`
+  (`toolchainVersion=17`). El plugin `foojay-resolver-convention` de `settings.gradle.kts`
+  deja que Gradle descargue ese JDK solo si la máquina no lo tiene. **No borres el archivo**:
+  Android Studio trae Java 25 y Gradle 8.14 no corre sobre Java 25 (eso exige Gradle 9.1+),
+  así que sin el archivo el sync falla.
 - `app_name` = "CV Pro" — **placeholder**, pendiente de confirmar con el equipo.
 
 ⚠️ Estas versiones son contrato con DevOps: el runner de GitHub Actions debe usar el mismo
-AGP, el mismo `compileSdk` y Java 25 declarado explícitamente en `setup-java` (si se deja
+AGP, el mismo `compileSdk` y Java 17 declarado explícitamente en `setup-java` (si se deja
 auto-provisionar, Gradle baja un JDK entero en cada corrida). Si necesitás subir o bajar alguna, **pará y
 avisame primero** — no es una decisión del repo móvil.
 
