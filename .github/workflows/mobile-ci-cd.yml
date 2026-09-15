@@ -29,6 +29,10 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Restore Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > app/debug.keystore
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
