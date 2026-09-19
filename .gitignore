@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.expo/
+.expo-shared/
+android/app/build/
+ios/build/
+*.apk
+*.aab
+*.ipa
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# Logs & temp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+.cache/
+tmp/
+temp/
+
+# Testing & coverage
+coverage/
+.nyc_output/
+
+# Flutter / Dart (por si usan Flutter)
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+
+# Misc
+*.tsbuildinfo
+.turbo/
+.vercel
