@@ -2,7 +2,7 @@ import { http } from './http';
 import type { CVTemplate, JobOffer, JobApplication, ApplicationStatus } from '../types/models';
 import type { PaginatedResponse, PaginationParams } from '../types/api';
 
-// ─── PLANTILLAS ───────────────────────────────────────────────────────────────
+// PLANTILLAS
 
 export const templateService = {
     getAll: ({ page, pageSize, search }: PaginationParams) => {
@@ -15,7 +15,7 @@ export const templateService = {
     },
 };
 
-// ─── OFERTAS LABORALES ────────────────────────────────────────────────────────
+// OFERTAS LABORALES
 
 export const jobService = {
     getAll: ({ page, pageSize, search }: PaginationParams) => {
