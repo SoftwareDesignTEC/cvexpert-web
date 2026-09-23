@@ -1,40 +1,36 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import App from '../App';
+import MainLayout from '../layouts/MainLayout';
 
-// Páginas — creá el archivo cuando empieces cada pantalla
-// import HomePage from '../pages/HomePage';
-// import LoginPage from '../pages/LoginPage';
-// import NotFoundPage from '../pages/NotFoundPage';
-
-// Placeholder hasta que tengas las páginas reales
+// Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-        <h2>🚧 {name}</h2>
-        <p>Página pendiente de implementar.</p>
+    <div className="p-8">
+        <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-200">🚧 {name}</h2>
+        <p className="text-gray-500 mt-2">Página pendiente de implementar.</p>
     </div>
 );
 
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <App />,           // App envuelve con ThemeProvider y el layout base
+        element: <MainLayout />,
         children: [
-            {
-                index: true,
-                element: <Placeholder name="Home" />,
-            },
-            {
-                path: 'login',
-                element: <Placeholder name="Login" />,
-            },
-            // Agregar rutas aquí conforme se creen las páginas:
-            // { path: 'entidades', element: <HomePage /> },
-            // { path: 'entidades/:id', element: <DetallePage /> },
+            { index: true,                    element: <Placeholder name="Panel Principal" /> },
+            { path: 'cvs',                    element: <Placeholder name="Mis Currículums" /> },
+            { path: 'cvs/new',                element: <Placeholder name="Crear Nuevo CV" /> },
+            { path: 'profile',                element: <Placeholder name="Mi Perfil" /> },
+            { path: 'skills-gap',             element: <Placeholder name="Análisis de Brechas" /> },
+            { path: 'templates',              element: <Placeholder name="Plantillas / Offline" /> },
+            { path: 'jobs',                   element: <Placeholder name="Ofertas Laborales" /> },
+            { path: 'applications',           element: <Placeholder name="Postulaciones" /> },
+            { path: 'settings',               element: <Placeholder name="Configuración" /> },
         ],
     },
     {
-        // Cualquier ruta desconocida redirige a Home
+        path: '/login',
+        element: <Placeholder name="Login" />,
+    },
+    {
         path: '*',
         element: <Navigate to="/" replace />,
     },
