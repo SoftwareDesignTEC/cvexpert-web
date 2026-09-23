@@ -38,6 +38,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
+        env:
+          APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: ./gradlew assembleDebug
 
       # TODO: Subir a Firebase App Distribution cuando Andrés tenga listo el APK de producción
