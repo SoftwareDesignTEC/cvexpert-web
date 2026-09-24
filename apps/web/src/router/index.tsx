@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
+import DashboardPage from '../pages/DashboardPage';
 
 // Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
@@ -15,7 +16,7 @@ export const router = createBrowserRouter([
         path: '/',
         element: <MainLayout />,
         children: [
-            { index: true,                    element: <Placeholder name="Panel Principal" /> },
+            { index: true,                    element: <DashboardPage /> },
             { path: 'cvs',                    element: <Placeholder name="Mis Currículums" /> },
             { path: 'cvs/new',                element: <Placeholder name="Crear Nuevo CV" /> },
             { path: 'profile',                element: <Placeholder name="Mi Perfil" /> },
