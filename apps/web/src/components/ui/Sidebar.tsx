@@ -1,27 +1,31 @@
 import { NavLink } from 'react-router-dom';
-import {
-    LayoutDashboard, FileText, User, TrendingUp,
-    Layout, Briefcase, Kanban, Settings, PlusCircle,
-} from 'lucide-react';
+import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Settings, PlusCircle } from 'lucide-react';
 
 const navItems = [
-    { to: '/',             icon: LayoutDashboard, label: 'Panel Principal'       },
-    { to: '/cvs',          icon: FileText,         label: 'Mis Currículums'       },
-    { to: '/cvs/new',      icon: PlusCircle,       label: 'Crear CV'              },
-    { to: '/profile',      icon: User,             label: 'Mi Perfil'             },
-    { to: '/skills-gap',   icon: TrendingUp,       label: 'Análisis de Brechas'   },
-    { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline'  },
-    { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'     },
-    { to: '/applications', icon: Kanban,           label: 'Postulaciones'         },
-    { to: '/settings',     icon: Settings,         label: 'Configuración'         },
+    { to: '/',             icon: LayoutDashboard, label: 'Panel Principal'      },
+    { to: '/cvs',          icon: FileText,         label: 'Mis Currículums'      },
+    { to: '/cvs/new',      icon: PlusCircle,       label: 'Crear CV'             },
+    { to: '/profile',      icon: User,             label: 'Mi Perfil'            },
+    { to: '/skills-gap',   icon: TrendingUp,       label: 'Análisis de Brechas'  },
+    { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline' },
+    { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'    },
+    { to: '/applications', icon: Kanban,           label: 'Postulaciones'        },
+    { to: '/settings',     icon: Settings,         label: 'Configuración'        },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+    onClose: () => void;
+}
+
+export default function Sidebar({ onClose }: SidebarProps) {
     return (
-        <aside className="w-64 bg-[#1A3A6B] dark:bg-gray-900 flex flex-col shrink-0">
-            {/* Logo */}
-            <div className="h-16 flex items-center px-6 border-b border-white/10">
+        <aside className="w-64 h-full bg-[#1A3A6B] dark:bg-gray-900 flex flex-col">
+            {/* Header del sidebar con botón cerrar */}
+            <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
                 <span className="text-white font-bold text-xl tracking-tight">CV Master</span>
+                <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+                    <X size={20} />
+                </button>
             </div>
 
             {/* Navegación */}
@@ -31,6 +35,7 @@ export default function Sidebar() {
                         key={to}
                         to={to}
                         end={to === '/'}
+                        onClick={onClose}
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors
               ${isActive
