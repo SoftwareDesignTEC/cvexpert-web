@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Habilita dark mode por clase (.dark) en Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     /* Colores provisionales — se actualizan cuando Samuel mande los hex */
     --color-primary: #2F7FD4;
