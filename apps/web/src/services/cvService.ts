@@ -1,10 +1,17 @@
-import apiFetch, { type PaginatedResponse } from './api';
+import { http } from './http';
 import type { CV } from '../types/models';
+import type { PaginatedResponse, PaginationParams } from '../types/api';
 
-export async function getCVs(page = 1, pageSize = 10): Promise<PaginatedResponse<CV>> {
-    return apiFetch<PaginatedResponse<CV>>(`/cvs?page=${page}&pageSize=${pageSize}`);
-}
+export const cvService = {
+    getAll: ({ page, pageSize, search }: PaginationParams) => {
+        const params = new URLSearchParams({
+            page: String(page),
+            pageSize: String(pageSize),
+            ...(search ? { search } : {}),
+        });
+        return http.get<PaginatedResponse<CV>>(`/cvs?${params}`);
+    },
 
-export async function getCVById(id: string): Promise<CV> {
-    return apiFetch<CV>(`/cvs/${id}`);
-}
+    getById: (id: string) =>
+        http.get<CV>(`/cvs/${id}`),
+};

@@ -7,8 +7,8 @@ import { PlusCircle, Briefcase, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { CV, JobOffer, SkillGapItem } from '../types/models';
 import Badge from '../components/ui/Badge';
-import { getCVs } from '../services/cvService';
-import { getJobs } from '../services/jobService';
+import { cvService } from '../services/cvService';
+import { jobService } from '../services/otherServices';
 
 // Brecha de habilidades — datos estáticos hasta que exista el endpoint
 const MOCK_SKILLS: SkillGapItem[] = [
@@ -36,14 +36,14 @@ export default function DashboardPage() {
     const [errorJobs, setErrorJobs]     = useState<string | null>(null);
 
     useEffect(() => {
-        getCVs(1, 3)
+        cvService.getAll({ page: 1, pageSize: 3 })
             .then(res => setCvs(res.items))
             .catch(() => setErrorCvs('No se pudieron cargar los currículums.'))
             .finally(() => setLoadingCvs(false));
     }, []);
 
     useEffect(() => {
-        getJobs(1, 3)
+        jobService.getAll({ page: 1, pageSize: 3 })
             .then(res => setJobs(res.items))
             .catch(() => setErrorJobs('No se pudieron cargar las ofertas.'))
             .finally(() => setLoadingJobs(false));
@@ -183,8 +183,8 @@ export default function DashboardPage() {
                                         </div>
                                         {job.matchScore !== undefined && (
                                             <span className="shrink-0 text-[10px] font-bold text-[#2F7FD4]">
-                        {job.matchScore}% match
-                      </span>
+                                                {job.matchScore}% match
+                                            </span>
                                         )}
                                     </div>
                                 ))}
@@ -210,8 +210,8 @@ export default function DashboardPage() {
                                             </div>
                                             {job.matchScore !== undefined && (
                                                 <span className="shrink-0 text-xs font-bold text-[#2F7FD4] bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
-                          {job.matchScore}% match
-                        </span>
+                                                    {job.matchScore}% match
+                                                </span>
                                             )}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
