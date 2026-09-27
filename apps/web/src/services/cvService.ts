@@ -14,13 +14,4 @@ export const cvService = {
 
     getById: (id: string) =>
         http.get<CV>(`/cvs/${id}`),
-
-    create: (data: Omit<CV, 'id' | 'createdAt' | 'updatedAt'>) =>
-        http.post<CV>('/cvs', data),
-
-    update: (id: string, data: Partial<CV>) =>
-        http.put<CV>(`/cvs/${id}`, data),
-
-    delete: (id: string) =>
-        http.delete<void>(`/cvs/${id}`),
 };
