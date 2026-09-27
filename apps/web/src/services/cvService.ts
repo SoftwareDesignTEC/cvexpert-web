@@ -1,26 +1,10 @@
-import { http } from './http';
+import apiFetch, { type PaginatedResponse } from './api';
 import type { CV } from '../types/models';
-import type { PaginatedResponse, PaginationParams } from '../types/api';
 
-export const cvService = {
-    getAll: ({ page, pageSize, search }: PaginationParams) => {
-        const params = new URLSearchParams({
-            page: String(page),
-            pageSize: String(pageSize),
-            ...(search ? { search } : {}),
-        });
-        return http.get<PaginatedResponse<CV>>(`/cvs?${params}`);
-    },
+export async function getCVs(page = 1, pageSize = 10): Promise<PaginatedResponse<CV>> {
+    return apiFetch<PaginatedResponse<CV>>(`/cvs?page=${page}&pageSize=${pageSize}`);
+}
 
-    getById: (id: string) =>
-        http.get<CV>(`/cvs/${id}`),
-
-    create: (data: Omit<CV, 'id' | 'createdAt' | 'updatedAt'>) =>
-        http.post<CV>('/cvs', data),
-
-    update: (id: string, data: Partial<CV>) =>
-        http.put<CV>(`/cvs/${id}`, data),
-
-    delete: (id: string) =>
-        http.delete<void>(`/cvs/${id}`),
-};
+export async function getCVById(id: string): Promise<CV> {
+    return apiFetch<CV>(`/cvs/${id}`);
+}
