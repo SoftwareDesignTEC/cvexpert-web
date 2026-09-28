@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import DashboardPage from '../pages/DashboardPage';
+import JobsPage from '../pages/JobsPage';
 
 // Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
@@ -22,7 +23,7 @@ export const router = createBrowserRouter([
             { path: 'profile',                element: <Placeholder name="Mi Perfil" /> },
             { path: 'skills-gap',             element: <Placeholder name="Análisis de Brechas" /> },
             { path: 'templates',              element: <Placeholder name="Plantillas / Offline" /> },
-            { path: 'jobs',                   element: <Placeholder name="Ofertas Laborales" /> },
+            { path: 'jobs', element: <JobsPage /> },
             { path: 'applications',           element: <Placeholder name="Postulaciones" /> },
             { path: 'settings',               element: <Placeholder name="Configuración" /> },
         ],
