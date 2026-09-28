@@ -111,8 +111,8 @@ export default function CreateCVPage() {
         <div className="flex flex-col gap-3 sm:gap-6">
 
             {/* ── Barra: título + modos ───────────────────────────────────────── */}
-            <div className="bg-gray-900 dark:bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h1 className="text-sm font-bold text-white sm:text-lg">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h1 className="text-sm font-bold text-gray-900 dark:text-white sm:text-lg">
                     Crear Nuevo Currículum
                 </h1>
                 <div className="grid grid-cols-2 gap-2 sm:flex">
