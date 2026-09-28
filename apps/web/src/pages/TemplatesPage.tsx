@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { templateService } from '../services/otherServices';
 import type { CVTemplate } from '../types/models';
 
-
+// Cuántas plantillas se muestran al entrar y cuántas se agregan con cada clic
 const OFFLINE_INITIAL = 8;
 const OFFLINE_STEP = 8;
 const STORE_INITIAL = 4;
@@ -113,6 +114,7 @@ function TemplateSection({
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function TemplatesPage() {
+    const isOnline = useOnlineStatus();
     const [templates, setTemplates] = useState<CVTemplate[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -161,15 +163,18 @@ export default function TemplatesPage() {
                 onShowMore={() => setOfflineVisible(v => v + OFFLINE_STEP)}
             />
 
-            <TemplateSection
-                title="Tienda de plantillas"
-                items={storeTemplates}
-                visibleCount={storeVisible}
-                moreLabel="Ver Más"
-                cardActionLabel="Descargar Plantilla"
-                emptyText="No hay plantillas disponibles en la tienda."
-                onShowMore={() => setStoreVisible(v => v + STORE_STEP)}
-            />
+            {/* La tienda requiere conexión: desaparece si el usuario está offline */}
+            {isOnline && (
+                <TemplateSection
+                    title="Tienda de plantillas"
+                    items={storeTemplates}
+                    visibleCount={storeVisible}
+                    moreLabel="Ver Más"
+                    cardActionLabel="Descargar Plantilla"
+                    emptyText="No hay plantillas disponibles en la tienda."
+                    onShowMore={() => setStoreVisible(v => v + STORE_STEP)}
+                />
+            )}
         </div>
     );
 }
