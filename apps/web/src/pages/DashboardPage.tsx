@@ -77,7 +77,7 @@ export default function DashboardPage() {
                         <CardHeader
                             title="Currículums Recientes"
                             action={
-                                <Button variant="secondary" size="sm" onClick={() => navigate('/cvs')}>
+                                <Button variant="secondary" size="sm" onClick={() => navigate('/cvs/new')}>
                                     Ver todos
                                 </Button>
                             }

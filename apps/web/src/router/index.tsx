@@ -4,6 +4,7 @@ import MainLayout from '../layouts/MainLayout';
 import DashboardPage from '../pages/DashboardPage';
 import JobsPage from '../pages/JobsPage';
 import TemplatesPage from '../pages/TemplatesPage';
+import CreateCVPage from '../pages/CreateCVPage';
 
 // Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
@@ -20,7 +21,7 @@ export const router = createBrowserRouter([
         children: [
             { index: true,                    element: <DashboardPage /> },
             { path: 'cvs',                    element: <Placeholder name="Mis Currículums" /> },
-            { path: 'cvs/new',                element: <Placeholder name="Crear Nuevo CV" /> },
+            { path: 'cvs/new', element: <CreateCVPage /> },
             { path: 'profile',                element: <Placeholder name="Mi Perfil" /> },
             { path: 'skills-gap',             element: <Placeholder name="Análisis de Brechas" /> },
             { path: 'templates', element: <TemplatesPage /> },
