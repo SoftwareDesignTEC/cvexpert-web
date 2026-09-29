@@ -7,6 +7,7 @@ import TemplatesPage from '../pages/TemplatesPage';
 import CreateCVPage from '../pages/CreateCVPage';
 import SettingsPage from '../pages/SettingsPage';
 import ApplicationsPage from '../pages/ApplicationsPage';
+import SkillsGapPage from '../pages/SkillsGapPage.tsx';
 
 // Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
@@ -25,7 +26,7 @@ export const router = createBrowserRouter([
             { path: 'cvs',                    element: <Placeholder name="Mis Currículums" /> },
             { path: 'cvs/new', element: <CreateCVPage /> },
             { path: 'profile',                element: <Placeholder name="Mi Perfil" /> },
-            { path: 'skills-gap',             element: <Placeholder name="Análisis de Brechas" /> },
+            { path: 'skills-gap', element: <SkillsGapPage /> },
             { path: 'templates', element: <TemplatesPage /> },
             { path: 'jobs', element: <JobsPage /> },
             { path: 'applications', element: <ApplicationsPage /> },
