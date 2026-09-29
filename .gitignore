@@ -23,6 +23,15 @@ ios/build/
 *.pem
 *.key
 
+# Firmas y configuracion local: nunca se suben al repositorio.
+# El keystore se comparte por canal directo o vive en un secret de GitHub Actions.
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+local.properties
+google-services.json
+
 # IDE & OS
 .DS_Store
 .idea/
