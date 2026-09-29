@@ -5,6 +5,7 @@ import DashboardPage from '../pages/DashboardPage';
 import JobsPage from '../pages/JobsPage';
 import TemplatesPage from '../pages/TemplatesPage';
 import CreateCVPage from '../pages/CreateCVPage';
+import SettingsPage from '../pages/SettingsPage';
 
 // Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
@@ -27,7 +28,7 @@ export const router = createBrowserRouter([
             { path: 'templates', element: <TemplatesPage /> },
             { path: 'jobs', element: <JobsPage /> },
             { path: 'applications',           element: <Placeholder name="Postulaciones" /> },
-            { path: 'settings',               element: <Placeholder name="Configuración" /> },
+            { path: 'settings', element: <SettingsPage /> },
         ],
     },
     {
