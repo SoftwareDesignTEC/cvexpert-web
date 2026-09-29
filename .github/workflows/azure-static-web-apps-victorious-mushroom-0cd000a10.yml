@@ -45,7 +45,7 @@ jobs:
           output_location: "dist" # Carpeta de salida de compilación para proyectos Vite/React
           ###### End of Repository/Build Configurations ######
         env:
-          VITE_APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
+          VITE_APIM_BASE_URL: ${{ vars.APIM_BASE_URL }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
   close_pull_request_job:
