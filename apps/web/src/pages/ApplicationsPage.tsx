@@ -272,7 +272,7 @@ export default function ApplicationsPage() {
 
             {/* ── Mobile/tablet: pestañas + lista (sin arrastrar y soltar) ───── */}
             <div className="lg:hidden flex flex-col gap-3">
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {COLUMNS.map(c => (
                         <button
                             key={c.status}
