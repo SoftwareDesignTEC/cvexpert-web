@@ -7,7 +7,9 @@ import TemplatesPage from '../pages/TemplatesPage';
 import CreateCVPage from '../pages/CreateCVPage';
 import SettingsPage from '../pages/SettingsPage';
 import ApplicationsPage from '../pages/ApplicationsPage';
-import SkillsGapPage from '../pages/SkillsGapPage.tsx';
+import SkillsGapPage from '../pages/SkillsGapPage';
+import ProtectedRoute from './ProtectedRoute';
+import LoginPage from '../pages/LoginPage';
 
 // Páginas — placeholders hasta que se construya cada una
 const Placeholder = ({ name }: { name: string }) => (
@@ -19,23 +21,28 @@ const Placeholder = ({ name }: { name: string }) => (
 
 export const router = createBrowserRouter([
     {
-        path: '/',
-        element: <MainLayout />,
+        element: <ProtectedRoute />,
         children: [
-            { index: true,                    element: <DashboardPage /> },
-            { path: 'cvs',                    element: <Placeholder name="Mis Currículums" /> },
-            { path: 'cvs/new', element: <CreateCVPage /> },
-            { path: 'profile',                element: <Placeholder name="Mi Perfil" /> },
-            { path: 'skills-gap', element: <SkillsGapPage /> },
-            { path: 'templates', element: <TemplatesPage /> },
-            { path: 'jobs', element: <JobsPage /> },
-            { path: 'applications', element: <ApplicationsPage /> },
-            { path: 'settings', element: <SettingsPage /> },
+            {
+                path: '/',
+                element: <MainLayout />,
+                children: [
+                    { index: true,           element: <DashboardPage /> },
+                    { path: 'cvs',           element: <Placeholder name="Mis Currículums" /> },
+                    { path: 'cvs/new',       element: <CreateCVPage /> },
+                    { path: 'profile',       element: <Placeholder name="Mi Perfil" /> },
+                    { path: 'skills-gap',    element: <SkillsGapPage /> },
+                    { path: 'templates',     element: <TemplatesPage /> },
+                    { path: 'jobs',          element: <JobsPage /> },
+                    { path: 'applications',  element: <ApplicationsPage /> },
+                    { path: 'settings',      element: <SettingsPage /> },
+                ],
+            },
         ],
     },
     {
         path: '/login',
-        element: <Placeholder name="Login" />,
+        element: <LoginPage />,
     },
     {
         path: '*',

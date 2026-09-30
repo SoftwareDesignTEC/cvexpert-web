@@ -1,94 +1,92 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useGoogleLogin, googleLogout } from '@react-oauth/google';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { googleLogout } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
+import { UNAUTHORIZED_EVENT } from '../services/http';
 
-// Datos del usuario que Google devuelve
 export interface GoogleUser {
-    sub: string;        // ID único de Google
+    sub: string;
     name: string;
     email: string;
     picture: string;
 }
 
+interface DecodedToken extends GoogleUser {
+    exp: number;
+}
+
 interface AuthContextValue {
     user: GoogleUser | null;
     isAuthenticated: boolean;
-    login: () => void;        // dispara el popup de Google
+    loginWithCredential: (idToken: string) => void;
     logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<GoogleUser | null>(() => {
-        // Restaurar sesión guardada al recargar la página
-        const saved = localStorage.getItem('auth_user');
-        return saved ? JSON.parse(saved) : null;
-    });
-
-    // Login manual desplegado por el usuario
-    const googleLogin = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            const userInfo = await fetch(
-                'https://www.googleapis.com/oauth2/v3/userinfo',
-                { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
-            ).then(res => res.json()) as GoogleUser;
-
-            setUser(userInfo);
-            localStorage.setItem('auth_user', JSON.stringify(userInfo));
-            if (tokenResponse.access_token) {
-                localStorage.setItem('id_token', tokenResponse.access_token);
-            }
-        },
-        onError: () => {
-            //
-        },
-    });
-
-    // Renovación silenciosa en segundo plano
-    const refreshToken = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            if (tokenResponse.access_token) {
-                localStorage.setItem('id_token', tokenResponse.access_token);
-                console.log('Token de Google renovado silenciosamente');
-            }
-        },
-        onError: (error) => {
-            console.error('Error al renovar sesión silenciosamente:', error);
-        },
-        prompt: 'none', // IMPORTANTE: No muestra la ventana emergente al usuario
-    });
-
-    // Temporizador para ejecutar el Silent Refresh cada 55 minutos
-    useEffect(() => {
-        if (!user) return; // Solo renueva si hay un usuario logueado
-
-        const interval = setInterval(() => {
-            refreshToken();
-        }, 55 * 60 * 1000); // 55 minutos en milisegundos
-
-        return () => clearInterval(interval);
-    }, [user, refreshToken]);
-
-    const logout = () => {
-        googleLogout();
-        setUser(null);
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('id_token');
-    };
-
-    return (
-        <AuthContext.Provider value={{
-            user,
-            isAuthenticated: user !== null,
-            login: googleLogin,
-            logout,
-        }}>
-            {children}
-        </AuthContext.Provider>
-    );
+function clearStoredSession() {
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('id_token');
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+// Restaurar un id_token ya vencido deja a ProtectedRoute creyendo que hay sesión;
+// el primer fetch devuelve 401 y rebota a /login, que es media vuelta del loop.
+// Mejor descartarlo acá y arrancar sin sesión.
+function readStoredSession(): GoogleUser | null {
+    const idToken = localStorage.getItem('id_token');
+    const saved = localStorage.getItem('auth_user');
+    if (!idToken || !saved) return null;
+
+    try {
+        const { exp } = jwtDecode<DecodedToken>(idToken);
+        if (!exp || exp * 1000 <= Date.now()) {
+            clearStoredSession();
+            return null;
+        }
+        return JSON.parse(saved) as GoogleUser;
+    } catch {
+        clearStoredSession();
+        return null;
+    }
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<GoogleUser | null>(readStoredSession);
+
+    // Memoizadas: LoginPage las tiene en las deps de su useEffect, y una identidad
+    // nueva en cada render volvía a disparar el efecto en bucle.
+    const loginWithCredential = useCallback((idToken: string) => {
+        const decoded = jwtDecode<DecodedToken>(idToken);
+        localStorage.setItem('auth_user', JSON.stringify(decoded));
+        localStorage.setItem('id_token', idToken);
+        setUser(decoded);
+    }, []);
+
+    const logout = useCallback(() => {
+        googleLogout();
+        clearStoredSession();
+        setUser(null);
+    }, []);
+
+    // Un 401 de APIM cierra la sesión por acá, de modo que el estado de React y
+    // localStorage nunca quedan desincronizados. El router se encarga de ir a /login.
+    useEffect(() => {
+        const onUnauthorized = () => {
+            clearStoredSession();
+            setUser(null);
+        };
+        window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+        return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    }, []);
+
+    const value = useMemo<AuthContextValue>(
+        () => ({ user, isAuthenticated: user !== null, loginWithCredential, logout }),
+        [user, loginWithCredential, logout],
+    );
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
 export function useAuth(): AuthContextValue {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error('useAuth debe usarse dentro de <AuthProvider>');
