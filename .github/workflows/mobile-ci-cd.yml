@@ -29,25 +29,37 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Restore Keystore
-        run: |
-          mkdir -p ~/.android
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ~/.android/debug.keystore
+      # El keystore de release se escribe en la raíz del repositorio, que es donde lo
+      # busca el signingConfig. GITHUB_WORKSPACE es absoluto, así que no le afecta el
+      # working-directory del job.
+      - name: Restore Release Keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/release-key.jks
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      # APIM_BASE_URL, GOOGLE_WEB_CLIENT_ID y FIREBASE_APP_ID están guardados como
+      # Variables del repositorio, no como Secrets, así que van con vars. y no con
+      # secrets.: con el prefijo equivocado llegan vacíos y el APK sale sin servicio
+      # ni login. Las credenciales de firma sí son secrets.
+      - name: Build Release APK
         env:
-          APIM_BASE_URL: ${{ secrets.APIM_BASE_URL }}
-          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
-        run: ./gradlew assembleDebug
+          APIM_BASE_URL: ${{ vars.APIM_BASE_URL }}
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          RELEASE_KEYSTORE_PATH: release-key.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
 
-      # TODO: Subir a Firebase App Distribution cuando Andrés tenga listo el APK de producción
-      # - name: Upload to Firebase App Distribution
-      #   uses: wzieba/Firebase-Distribution-Github-Action@v1
-      #   with:
-      #     appId: ${{ secrets.FIREBASE_APP_ID }}
-      #     serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_CREDENTIALS }}
-      #     groups: testers
-      #     file: app/build/outputs/apk/debug/app-debug.apk
+      # Solo desde main: si no, cada push a una rama le manda un correo a todo el grupo.
+      # La ruta del APK va desde la raíz del repositorio: working-directory solo aplica
+      # a los pasos "run", no a las acciones con "uses".
+      - name: Upload to Firebase App Distribution
+        if: github.ref == 'refs/heads/main'
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ vars.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_CREDENTIALS }}
+          groups: testers
+          file: apps/mobile/app/build/outputs/apk/release/app-release.apk
