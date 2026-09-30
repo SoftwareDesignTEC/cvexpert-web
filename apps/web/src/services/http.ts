@@ -2,6 +2,12 @@
 
 const BASE_URL = import.meta.env.VITE_APIM_BASE_URL;
 
+// AuthProvider escucha este evento para cerrar la sesión. Antes acá se hacía
+// window.location.href = '/login', que es una navegación dura del navegador por cada
+// request fallida (el Dashboard lanza dos en paralelo) y además dejaba el estado de
+// React con el usuario vivo mientras localStorage ya estaba vacío.
+export const UNAUTHORIZED_EVENT = 'auth:unauthorized';
+
 // Error tipado para poder distinguir errores de API en los componentes
 export class ApiError extends Error {
     status: number;
@@ -27,11 +33,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     });
 
     if (res.status === 401) {
-        // Token vencido o inválido — APIM no tiene refresh automático,
-        // así que se limpia la sesión y se manda al usuario a loguearse de nuevo.
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('id_token');
-        window.location.href = '/login';
+        // Token vencido o inválido — APIM no tiene refresh automático. Avisamos y cortamos:
+        // limpiar la sesión y navegar es responsabilidad de AuthProvider y del router.
+        window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+        throw new ApiError(401, 'Sesión expirada. Iniciá sesión de nuevo.');
     }
 
     if (!res.ok) {
