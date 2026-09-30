@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 
 // Datos del usuario que Google devuelve
@@ -25,8 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return saved ? JSON.parse(saved) : null;
     });
 
-    // useGoogleLogin con flow 'implicit' devuelve un access_token directamente
-    // Con ese token se consulta el perfil del usuario a Google
+    // Login manual desplegado por el usuario
     const googleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
             const userInfo = await fetch(
@@ -36,16 +35,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             setUser(userInfo);
             localStorage.setItem('auth_user', JSON.stringify(userInfo));
+            if (tokenResponse.access_token) {
+                localStorage.setItem('id_token', tokenResponse.access_token);
+            }
         },
         onError: () => {
             //
         },
     });
 
+    // Renovación silenciosa en segundo plano
+    const refreshToken = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            if (tokenResponse.access_token) {
+                localStorage.setItem('id_token', tokenResponse.access_token);
+                console.log('Token de Google renovado silenciosamente');
+            }
+        },
+        onError: (error) => {
+            console.error('Error al renovar sesión silenciosamente:', error);
+        },
+        prompt: 'none', // IMPORTANTE: No muestra la ventana emergente al usuario
+    });
+
+    // Temporizador para ejecutar el Silent Refresh cada 55 minutos
+    useEffect(() => {
+        if (!user) return; // Solo renueva si hay un usuario logueado
+
+        const interval = setInterval(() => {
+            refreshToken();
+        }, 55 * 60 * 1000); // 55 minutos en milisegundos
+
+        return () => clearInterval(interval);
+    }, [user, refreshToken]);
+
     const logout = () => {
         googleLogout();
         setUser(null);
         localStorage.removeItem('auth_user');
+        localStorage.removeItem('id_token');
     };
 
     return (
@@ -59,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         </AuthContext.Provider>
     );
 }
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
     const ctx = useContext(AuthContext);
