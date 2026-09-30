@@ -2,8 +2,11 @@
 // (junto con localhost). Los previews de PR delegan el login acá y reciben el token de vuelta.
 export const CENTRAL_AUTH_URL = "https://victorious-mushroom-0cd000a10.5.azurestaticapps.net";
 
-// Previews de este Static Web App: victorious-mushroom-0cd000a10-<PR>.<region>.azurestaticapps.net
-const SWA_HOST = /^victorious-mushroom-0cd000a10(-\d+\.[a-z0-9-]+)?\.azurestaticapps\.net$/;
+// Hosts de este Static Web App. Produccion es victorious-mushroom-0cd000a10.5.azurestaticapps.net
+// y los previews victorious-mushroom-0cd000a10-<PR>.<region>.5.azurestaticapps.net: Azure intercala
+// uno o mas segmentos (region, numero de escala) que pueden cambiar, asi que se aceptan todos
+// mientras el prefijo del app y el dominio azurestaticapps.net sean exactos.
+const SWA_HOST = /^victorious-mushroom-0cd000a10(-\d+)?(\.[a-z0-9-]+)*\.azurestaticapps\.net$/;
 
 function isLocalhost(hostname: string): boolean {
     return hostname === 'localhost' || hostname === '127.0.0.1';

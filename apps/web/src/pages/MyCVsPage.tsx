@@ -48,7 +48,7 @@ function CVListCard({ cv }: { cv: CV }) {
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
-export default function CreateCVPage() {
+export default function MyCVsPage() {
     const navigate = useNavigate();
 
     const [items, setItems] = useState<CV[]>([]);
@@ -113,7 +113,7 @@ export default function CreateCVPage() {
             {/* ── Barra: título + modos ───────────────────────────────────────── */}
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h1 className="text-sm font-bold text-gray-900 dark:text-white sm:text-lg">
-                    Crear Nuevo Currículum
+                    Mis Currículums
                 </h1>
                 <div className="grid grid-cols-2 gap-2 sm:flex">
                     <Button size="sm" onClick={() => setAiMode(v => !v)}>

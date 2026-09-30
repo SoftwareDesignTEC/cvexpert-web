@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Settings, PlusCircle } from 'lucide-react';
+import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Settings } from 'lucide-react';
 
 const navItems = [
     { to: '/',             icon: LayoutDashboard, label: 'Panel Principal'      },
     { to: '/cvs',          icon: FileText,         label: 'Mis Currículums'      },
-    { to: '/cvs/new',      icon: PlusCircle,       label: 'Crear CV'             },
     { to: '/profile',      icon: User,             label: 'Mi Perfil'            },
     { to: '/skills-gap',   icon: TrendingUp,       label: 'Análisis de Brechas'  },
     { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline' },

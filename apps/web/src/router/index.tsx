@@ -4,7 +4,7 @@ import MainLayout from '../layouts/MainLayout';
 import DashboardPage from '../pages/DashboardPage';
 import JobsPage from '../pages/JobsPage';
 import TemplatesPage from '../pages/TemplatesPage';
-import CreateCVPage from '../pages/CreateCVPage';
+import MyCVsPage from '../pages/MyCVsPage';
 import SettingsPage from '../pages/SettingsPage';
 import ApplicationsPage from '../pages/ApplicationsPage';
 import SkillsGapPage from '../pages/SkillsGapPage';
@@ -28,8 +28,8 @@ export const router = createBrowserRouter([
                 element: <MainLayout />,
                 children: [
                     { index: true,           element: <DashboardPage /> },
-                    { path: 'cvs',           element: <Placeholder name="Mis Currículums" /> },
-                    { path: 'cvs/new',       element: <CreateCVPage /> },
+                    { path: 'cvs',           element: <MyCVsPage /> },
+                    { path: 'cvs/new',       element: <Navigate to="/cvs" replace /> },
                     { path: 'profile',       element: <Placeholder name="Mi Perfil" /> },
                     { path: 'skills-gap',    element: <SkillsGapPage /> },
                     { path: 'templates',     element: <TemplatesPage /> },
