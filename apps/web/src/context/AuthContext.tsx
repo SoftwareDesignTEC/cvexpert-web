@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useGoogleLogin, googleLogout } from '@react-oauth/google';
+import { createContext, useContext, useState } from 'react';
+import { googleLogout } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
-// Datos del usuario que Google devuelve
+// Datos que vienen dentro del id_token (JWT) que firma Google —
+// coinciden con los campos estándar de un ID token de Google.
 export interface GoogleUser {
     sub: string;        // ID único de Google
     name: string;
@@ -12,7 +14,10 @@ export interface GoogleUser {
 interface AuthContextValue {
     user: GoogleUser | null;
     isAuthenticated: boolean;
-    login: () => void;        // dispara el popup de Google
+    // Recibe el id_token (JWT) que entrega el botón <GoogleLogin>, lo decodifica
+    // para sacar los datos del usuario y lo guarda — es el mismo token que
+    // http.ts manda a APIM en cada request.
+    loginWithCredential: (idToken: string) => void;
     logout: () => void;
 }
 
@@ -25,50 +30,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return saved ? JSON.parse(saved) : null;
     });
 
-    // Login manual desplegado por el usuario
-    const googleLogin = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            const userInfo = await fetch(
-                'https://www.googleapis.com/oauth2/v3/userinfo',
-                { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
-            ).then(res => res.json()) as GoogleUser;
+    const loginWithCredential = (idToken: string) => {
+        const decoded = jwtDecode<GoogleUser>(idToken);
+        setUser(decoded);
+        localStorage.setItem('auth_user', JSON.stringify(decoded));
+        // Este es el id_token real (JWT) — APIM lo valida y http.ts lo lee de acá
+        localStorage.setItem('id_token', idToken);
+    };
 
-            setUser(userInfo);
-            localStorage.setItem('auth_user', JSON.stringify(userInfo));
-            if (tokenResponse.access_token) {
-                localStorage.setItem('id_token', tokenResponse.access_token);
-            }
-        },
-        onError: () => {
-            //
-        },
-    });
-
-    // Renovación silenciosa en segundo plano
-    const refreshToken = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            if (tokenResponse.access_token) {
-                localStorage.setItem('id_token', tokenResponse.access_token);
-                console.log('Token de Google renovado silenciosamente');
-            }
-        },
-        onError: (error) => {
-            console.error('Error al renovar sesión silenciosamente:', error);
-        },
-        prompt: 'none', // IMPORTANTE: No muestra la ventana emergente al usuario
-    });
-
-    // Temporizador para ejecutar el Silent Refresh cada 55 minutos
-    useEffect(() => {
-        if (!user) return; // Solo renueva si hay un usuario logueado
-
-        const interval = setInterval(() => {
-            refreshToken();
-        }, 55 * 60 * 1000); // 55 minutos en milisegundos
-
-        return () => clearInterval(interval);
-    }, [user, refreshToken]);
-
+    // Sin refresh automático (APIM no lo soporta, según Cabrera): al vencer
+    // el token, http.ts limpia la sesión y manda al usuario de vuelta a /login.
     const logout = () => {
         googleLogout();
         setUser(null);
@@ -80,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         <AuthContext.Provider value={{
             user,
             isAuthenticated: user !== null,
-            login: googleLogin,
+            loginWithCredential,
             logout,
         }}>
             {children}

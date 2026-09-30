@@ -14,13 +14,25 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+    // El id_token (JWT) de Google que APIM valida en cada request
+    const idToken = localStorage.getItem('id_token');
+
     const res = await fetch(`${BASE_URL}${path}`, {
         headers: {
             'Content-Type': 'application/json',
+            ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
             ...options?.headers,
         },
         ...options,
     });
+
+    if (res.status === 401) {
+        // Token vencido o inválido — APIM no tiene refresh automático,
+        // así que se limpia la sesión y se manda al usuario a loguearse de nuevo.
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('id_token');
+        window.location.href = '/login';
+    }
 
     if (!res.ok) {
         // Intenta leer el mensaje de error del body; si no, usa un genérico
