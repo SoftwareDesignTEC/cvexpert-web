@@ -5,19 +5,12 @@ import CVCard from '../components/ui/CVCard';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { PlusCircle, Briefcase, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { CV, JobOffer, SkillGapItem } from '../types/models';
+import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
 import { cvService } from '../services/cvService';
 import { jobService } from '../services/otherServices';
-
-// Brecha de habilidades — datos estáticos hasta que exista el endpoint
-const MOCK_SKILLS: SkillGapItem[] = [
-    { name: 'React',      userLevel: 85, marketLevel: 90 },
-    { name: 'TypeScript', userLevel: 70, marketLevel: 85 },
-    { name: 'Node.js',    userLevel: 60, marketLevel: 75 },
-    { name: 'SQL',        userLevel: 55, marketLevel: 70 },
-    { name: 'Docker',     userLevel: 40, marketLevel: 65 },
-];
+import { skillsGapService } from '../services/skillsGapService';
+import type { SkillGapApiItem } from '../services/skillsGapService';
 
 const modalityLabel: Record<JobOffer['modality'], string> = {
     'remote':  'Remoto',
@@ -34,6 +27,9 @@ export default function DashboardPage() {
     const [loadingJobs, setLoadingJobs] = useState(true);
     const [errorCvs, setErrorCvs]       = useState<string | null>(null);
     const [errorJobs, setErrorJobs]     = useState<string | null>(null);
+    const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
+    const [loadingSkills, setLoadingSkills] = useState(true);
+    const [errorSkills, setErrorSkills]     = useState<string | null>(null);
 
     useEffect(() => {
         cvService.getAll({ page: 1, pageSize: 3 })
@@ -49,6 +45,13 @@ export default function DashboardPage() {
             .finally(() => setLoadingJobs(false));
     }, []);
 
+    useEffect(() => {
+        skillsGapService.getAll()
+            .then(res => setSkills(res.items))
+            .catch(() => setErrorSkills('No se pudo cargar el análisis de brecha.'))
+            .finally(() => setLoadingSkills(false));
+    }, []);
+
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
 
@@ -62,7 +65,7 @@ export default function DashboardPage() {
                         ¡Bienvenido! Aquí está tu resumen...
                     </p>
                 </div>
-                <Button onClick={() => navigate('/cvs/new')} className="hidden sm:inline-flex">
+                <Button onClick={() => navigate('/cvs')} className="hidden sm:inline-flex">
                     <PlusCircle size={16} />
                     Crear CV con IA
                 </Button>
@@ -77,7 +80,7 @@ export default function DashboardPage() {
                         <CardHeader
                             title="Currículums Recientes"
                             action={
-                                <Button variant="secondary" size="sm" onClick={() => navigate('/cvs/new')}>
+                                <Button variant="secondary" size="sm" onClick={() => navigate('/cvs')}>
                                     Ver todos
                                 </Button>
                             }
@@ -103,7 +106,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Botón "Crear CV" en mobile */}
-                <Button onClick={() => navigate('/cvs/new')} className="sm:hidden w-full">
+                <Button onClick={() => navigate('/cvs')} className="sm:hidden w-full">
                     <PlusCircle size={16} />
                     Crear CV con IA
                 </Button>
@@ -120,22 +123,40 @@ export default function DashboardPage() {
                             }
                         />
                         <CardBody>
-                            <div className="flex items-start gap-3 lg:flex-col">
-                                <div className="shrink-0">
-                                    <SkillsRadar skills={MOCK_SKILLS} size={120} />
+                            {loadingSkills ? (
+                                <div className="flex items-center justify-center py-6 text-gray-400">
+                                    <Loader2 size={20} className="animate-spin" />
                                 </div>
-                                <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                        Habilidades por mejorar
-                                    </p>
-                                    {MOCK_SKILLS.filter(s => s.userLevel < s.marketLevel).map(s => (
-                                        <div key={s.name} className="flex items-center justify-between gap-1 text-xs">
-                                            <span className="text-gray-700 dark:text-gray-300 truncate">{s.name}</span>
-                                            <span className="text-amber-500 font-medium shrink-0">{s.userLevel}%</span>
-                                        </div>
-                                    ))}
+                            ) : errorSkills ? (
+                                <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
+                            ) : skills.length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-4">Aún no hay análisis de brecha.</p>
+                            ) : (
+                                <div className="flex items-start gap-3 lg:flex-col">
+                                    <div className="shrink-0">
+                                        {/* SkillsRadar espera `name`; APIM devuelve `skillName` */}
+                                        <SkillsRadar
+                                            skills={skills.map(s => ({
+                                                name: s.skillName,
+                                                userLevel: s.userLevel,
+                                                marketLevel: s.marketLevel,
+                                            }))}
+                                            size={120}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                            Habilidades por mejorar
+                                        </p>
+                                        {skills.filter(s => s.userLevel < s.marketLevel).map(s => (
+                                            <div key={s.skillName} className="flex items-center justify-between gap-1 text-xs">
+                                                <span className="text-gray-700 dark:text-gray-300 truncate">{s.skillName}</span>
+                                                <span className="text-amber-500 font-medium shrink-0">{s.userLevel}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </CardBody>
                     </Card>
                 </div>
