@@ -6,6 +6,38 @@ interface SkillsRadarProps {
 }
 
 export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
+    // Un radar necesita al menos 3 ejes: con menos, el poligono degenera en una linea
+    // o un punto. En ese caso se comparan los niveles con barras, que se leen igual de bien.
+    if (skills.length < 3) {
+        return (
+            <div className="flex flex-col gap-3 w-full" style={{ minHeight: size / 2 }}>
+                {skills.map(s => (
+                    <div key={s.name} className="flex flex-col gap-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 text-xs">
+                            <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{s.name}</span>
+                            <span className="text-gray-400 shrink-0">{s.userLevel}% / {s.marketLevel}%</span>
+                        </div>
+                        <div className="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                            {/* Nivel del mercado, de fondo */}
+                            <div
+                                className="absolute inset-y-0 left-0 rounded-full bg-[#93C5FD]"
+                                style={{ width: `${Math.min(s.marketLevel, 100)}%` }}
+                            />
+                            {/* Nivel del usuario, encima */}
+                            <div
+                                className="absolute inset-y-0 left-0 rounded-full bg-[#2F7FD4]"
+                                style={{ width: `${Math.min(s.userLevel, 100)}%` }}
+                            />
+                        </div>
+                    </div>
+                ))}
+                {skills.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center py-4">Aun no hay habilidades para comparar.</p>
+                )}
+            </div>
+        );
+    }
+
     const cx = size / 2;
     const cy = size / 2;
     const radius = size * 0.38;
