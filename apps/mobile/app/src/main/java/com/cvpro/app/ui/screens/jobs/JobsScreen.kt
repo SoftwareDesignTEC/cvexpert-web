@@ -1,6 +1,8 @@
 package com.cvpro.app.ui.screens.jobs
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.cvpro.app.ui.components.JobOfferDetailSheet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,6 +82,13 @@ fun JobsContent(
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Oferta abierta en el detalle, o null si la hoja está cerrada.
+    var detailOffer by remember { mutableStateOf<JobOffer?>(null) }
+
+    detailOffer?.let { offer ->
+        JobOfferDetailSheet(offer = offer, onDismiss = { detailOffer = null })
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         JobsHeader(
             query = uiState.query,
@@ -112,7 +125,7 @@ fun JobsContent(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(items = uiState.visibleOffers, key = { it.id }) { offer ->
-                    JobCard(offer = offer)
+                    JobCard(offer = offer, onDetailsClick = { detailOffer = offer })
                 }
 
                 if (uiState.hasMore) {
@@ -185,9 +198,13 @@ private fun JobsFilters(
     onFilterChange: (JobsFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Con desplazamiento horizontal: los cuatro filtros no entran en el ancho de un
+    // teléfono, y sin esto el último parte su texto en dos líneas.
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        modifier = modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
         JobsFilter.entries.forEach { filter ->
             FilterChip(
@@ -197,6 +214,8 @@ private fun JobsFilters(
                     Text(
                         text = stringResource(filter.labelRes),
                         style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 },
             )
@@ -211,6 +230,7 @@ private fun JobsFilters(
 @Composable
 private fun JobCard(
     offer: JobOffer,
+    onDetailsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -279,9 +299,8 @@ private fun JobCard(
                 )
             }
 
-            // TODO: sin acción. Falta la pantalla de detalle de la oferta.
             Button(
-                onClick = {},
+                onClick = onDetailsClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
@@ -401,8 +420,12 @@ private fun JobsPreview(darkTheme: Boolean) {
                             location = "Escazú, San José",
                             modality = JobModality.HYBRID,
                             sector = "Tecnología",
+                            type = "full-time",
+                            description = "Análisis de datos para decisiones de negocio.",
                             requirements = listOf("SQL avanzado", "Power BI"),
+                            salary = null,
                             matchScore = 80,
+                            postedAt = "13/09/2026",
                         ),
                         JobOffer(
                             id = "2",
@@ -412,8 +435,12 @@ private fun JobsPreview(darkTheme: Boolean) {
                             location = "Heredia",
                             modality = JobModality.REMOTE,
                             sector = "Tecnología",
+                            type = "full-time",
+                            description = "Modelado de datos y tableros para el negocio.",
                             requirements = listOf("Modelado de datos", "ETL"),
+                            salary = null,
                             matchScore = 76,
+                            postedAt = "12/09/2026",
                         ),
                     ),
                 ),
