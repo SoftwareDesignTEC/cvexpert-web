@@ -104,7 +104,7 @@ export default function MyCVsPage() {
             try {
                 const res = await cvService.getAll({ page: 1, pageSize: PAGE_SIZE, search: search || undefined });
                 if (cancelled) return;
-                setItems(res.items);
+                setItems(res.items ?? []);
                 setPage(1);
                 setTotalRecords(res.totalRecords);
             } catch (err) {
@@ -126,7 +126,7 @@ export default function MyCVsPage() {
         setLoadMoreError(null);
         try {
             const res = await cvService.getAll({ page: next, pageSize: PAGE_SIZE, search: search || undefined });
-            setItems(prev => [...prev, ...res.items]);
+            setItems(prev => [...prev, ...(res.items ?? [])]);
             setPage(next);
             setTotalRecords(res.totalRecords);
         } catch (err) {

@@ -114,9 +114,9 @@ async function fetchAllApplications(): Promise<{ items: JobApplication[]; total:
     let total = 0;
     for (let page = 1; page <= MAX_PAGES; page++) {
         const res = await applicationService.getAll({ page, pageSize: FETCH_PAGE_SIZE });
-        all.push(...res.items);
+        all.push(...(res.items ?? []));
         total = res.totalRecords;
-        if (res.items.length === 0 || all.length >= res.totalRecords) break;
+        if (!res.items?.length || all.length >= (res.totalRecords ?? 0)) break;
     }
     return { items: all, total };
 }

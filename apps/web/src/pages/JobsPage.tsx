@@ -68,7 +68,8 @@ function MatchRing({ score }: { score: number }) {
 
 // ── Fila de oferta ────────────────────────────────────────────────────────────
 function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
-    const requirements = job.requirements.slice(0, MAX_REQUIREMENTS);
+    // `requirements` puede faltar en la respuesta; sin esto la pantalla entera falla
+    const requirements = (job.requirements ?? []).slice(0, MAX_REQUIREMENTS);
 
     return (
         <div
@@ -166,7 +167,7 @@ export default function JobsPage() {
             try {
                 const res = await jobService.getAll({ page: 1, pageSize: PAGE_SIZE, search: search || undefined });
                 if (cancelled) return;
-                setItems(res.items);
+                setItems(res.items ?? []);
                 setPage(1);
                 setTotalRecords(res.totalRecords);
             } catch (err) {
@@ -193,7 +194,7 @@ export default function JobsPage() {
                 pageSize: PAGE_SIZE,
                 search: search || undefined,
             });
-            setItems(prev => [...prev, ...res.items]);
+            setItems(prev => [...prev, ...(res.items ?? [])]);
             setPage(next);
             setTotalRecords(res.totalRecords);
         } catch (err) {

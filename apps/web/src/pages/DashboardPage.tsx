@@ -33,21 +33,21 @@ export default function DashboardPage() {
 
     useEffect(() => {
         cvService.getAll({ page: 1, pageSize: 3 })
-            .then(res => setCvs(res.items))
+            .then(res => setCvs(res.items ?? []))
             .catch(() => setErrorCvs('No se pudieron cargar los currículums.'))
             .finally(() => setLoadingCvs(false));
     }, []);
 
     useEffect(() => {
         jobService.getAll({ page: 1, pageSize: 3 })
-            .then(res => setJobs(res.items))
+            .then(res => setJobs(res.items ?? []))
             .catch(() => setErrorJobs('No se pudieron cargar las ofertas.'))
             .finally(() => setLoadingJobs(false));
     }, []);
 
     useEffect(() => {
         skillsGapService.getAll()
-            .then(res => setSkills(res.items))
+            .then(res => setSkills(res.items ?? []))
             .catch(() => setErrorSkills('No se pudo cargar el análisis de brecha.'))
             .finally(() => setLoadingSkills(false));
     }, []);

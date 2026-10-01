@@ -93,7 +93,7 @@ export default function ProfilePage() {
             setErrorSkills(null);
             try {
                 const res = await skillsGapService.getAll();
-                if (!cancelled) setSkills(res.items);
+                if (!cancelled) setSkills(res.items ?? []);
             } catch {
                 if (!cancelled) setErrorSkills('No se pudo cargar el análisis de habilidades.');
             } finally {

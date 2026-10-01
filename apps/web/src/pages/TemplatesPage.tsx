@@ -23,8 +23,8 @@ async function fetchAllTemplates(): Promise<CVTemplate[]> {
     const all: CVTemplate[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
         const res = await templateService.getAll({ page, pageSize: FETCH_PAGE_SIZE });
-        all.push(...res.items);
-        if (res.items.length === 0 || all.length >= res.totalRecords) break;
+        all.push(...(res.items ?? []));
+        if (!res.items?.length || all.length >= (res.totalRecords ?? 0)) break;
     }
     return all;
 }

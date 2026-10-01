@@ -42,7 +42,7 @@ export default function SkillsGapPage() {
             setError(null);
             try {
                 const res = await skillsGapService.getAll();
-                if (!cancelled) setItems(res.items);
+                if (!cancelled) setItems(res.items ?? []);
             } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'No se pudo cargar el análisis de brecha');

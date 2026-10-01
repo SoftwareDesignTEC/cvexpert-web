@@ -9,11 +9,13 @@ import ApplicationsPage from '../pages/ApplicationsPage';
 import SkillsGapPage from '../pages/SkillsGapPage';
 import ProtectedRoute from './ProtectedRoute';
 import LoginPage from '../pages/LoginPage';
+import ErrorPage from '../pages/ErrorPage';
 import ProfilePage from '../pages/ProfilePage';
 
 export const router = createBrowserRouter([
     {
         element: <ProtectedRoute />,
+        errorElement: <ErrorPage />,
         children: [
             {
                 path: '/',
@@ -35,6 +37,7 @@ export const router = createBrowserRouter([
     {
         path: '/login',
         element: <LoginPage />,
+        errorElement: <ErrorPage />,
     },
     {
         path: '*',
