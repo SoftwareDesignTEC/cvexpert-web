@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Filter, MapPin, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -8,6 +7,7 @@ import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import Modal from '../components/ui/Modal';
 import { ChipGroup } from '../components/ui/FormBits';
+import JobDetailDialog from '../components/ui/JobDetailDialog';
 import { jobService } from '../services/otherServices';
 import type { JobOffer } from '../types/models';
 
@@ -36,13 +36,6 @@ const MODALITY_OPTIONS: { value: JobOffer['modality']; label: string }[] = [
     { value: 'remote',  label: 'Remoto' },
     { value: 'on-site', label: 'Presencial' },
     { value: 'hybrid',  label: 'Híbrido' },
-];
-
-const TYPE_OPTIONS: { value: JobOffer['type']; label: string }[] = [
-    { value: 'full-time',  label: 'Tiempo completo' },
-    { value: 'part-time',  label: 'Medio tiempo' },
-    { value: 'freelance',  label: 'Freelance' },
-    { value: 'internship', label: 'Práctica profesional' },
 ];
 
 async function fetchAllJobs(search?: string): Promise<JobOffer[]> {
@@ -160,7 +153,6 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function JobsPage() {
-    const navigate = useNavigate();
 
     const [items, setItems] = useState<JobOffer[]>([]);
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
@@ -168,10 +160,9 @@ export default function JobsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [detailJob, setDetailJob] = useState<JobOffer | null>(null);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [modalities, setModalities] = useState<JobOffer['modality'][]>([]);
-    const [types, setTypes] = useState<JobOffer['type'][]>([]);
-    const [sectors, setSectors] = useState<string[]>([]);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
@@ -211,26 +202,18 @@ export default function JobsPage() {
         return () => { cancelled = true; };
     }, [search, reloadKey]);
 
-    // Los sectores salen de las propias ofertas: no hay catálogo fijo
-    const sectorOptions = useMemo(
-        () => [...new Set(items.map(j => j.sector).filter(Boolean))].sort(),
-        [items],
-    );
-
     const toggle = <T,>(list: T[], value: T) =>
         list.includes(value) ? list.filter(v => v !== value) : [...list, value];
 
-    const activeFilters = modalities.length + types.length + sectors.length;
+    const activeFilters = modalities.length;
 
-    const clearFilters = () => { setModalities([]); setTypes([]); setSectors([]); };
+    const clearFilters = () => setModalities([]);
 
     // Primero el panel de filtros, después el chip, y al final el orden
     const filtered = useMemo(() => {
         let list = items;
 
         if (modalities.length) list = list.filter(j => modalities.includes(j.modality));
-        if (types.length)      list = list.filter(j => types.includes(j.type));
-        if (sectors.length)    list = list.filter(j => sectors.includes(j.sector));
 
         switch (quickFilter) {
             case 'remote':
@@ -243,7 +226,7 @@ export default function JobsPage() {
                 // "Recomendadas": todas, de mayor a menor compatibilidad
                 return [...list].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
         }
-    }, [items, quickFilter, recentCutoff, modalities, types, sectors]);
+    }, [items, quickFilter, recentCutoff, modalities]);
 
     const visibleItems = filtered.slice(0, visibleCount);
     const hasMore = visibleCount < filtered.length;
@@ -331,7 +314,7 @@ export default function JobsPage() {
             ) : (
                 <div className="flex flex-col gap-3">
                     {visibleItems.map(job => (
-                        <JobRow key={job.id} job={job} onOpen={() => navigate(`/jobs/${job.id}`)} />
+                        <JobRow key={job.id} job={job} onOpen={() => setDetailJob(job)} />
                     ))}
 
                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -357,11 +340,13 @@ export default function JobsPage() {
                 </div>
             )}
 
+            <JobDetailDialog job={detailJob} onClose={() => setDetailJob(null)} />
+
             {/* Panel de filtros */}
             <Modal
                 open={filtersOpen}
                 title="Filtrar ofertas"
-                description="Se combinan con los accesos rápidos y la búsqueda."
+                description="Se combina con los accesos rápidos y la búsqueda."
                 onClose={() => setFiltersOpen(false)}
             >
                 <div className="flex flex-col gap-5">
@@ -371,20 +356,6 @@ export default function JobsPage() {
                         selected={modalities}
                         onToggle={v => setModalities(prev => toggle(prev, v))}
                     />
-                    <ChipGroup
-                        label="Tipo de jornada"
-                        options={TYPE_OPTIONS}
-                        selected={types}
-                        onToggle={v => setTypes(prev => toggle(prev, v))}
-                    />
-                    {sectorOptions.length > 0 && (
-                        <ChipGroup
-                            label="Sector"
-                            options={sectorOptions.map(sec => ({ value: sec, label: sec }))}
-                            selected={sectors}
-                            onToggle={v => setSectors(prev => toggle(prev, v))}
-                        />
-                    )}
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                         <Button variant="secondary" size="sm" onClick={clearFilters} disabled={activeFilters === 0}>

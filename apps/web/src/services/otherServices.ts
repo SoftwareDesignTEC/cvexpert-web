@@ -17,6 +17,46 @@ export const templateService = {
 
 // OFERTAS LABORALES
 
+// El APIM nombra distinto algunos campos (compatibility, createdAt) y no envía
+// `type`, `sector` ni `description`. Se traduce acá para no esparcir esa diferencia
+// por las pantallas, igual que se hace con el perfil.
+interface JobApiResponse {
+    id: string;
+    title: string;
+    company: string;
+    companyLogoUrl?: string;
+    logoUrl?: string;
+    location: string;
+    modality: JobOffer['modality'];
+    type?: JobOffer['type'];
+    sector?: string;
+    description?: string;
+    requirements?: string[];
+    skills?: string[];
+    compatibility?: number;
+    matchScore?: number;
+    createdAt?: string;
+    postedAt?: string;
+}
+
+function toJobOffer(res: JobApiResponse): JobOffer {
+    return {
+        id: res.id,
+        title: res.title,
+        company: res.company,
+        companyLogoUrl: res.companyLogoUrl ?? res.logoUrl,
+        location: res.location,
+        modality: res.modality,
+        type: res.type ?? 'full-time',
+        sector: res.sector ?? '',
+        description: res.description ?? '',
+        requirements: res.requirements ?? [],
+        skills: res.skills ?? [],
+        matchScore: res.matchScore ?? res.compatibility,
+        postedAt: res.postedAt ?? res.createdAt ?? '',
+    };
+}
+
 export const jobService = {
     getAll: ({ page, pageSize, search }: PaginationParams) => {
         const params = new URLSearchParams({
@@ -24,11 +64,14 @@ export const jobService = {
             pageSize: String(pageSize),
             ...(search ? { search } : {}),
         });
-        return http.get<unknown>(`/jobs?${params}`).then(r => toPaginated<JobOffer>(r, pageSize, page));
+        return http.get<unknown>(`/jobs?${params}`).then(r => {
+            const paged = toPaginated<JobApiResponse>(r, pageSize, page);
+            return { ...paged, items: paged.items.map(toJobOffer) };
+        });
     },
 
     getById: (id: string) =>
-        http.get<JobOffer>(`/jobs/${id}`),
+        http.get<JobApiResponse>(`/jobs/${id}`).then(toJobOffer),
 };
 
 // ─── TRACKER DE POSTULACIONES ─────────────────────────────────────────────────
