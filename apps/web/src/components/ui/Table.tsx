@@ -51,7 +51,7 @@ export default function Table<T extends { id: string }>({
                     value={searchValue}
                     onChange={e => handleSearch(e.target.value)}
                     placeholder={searchPlaceholder}
-                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2F7FD4]"
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
             </div>
 
@@ -76,7 +76,7 @@ export default function Table<T extends { id: string }>({
                         <tr>
                             <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-400">
                                 <div className="flex justify-center">
-                                    <svg className="animate-spin h-6 w-6 text-[#2F7FD4]" viewBox="0 0 24 24" fill="none">
+                                    <svg className="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                     </svg>
@@ -127,7 +127,7 @@ export default function Table<T extends { id: string }>({
                             onClick={() => onPageChange(p)}
                             className={`w-8 h-8 rounded text-sm transition-colors
                 ${p === page
-                                ? 'bg-[#2F7FD4] text-white font-medium'
+                                ? 'bg-primary text-white font-medium'
                                 : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
                             {p}

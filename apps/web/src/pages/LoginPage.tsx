@@ -94,7 +94,7 @@ export default function LoginPage() {
                     <p className="text-sm text-red-500">{error ?? tokenError}</p>
                     <button
                         onClick={() => window.location.replace(`${window.location.origin}/login`)}
-                        className="text-sm font-medium text-[#2F7FD4] hover:underline"
+                        className="text-sm font-medium text-primary hover:underline"
                     >
                         Reintentar
                     </button>
@@ -111,7 +111,12 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
             <div className="w-full max-w-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 flex flex-col items-center gap-6">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">CVMaster</h1>
+                <div className="flex items-center gap-2">
+                    <span className="w-9 h-9 rounded-lg bg-primary text-white font-bold text-xl flex items-center justify-center">
+                        C
+                    </span>
+                    <h1 className="text-xl font-bold text-ink dark:text-white">CVExpert</h1>
+                </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                     Iniciá sesión con tu cuenta de Google para continuar.
                 </p>

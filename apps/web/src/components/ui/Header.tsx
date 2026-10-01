@@ -1,8 +1,8 @@
-import { Menu, Moon, Sun, LogOut, Wifi, WifiOff, Bell, UserCircle2 } from 'lucide-react';
+import { Menu, Moon, Sun, LogOut, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { Avatar } from './Avatar';
 
 interface HeaderProps {
     onMenuClick: () => void;
@@ -12,7 +12,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
     const { isAuthenticated, profile, logout } = useAuth();
-    const isOnline = useOnlineStatus();
 
     return (
         <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 shrink-0">
@@ -27,21 +26,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     <Menu size={20} />
                 </button>
 
-                {/* Logo — placeholder de texto hasta que exista el logo real de la app */}
+                {/* Marca: el recuadro azul queda listo para recibir el logo real;
+                    mientras tanto muestra la inicial. */}
                 <button
                     onClick={() => navigate('/')}
-                    className="text-sm font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-primary-tint dark:hover:bg-gray-800 transition-colors"
                     title="Ir al Panel Principal"
                 >
-                    CVMaster
+                    <span className="w-8 h-8 rounded-lg bg-primary text-white font-bold text-lg flex items-center justify-center shrink-0">
+                        C
+                    </span>
+                    <span className="text-base font-bold text-ink dark:text-white">CVExpert</span>
                 </button>
 
-                <div className={`hidden sm:flex items-center gap-1.5 text-sm font-medium
-          ${isOnline ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}
-                >
-                    {isOnline ? <Wifi size={15} /> : <WifiOff size={15} />}
-                    <span>{isOnline ? 'Online' : 'Offline'}</span>
-                </div>
             </div>
 
             {/* Derecha: notificaciones (decorativo) + usuario + tema */}
@@ -56,18 +53,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 </button>
 
                 {isAuthenticated && (
-                    <div className="flex items-center gap-2">
-                        {/* Nombre y foto vienen del APIM, no del token: sin conexión no se muestran */}
-                        {profile?.photoUrl ? (
-                            <img src={profile.photoUrl} alt={profile.name} className="w-8 h-8 rounded-full object-cover" />
-                        ) : (
-                            <UserCircle2 size={32} className="text-gray-400 dark:text-gray-600" />
-                        )}
-                        {profile && (
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:block">
-                                {profile.name}
-                            </span>
-                        )}
+                    <div className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-2 shadow-sm">
+                        {/* Nombre y foto vienen del APIM, no del token: sin conexión no se muestran.
+                            Mientras tanto se usan las iniciales para no dejar el hueco vacío. */}
+                        <Avatar src={profile?.photoUrl} name={profile?.name ?? 'Mi cuenta'} size={32} />
+                        <span className="text-sm font-medium text-ink dark:text-gray-200 hidden sm:block max-w-[12rem] truncate">
+                            {profile?.name ?? 'Mi cuenta'}
+                        </span>
                         <button
                             onClick={logout}
                             className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

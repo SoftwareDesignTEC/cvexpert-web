@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import Card, { CardHeader, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import CVCard from '../components/ui/CVCard';
+import { CompanyLogo } from '../components/ui/Avatar';
 import SkillsRadar from '../components/ui/SkillsRadar';
-import { PlusCircle, Briefcase, MapPin, Loader2 } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
@@ -33,21 +34,21 @@ export default function DashboardPage() {
 
     useEffect(() => {
         cvService.getAll({ page: 1, pageSize: 3 })
-            .then(res => setCvs(res.items))
+            .then(res => setCvs(res.items ?? []))
             .catch(() => setErrorCvs('No se pudieron cargar los currículums.'))
             .finally(() => setLoadingCvs(false));
     }, []);
 
     useEffect(() => {
         jobService.getAll({ page: 1, pageSize: 3 })
-            .then(res => setJobs(res.items))
+            .then(res => setJobs(res.items ?? []))
             .catch(() => setErrorJobs('No se pudieron cargar las ofertas.'))
             .finally(() => setLoadingJobs(false));
     }, []);
 
     useEffect(() => {
         skillsGapService.getAll()
-            .then(res => setSkills(res.items))
+            .then(res => setSkills(res.items ?? []))
             .catch(() => setErrorSkills('No se pudo cargar el análisis de brecha.'))
             .finally(() => setLoadingSkills(false));
     }, []);
@@ -190,9 +191,11 @@ export default function DashboardPage() {
                                         onClick={() => navigate(`/jobs/${job.id}`)}
                                         className="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-1 px-1 rounded-lg transition-colors"
                                     >
-                                        <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                            <Briefcase size={14} className="text-gray-400" />
-                                        </div>
+                                        <CompanyLogo
+                                            src={job.companyLogoUrl}
+                                            name={job.company}
+                                            className="w-8 h-8 rounded-lg bg-primary-tint text-primary text-[11px] dark:bg-gray-800"
+                                        />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{job.title}</p>
                                             <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5">
@@ -203,7 +206,7 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         {job.matchScore !== undefined && (
-                                            <span className="shrink-0 text-[10px] font-bold text-[#2F7FD4]">
+                                            <span className="shrink-0 text-[10px] font-bold text-primary">
                                                 {job.matchScore}% match
                                             </span>
                                         )}
@@ -217,20 +220,22 @@ export default function DashboardPage() {
                                     <div
                                         key={job.id}
                                         onClick={() => navigate(`/jobs/${job.id}`)}
-                                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md hover:border-[#2F7FD4] dark:hover:border-[#2F7FD4] transition-all cursor-pointer"
+                                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md hover:border-primary dark:hover:border-primary transition-all cursor-pointer"
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                                    <Briefcase size={18} className="text-gray-400" />
-                                                </div>
+                                                <CompanyLogo
+                                                    src={job.companyLogoUrl}
+                                                    name={job.company}
+                                                    className="w-10 h-10 rounded-lg bg-primary-tint text-primary text-sm dark:bg-gray-800"
+                                                />
                                                 <div>
                                                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{job.title}</h4>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400">{job.company}</p>
                                                 </div>
                                             </div>
                                             {job.matchScore !== undefined && (
-                                                <span className="shrink-0 text-xs font-bold text-[#2F7FD4] bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
+                                                <span className="shrink-0 text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
                                                     {job.matchScore}% match
                                                 </span>
                                             )}

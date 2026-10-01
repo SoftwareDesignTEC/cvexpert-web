@@ -1,5 +1,6 @@
-import { MapPin, Briefcase } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import type { JobOffer } from '../../types/models';
+import { CompanyLogo } from './Avatar';
 import Badge from './Badge';
 import Button from './Button';
 
@@ -28,12 +29,11 @@ export default function JobCard({ job, onViewDetails }: JobCardProps) {
             <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
                     {/* Logo placeholder */}
-                    <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                        {job.companyLogoUrl
-                            ? <img src={job.companyLogoUrl} alt={job.company} className="w-8 h-8 object-contain rounded" />
-                            : <Briefcase size={18} className="text-gray-400" />
-                        }
-                    </div>
+                    <CompanyLogo
+                        src={job.companyLogoUrl}
+                        name={job.company}
+                        className="w-10 h-10 rounded-lg bg-primary-tint text-primary text-sm dark:bg-gray-800"
+                    />
                     <div>
                         <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{job.title}</h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{job.company}</p>
@@ -42,7 +42,7 @@ export default function JobCard({ job, onViewDetails }: JobCardProps) {
 
                 {/* % de compatibilidad */}
                 {job.matchScore !== undefined && (
-                    <span className="shrink-0 text-xs font-bold text-[#2F7FD4] bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
+                    <span className="shrink-0 text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
             {job.matchScore}% match
           </span>
                 )}

@@ -1,57 +1,81 @@
+import { ChevronRight, HelpCircle, KeyRound, Mail, MonitorSmartphone, Download, Trash2, Shield, FileText, Bell, GraduationCap, Briefcase } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import PageHeader from '../components/ui/PageHeader';
+import {
+    ApplicationAlertsDialog, ChangeEmailDialog, ChangePasswordDialog,
+    CourseAlertsDialog, DeleteAccountDialog, JobAlertsDialog,
+} from '../components/ui/SettingsDialogs';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-// ── Bloque de configuración (título + card) ───────────────────────────────────
-function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
+// ── Tarjeta con título y descripción ─────────────────────────────────────────
+function SettingsCard({
+    title, subtitle, children, className = '',
+}: {
+    title: string;
+    subtitle: string;
+    children: React.ReactNode;
+    className?: string;
+}) {
     return (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h2>
-            {children}
+        <div className={`bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-sm p-5 flex flex-col gap-4 ${className}`}>
+            <div>
+                <h2 className="text-lg font-bold text-ink dark:text-white">{title}</h2>
+                <p className="text-sm text-muted">{subtitle}</p>
+            </div>
+            <div className="flex flex-col gap-2">{children}</div>
         </div>
     );
 }
 
-// ── Fila de acción decorativa (sin funcionalidad en esta fase) ───────────────
-function ActionRow({ label, danger }: { label: string; danger?: boolean }) {
+// ── Fila de acción. Sin funcionalidad en esta fase: va deshabilitada y el cursor
+//    de bloqueo lo deja claro al pasar por encima. ────────────────────────────
+function ActionRow({
+    label, icon: Icon, danger, onClick,
+}: {
+    label: string;
+    icon: LucideIcon;
+    danger?: boolean;
+    onClick?: () => void;
+}) {
     return (
         <button
             type="button"
-            disabled
-            className={`w-full text-left text-sm px-3 py-2 rounded-lg border transition-colors cursor-not-allowed
+            onClick={onClick}
+            disabled={!onClick}
+            title={onClick ? undefined : 'Todavía no disponible'}
+            className={`group w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors
+                ${onClick ? 'hover:border-primary cursor-pointer' : 'cursor-not-allowed'}
                 ${danger
-                ? 'text-red-500 border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10'
-                : 'text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50'
+                ? 'border-rose-200 bg-rose-50/60 dark:border-rose-900/50 dark:bg-rose-950/20'
+                : 'border-line bg-primary-tint/50 dark:border-gray-800 dark:bg-gray-800/40'
             }`}
         >
-            {label}
-        </button>
-    );
-}
-
-// ── Fila de notificación con toggle decorativo (siempre activado) ────────────
-function NotificationRow({ label }: { label: string }) {
-    return (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-            <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
-            <span
-                aria-hidden="true"
-                className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-[#2F7FD4] cursor-not-allowed"
+            <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white
+                ${danger ? 'bg-rose-500' : 'bg-primary'}`}
             >
-                <span className="inline-block h-4 w-4 translate-x-4 rounded-full bg-white transition-transform" />
+                <Icon size={15} />
             </span>
-        </div>
+            <span className={`flex-1 text-sm font-medium truncate ${danger ? 'text-rose-600 dark:text-rose-400' : 'text-body dark:text-gray-200'}`}>
+                {label}
+            </span>
+            <ChevronRight size={16} className={danger ? 'text-rose-400 shrink-0' : 'text-muted shrink-0'} />
+        </button>
     );
 }
 
 // ── Selector decorativo (Idioma / Zona Horaria) ───────────────────────────────
 function DisabledSelect({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
+        <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-muted">{label}</label>
             <select
                 disabled
                 value={value}
                 onChange={() => {}}
-                className="text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 px-3 py-2 cursor-not-allowed"
+                title="Todavía no disponible"
+                className="text-sm rounded-xl border border-line dark:border-gray-800 bg-canvas/60 dark:bg-gray-800/50 text-muted px-3 py-2.5 cursor-not-allowed"
             >
                 <option>{value}</option>
             </select>
@@ -60,65 +84,109 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
+type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | null;
+
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
+    const { profile } = useAuth();
+    const [dialog, setDialog] = useState<OpenDialog>(null);
 
     return (
-        <div className="flex flex-col gap-3 sm:gap-6">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
-                Configuración
-            </h1>
+        <div className="flex flex-col gap-4 sm:gap-6">
 
-            {/* ── Preferencias del Sistema (Tema conectado a ThemeContext) ────── */}
-            <SettingsCard title="Preferencias del Sistema">
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tema</label>
-                        <select
-                            value={theme}
-                            onChange={e => {
-                                const next = e.target.value as 'light' | 'dark';
-                                if (next !== theme) toggleTheme();
-                            }}
-                            className="text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:border-[#2F7FD4]"
-                        >
-                            <option value="light">Claro</option>
-                            <option value="dark">Oscuro</option>
-                        </select>
-                    </div>
+            <PageHeader eyebrow="Tu cuenta" title="Configuración" />
 
-                    <DisabledSelect label="Idioma" value="Español" />
-                    <DisabledSelect label="Zona Horaria" value="GMT-6" />
-                </div>
-            </SettingsCard>
-
-            {/* ── Seguridad de la Cuenta + Notificaciones ──────────────────────── */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                <SettingsCard title="Seguridad de la Cuenta">
-                    <ActionRow label="Cambiar Contraseña" />
-                    <ActionRow label="Cambiar Correo Electrónico" />
-                    <ActionRow label="Sesiones Activas" />
+            {/* Tres bloques en escritorio, apilados en móvil */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+                <SettingsCard
+                    title="Seguridad de la Cuenta"
+                    subtitle="Administra el acceso y protege tu información."
+                >
+                    <ActionRow label="Cambiar Contraseña" icon={KeyRound} onClick={() => setDialog('password')} />
+                    <ActionRow label="Cambiar Correo Electrónico" icon={Mail} onClick={() => setDialog('email')} />
+                    <ActionRow label="Sesiones Activas" icon={MonitorSmartphone} />
                 </SettingsCard>
 
-                <SettingsCard title="Notificaciones">
-                    <NotificationRow label="Estado de Postulación" />
-                    <NotificationRow label="Recomendación de Curso" />
-                    <NotificationRow label="Alertas de Empleo" />
+                <SettingsCard
+                    title="Notificaciones"
+                    subtitle="Elige qué novedades quieres recibir."
+                >
+                    <ActionRow label="Estado de Postulación" icon={Bell} onClick={() => setDialog('applications')} />
+                    <ActionRow label="Recomendación de Curso" icon={GraduationCap} onClick={() => setDialog('courses')} />
+                    <ActionRow label="Alertas de Empleo" icon={Briefcase} onClick={() => setDialog('jobs')} />
+                </SettingsCard>
+
+                <SettingsCard
+                    title="Datos"
+                    subtitle="Controla tus datos y documentos legales."
+                >
+                    <ActionRow label="Descargar mis datos" icon={Download} />
+                    <ActionRow label="Eliminar Cuenta" icon={Trash2} danger onClick={() => setDialog('delete')} />
+                    <ActionRow label="Políticas de Privacidad" icon={Shield} />
+                    <ActionRow label="Términos y Condiciones" icon={FileText} />
                 </SettingsCard>
             </div>
 
-            {/* ── Datos ─────────────────────────────────────────────────────────── */}
-            <SettingsCard title="Datos">
-                <ActionRow label="Descargar mis datos" />
-                <ActionRow label="Eliminar Cuenta" danger />
-                <ActionRow label="Políticas de Privacidad" />
-                <ActionRow label="Términos y Condiciones" />
-            </SettingsCard>
+            {/* Preferencias y soporte */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+                <SettingsCard
+                    title="Preferencias del Sistema"
+                    subtitle="Personaliza CVExpert para trabajar a tu manera."
+                    className="lg:col-span-2"
+                >
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-medium text-muted">Tema</label>
+                            <select
+                                value={theme}
+                                onChange={e => {
+                                    const next = e.target.value as 'light' | 'dark';
+                                    if (next !== theme) toggleTheme();
+                                }}
+                                className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
+                            >
+                                <option value="light">Claro</option>
+                                <option value="dark">Oscuro</option>
+                            </select>
+                        </div>
 
-            {/* ── Contacto ──────────────────────────────────────────────────────── */}
-            <SettingsCard title="Para consultas contactar al soporte técnico">
-                <ActionRow label="Enviar Correo Electrónico" />
-            </SettingsCard>
+                        <DisabledSelect label="Idioma" value="Español" />
+                        <DisabledSelect label="Zona Horaria" value="Costa Rica (GMT-6)" />
+                    </div>
+                </SettingsCard>
+
+                {/* Soporte, en alto contraste como en el mockup */}
+                <div className="rounded-2xl bg-gradient-to-br from-ink to-deep p-5 flex flex-col gap-4 justify-between">
+                    <div className="flex items-start gap-3">
+                        <span className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
+                            <HelpCircle size={18} />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="text-base font-bold text-white">¿Necesitas ayuda?</h2>
+                            <p className="text-sm text-white/60">Contacta a nuestro equipo de soporte técnico.</p>
+                        </div>
+                    </div>
+                    {/* Sin funcionalidad por ahora: no hay buzón de soporte configurado */}
+                    <button
+                        disabled
+                        title="Todavía no disponible"
+                        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        Enviar Correo Electrónico
+                    </button>
+                </div>
+            </div>
+
+            <ChangePasswordDialog open={dialog === 'password'} onClose={() => setDialog(null)} />
+            <ChangeEmailDialog
+                open={dialog === 'email'}
+                onClose={() => setDialog(null)}
+                currentEmail={profile?.email}
+            />
+            <DeleteAccountDialog open={dialog === 'delete'} onClose={() => setDialog(null)} />
+            <ApplicationAlertsDialog open={dialog === 'applications'} onClose={() => setDialog(null)} />
+            <CourseAlertsDialog open={dialog === 'courses'} onClose={() => setDialog(null)} />
+            <JobAlertsDialog open={dialog === 'jobs'} onClose={() => setDialog(null)} />
         </div>
     );
 }

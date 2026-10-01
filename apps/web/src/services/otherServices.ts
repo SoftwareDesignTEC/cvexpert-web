@@ -1,6 +1,6 @@
-import { http } from './http';
+import { http, toPaginated } from './http';
 import type { CVTemplate, JobOffer, JobApplication, ApplicationStatus } from '../types/models';
-import type { PaginatedResponse, PaginationParams } from '../types/api';
+import type { PaginationParams } from '../types/api';
 
 // PLANTILLAS
 
@@ -11,7 +11,7 @@ export const templateService = {
             pageSize: String(pageSize),
             ...(search ? { search } : {}),
         });
-        return http.get<PaginatedResponse<CVTemplate>>(`/templates?${params}`);
+        return http.get<unknown>(`/templates?${params}`).then(r => toPaginated<CVTemplate>(r, pageSize, page));
     },
 };
 
@@ -24,7 +24,7 @@ export const jobService = {
             pageSize: String(pageSize),
             ...(search ? { search } : {}),
         });
-        return http.get<PaginatedResponse<JobOffer>>(`/jobs?${params}`);
+        return http.get<unknown>(`/jobs?${params}`).then(r => toPaginated<JobOffer>(r, pageSize, page));
     },
 
     getById: (id: string) =>
@@ -40,7 +40,7 @@ export const applicationService = {
             pageSize: String(pageSize),
             ...(search ? { search } : {}),
         });
-        return http.get<PaginatedResponse<JobApplication>>(`/applications?${params}`);
+        return http.get<unknown>(`/applications?${params}`).then(r => toPaginated<JobApplication>(r, pageSize, page));
     },
 
     create: (data: Omit<JobApplication, 'id' | 'appliedAt' | 'updatedAt'>) =>
