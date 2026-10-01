@@ -27,7 +27,9 @@ export function useApi<T>(
             const message = err instanceof Error ? err.message : 'Error desconocido';
             setState({ data: null, loading: false, error: message });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // `deps` llega por parametro porque el hook es generico, asi que no puede ser
+        // un literal como exigen las reglas. Es intencional y el hook no se usa todavia.
+        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/use-memo
     }, deps);
 
     useEffect(() => { fetch(); }, [fetch]);

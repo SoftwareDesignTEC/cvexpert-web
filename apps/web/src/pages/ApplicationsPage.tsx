@@ -179,22 +179,24 @@ export default function ApplicationsPage() {
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setError(null);
 
-        fetchAllApplications()
-            .then(({ items, total }) => {
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const { items, total } = await fetchAllApplications();
                 if (cancelled) return;
                 setApplications(items);
                 setTotal(total);
-            })
-            .catch(err => {
-                if (cancelled) return;
-                setError(err instanceof Error ? err.message : 'No se pudieron cargar las postulaciones');
-            })
-            .finally(() => {
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'No se pudieron cargar las postulaciones');
+                }
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
+        load();
 
         return () => { cancelled = true; };
     }, [reloadKey]);

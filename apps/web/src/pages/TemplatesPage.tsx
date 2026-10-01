@@ -125,20 +125,22 @@ export default function TemplatesPage() {
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setError(null);
 
-        fetchAllTemplates()
-            .then(all => {
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const all = await fetchAllTemplates();
                 if (!cancelled) setTemplates(all);
-            })
-            .catch(err => {
-                if (cancelled) return;
-                setError(err instanceof Error ? err.message : 'No se pudieron cargar las plantillas');
-            })
-            .finally(() => {
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'No se pudieron cargar las plantillas');
+                }
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
+        load();
 
         return () => { cancelled = true; };
     }, [reloadKey]);

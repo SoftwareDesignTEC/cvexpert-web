@@ -13,21 +13,22 @@ export default function SkillsGapPage() {
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setError(null);
 
-        skillsGapService
-            .getAll()
-            .then(res => {
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const res = await skillsGapService.getAll();
                 if (!cancelled) setItems(res.items);
-            })
-            .catch(err => {
-                if (cancelled) return;
-                setError(err instanceof Error ? err.message : 'No se pudo cargar el análisis de brecha');
-            })
-            .finally(() => {
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'No se pudo cargar el análisis de brecha');
+                }
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
+        load();
 
         return () => { cancelled = true; };
     }, [reloadKey]);

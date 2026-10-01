@@ -5,13 +5,22 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CENTRAL_AUTH_URL, isAllowedReturnUrl, isAuthorizedOrigin } from '../config';
 
+// El dominio central devuelve el token en el fragmento de la URL. A diferencia del
+// query, el fragmento nunca se envia al servidor: no queda en los registros de Azure
+// ni viaja en la cabecera Referer. Se sigue leyendo el query como respaldo para las
+// vistas previa que todavia corran la version anterior.
+function readIncomingToken(searchParams: URLSearchParams): string | null {
+    const hash = window.location.hash.replace(/^#/, '');
+    return new URLSearchParams(hash).get('token') ?? searchParams.get('token');
+}
+
 export default function LoginPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { isAuthenticated, loginWithCredential } = useAuth();
     const [error, setError] = useState<string | null>(null);
 
-    const tokenFromUrl = searchParams.get('token');
+    const tokenFromUrl = readIncomingToken(searchParams);
     const returnTo = searchParams.get('returnTo');
     const authorized = isAuthorizedOrigin();
 
@@ -27,6 +36,10 @@ export default function LoginPage() {
         }
     }, [tokenFromUrl]);
 
+    // Sin esta validacion, ?returnTo=https://cualquier-cosa recibiria el id_token
+    // del usuario. Se calcula en el render para no llamar a setState en el efecto.
+    const returnToAllowed = returnTo !== null && isAllowedReturnUrl(returnTo);
+
     // El efecto navega y redirige: sin esta guarda, cualquier render extra lo vuelve a
     // ejecutar y se encadenan navegaciones hasta que Chrome las empieza a frenar.
     const handled = useRef(false);
@@ -39,9 +52,20 @@ export default function LoginPage() {
             handled.current = true;
             loginWithCredential(tokenFromUrl);
             // replace: deja el token fuera del historial, así el botón "atrás" no
-            // vuelve a caer en /login?token=... y reinicia todo el flujo.
+            // vuelve a caer en /login con el token y reinicia todo el flujo.
             navigate('/', { replace: true });
             return;
+        }
+
+        // Alguien llego desde una vista previa y en este dominio ya hay sesion: se le
+        // devuelve el token guardado en vez de obligarlo a iniciar sesion de nuevo.
+        if (returnTo && returnToAllowed && authorized && isAuthenticated) {
+            const stored = localStorage.getItem('id_token');
+            if (stored) {
+                handled.current = true;
+                window.location.replace(`${returnTo}#token=${encodeURIComponent(stored)}`);
+                return;
+            }
         }
 
         if (!authorized) {
@@ -49,11 +73,13 @@ export default function LoginPage() {
             const target = `${window.location.origin}/login`;
             window.location.replace(`${CENTRAL_AUTH_URL}/login?returnTo=${encodeURIComponent(target)}`);
         }
-    }, [tokenFromUrl, tokenIsValid, authorized, loginWithCredential, navigate]);
+    }, [tokenFromUrl, tokenIsValid, authorized, isAuthenticated, returnTo, returnToAllowed, loginWithCredential, navigate]);
 
     const tokenError = tokenFromUrl && !tokenIsValid
         ? 'El token recibido no es válido. Probá iniciar sesión otra vez.'
-        : null;
+        : returnTo !== null && !returnToAllowed
+            ? 'El destino del inicio de sesión no está autorizado.'
+            : null;
 
     const message = (text: string) => (
         <div className="min-h-screen flex items-center justify-center px-4">
@@ -77,6 +103,7 @@ export default function LoginPage() {
         );
     }
 
+    if (isAuthenticated && returnTo) return message('Volviendo al sitio de origen...');
     if (isAuthenticated) return <Navigate to="/" replace />;
     if (tokenFromUrl) return message('Procesando inicio de sesión...');
     if (!authorized) return message('Redirigiendo al sitio principal para iniciar sesión...');
@@ -104,8 +131,7 @@ export default function LoginPage() {
                                 setError('El destino del inicio de sesión no está autorizado.');
                                 return;
                             }
-                            const separator = returnTo.includes('?') ? '&' : '?';
-                            window.location.replace(`${returnTo}${separator}token=${encodeURIComponent(credential)}`);
+                            window.location.replace(`${returnTo}#token=${encodeURIComponent(credential)}`);
                             return;
                         }
 
