@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Filter, Loader2, MapPin, Search } from 'lucide-react';
+import { Filter, Loader2, MapPin, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import { CompanyLogo } from '../components/ui/Avatar';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import { jobService } from '../services/otherServices';
@@ -78,13 +79,11 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
         >
             {/* Parte superior (mobile) / izquierda (desktop): logo + datos + compatibilidad */}
             <div className="flex items-center gap-3 md:flex-1 md:min-w-0">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
-                    {job.companyLogoUrl ? (
-                        <img src={job.companyLogoUrl} alt={job.company} className="w-full h-full object-cover" />
-                    ) : (
-                        <Briefcase size={18} className="text-gray-400" />
-                    )}
-                </div>
+                <CompanyLogo
+                    src={job.companyLogoUrl}
+                    name={job.company}
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary-tint text-primary text-sm dark:bg-gray-800"
+                />
 
                 <div className="flex-1 min-w-0">
                     <h3 className="text-base font-bold text-ink dark:text-white truncate sm:text-lg">{job.title}</h3>

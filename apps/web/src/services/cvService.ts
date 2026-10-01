@@ -1,6 +1,6 @@
-import { http } from './http';
+import { http, toPaginated } from './http';
 import type { CV } from '../types/models';
-import type { PaginatedResponse, PaginationParams } from '../types/api';
+import type { PaginationParams } from '../types/api';
 
 export const cvService = {
     getAll: ({ page, pageSize, search }: PaginationParams) => {
@@ -9,7 +9,7 @@ export const cvService = {
             pageSize: String(pageSize),
             ...(search ? { search } : {}),
         });
-        return http.get<PaginatedResponse<CV>>(`/cvs?${params}`);
+        return http.get<unknown>(`/cvs?${params}`).then(r => toPaginated<CV>(r, pageSize, page));
     },
 
     getById: (id: string) =>

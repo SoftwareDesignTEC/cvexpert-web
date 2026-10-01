@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { MapPin } from 'lucide-react';
+import { CompanyLogo } from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
@@ -135,13 +136,11 @@ function ApplicationCardContent({ application, dimmed }: { application: JobAppli
                 ${tone.card} ${dimmed ? 'opacity-50' : ''}`}
         >
             <div className="flex items-start gap-2">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden font-bold text-sm ${tone.avatar}`}>
-                    {application.companyLogoUrl ? (
-                        <img src={application.companyLogoUrl} alt={application.company} className="w-full h-full object-cover" />
-                    ) : (
-                        <span>{(application.company || '?').charAt(0).toUpperCase()}</span>
-                    )}
-                </div>
+                <CompanyLogo
+                    src={application.companyLogoUrl}
+                    name={application.company}
+                    className={`w-10 h-10 rounded-lg text-sm ${tone.avatar}`}
+                />
                 <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate">{application.jobTitle}</h4>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{application.company}</p>
@@ -237,12 +236,12 @@ function KanbanColumn({
                     ))
                 )}
 
-                {!expanded && items.length > INITIAL_VISIBLE && (
+                {items.length > INITIAL_VISIBLE && (
                     <button
-                        onClick={() => setExpanded(true)}
+                        onClick={() => setExpanded(v => !v)}
                         className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
                     >
-                        Ver Todo
+                        {expanded ? 'Ver menos' : 'Ver Todo'}
                     </button>
                 )}
             </div>

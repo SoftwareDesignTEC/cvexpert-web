@@ -84,19 +84,23 @@ interface TemplateSectionProps {
     main?: boolean;            // true = el encabezado lo pone PageHeader
     items: CVTemplate[];
     visibleCount: number;
+    initialCount: number;
     moreLabel: string;
     cardActionLabel: string;
     emptyText: string;
     onShowMore: () => void;
+    onShowLess: () => void;
     onCardAction: (t: CVTemplate) => void;
 }
 
 function TemplateSection({
-                             title, subtitle, main, items, visibleCount, moreLabel, cardActionLabel, emptyText,
-                             onShowMore, onCardAction,
+                             title, subtitle, main, items, visibleCount, initialCount, moreLabel,
+                             cardActionLabel, emptyText, onShowMore, onShowLess, onCardAction,
                          }: TemplateSectionProps) {
     const visible = items.slice(0, visibleCount);
     const hasMore = visibleCount < items.length;
+    // Sin esto, al expandir no había forma de volver atrás
+    const canCollapse = visibleCount > initialCount;
 
     return (
         <section className="flex flex-col gap-4">
@@ -111,11 +115,18 @@ function TemplateSection({
                         </div>
                         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
                     </div>
-                    {hasMore && (
-                        <Button variant="secondary" size="sm" onClick={onShowMore} className="shrink-0">
-                            {moreLabel}
-                        </Button>
-                    )}
+                    <div className="flex gap-2 shrink-0">
+                        {canCollapse && (
+                            <Button variant="secondary" size="sm" onClick={onShowLess}>
+                                Ver menos
+                            </Button>
+                        )}
+                        {hasMore && (
+                            <Button variant="secondary" size="sm" onClick={onShowMore}>
+                                {moreLabel}
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -191,6 +202,14 @@ export default function TemplatesPage() {
                         >
                             Ver todas
                         </Button>
+                    ) : offlineVisible > OFFLINE_INITIAL ? (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setOfflineVisible(OFFLINE_INITIAL)}
+                        >
+                            Ver menos
+                        </Button>
                     ) : undefined
                 }
             />
@@ -200,10 +219,12 @@ export default function TemplatesPage() {
                 title="Plantillas sin conexión"
                 items={offlineTemplates}
                 visibleCount={offlineVisible}
+                initialCount={OFFLINE_INITIAL}
                 moreLabel="Ver todas"
                 cardActionLabel="Usar esta plantilla"
                 emptyText="No hay plantillas disponibles sin conexión."
                 onShowMore={() => setOfflineVisible(v => v + OFFLINE_STEP)}
+                onShowLess={() => setOfflineVisible(OFFLINE_INITIAL)}
                 onCardAction={setViewing}
             />
 
@@ -214,10 +235,12 @@ export default function TemplatesPage() {
                     subtitle="Explora diseños premium para destacar tu experiencia."
                     items={storeTemplates}
                     visibleCount={storeVisible}
+                    initialCount={STORE_INITIAL}
                     moreLabel="Ver más"
                     cardActionLabel="Descargar Plantilla"
                     emptyText="No hay plantillas disponibles en la tienda."
                     onShowMore={() => setStoreVisible(v => v + STORE_STEP)}
+                    onShowLess={() => setStoreVisible(STORE_INITIAL)}
                     onCardAction={setDownloading}
                 />
             )}

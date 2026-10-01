@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import Card, { CardHeader, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import CVCard from '../components/ui/CVCard';
+import { CompanyLogo } from '../components/ui/Avatar';
 import SkillsRadar from '../components/ui/SkillsRadar';
-import { PlusCircle, Briefcase, MapPin, Loader2 } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
@@ -190,9 +191,11 @@ export default function DashboardPage() {
                                         onClick={() => navigate(`/jobs/${job.id}`)}
                                         className="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-1 px-1 rounded-lg transition-colors"
                                     >
-                                        <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                            <Briefcase size={14} className="text-gray-400" />
-                                        </div>
+                                        <CompanyLogo
+                                            src={job.companyLogoUrl}
+                                            name={job.company}
+                                            className="w-8 h-8 rounded-lg bg-primary-tint text-primary text-[11px] dark:bg-gray-800"
+                                        />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{job.title}</p>
                                             <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5">
@@ -221,9 +224,11 @@ export default function DashboardPage() {
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                                    <Briefcase size={18} className="text-gray-400" />
-                                                </div>
+                                                <CompanyLogo
+                                                    src={job.companyLogoUrl}
+                                                    name={job.company}
+                                                    className="w-10 h-10 rounded-lg bg-primary-tint text-primary text-sm dark:bg-gray-800"
+                                                />
                                                 <div>
                                                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{job.title}</h4>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400">{job.company}</p>

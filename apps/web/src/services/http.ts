@@ -1,5 +1,7 @@
 // Cliente HTTP base — todas las llamadas a APIM pasan por aquí
 
+import type { PaginatedResponse } from '../types/api';
+
 const BASE_URL = import.meta.env.VITE_APIM_BASE_URL;
 
 // AuthProvider escucha este evento para cerrar la sesión. Antes acá se hacía
@@ -49,6 +51,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     if (res.status === 204) return undefined as T;
 
     return res.json();
+}
+
+// Algunos endpoints del APIM devuelven el arreglo pelado en vez del objeto con
+// metadatos de paginación (`/jobs` hoy lo hace). Se normalizan las dos formas acá
+// para que las páginas siempre reciban la misma estructura.
+export function toPaginated<T>(res: unknown, pageSize: number, page = 1): PaginatedResponse<T> {
+    if (Array.isArray(res)) {
+        return { items: res as T[], totalRecords: res.length, page, pageSize };
+    }
+    const obj = (res ?? {}) as Partial<PaginatedResponse<T>>;
+    const items = obj.items ?? [];
+    return {
+        items,
+        totalRecords: obj.totalRecords ?? items.length,
+        page: obj.page ?? page,
+        pageSize: obj.pageSize ?? pageSize,
+    };
 }
 
 // Métodos HTTP exportados — los servicios los usan directamente

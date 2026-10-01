@@ -2,16 +2,10 @@ import { Menu, Moon, Sun, LogOut, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { Avatar } from './Avatar';
 
 interface HeaderProps {
     onMenuClick: () => void;
-}
-
-// Iniciales para el avatar cuando el perfil no trae foto
-function initials(name?: string) {
-    if (!name) return '?';
-    const parts = name.trim().split(/\s+/).slice(0, 2);
-    return parts.map(p => p[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
@@ -62,13 +56,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     <div className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-2 shadow-sm">
                         {/* Nombre y foto vienen del APIM, no del token: sin conexión no se muestran.
                             Mientras tanto se usan las iniciales para no dejar el hueco vacío. */}
-                        {profile?.photoUrl ? (
-                            <img src={profile.photoUrl} alt={profile.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                        ) : (
-                            <span className="w-8 h-8 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
-                                {initials(profile?.name)}
-                            </span>
-                        )}
+                        <Avatar src={profile?.photoUrl} name={profile?.name ?? 'Mi cuenta'} size={32} />
                         <span className="text-sm font-medium text-ink dark:text-gray-200 hidden sm:block max-w-[12rem] truncate">
                             {profile?.name ?? 'Mi cuenta'}
                         </span>

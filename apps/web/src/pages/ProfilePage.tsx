@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, UserCircle2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Avatar } from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import SkillsRadar from '../components/ui/SkillsRadar';
@@ -142,15 +143,7 @@ export default function ProfilePage() {
                 <div className="order-1 lg:flex-1 lg:min-w-0">
                     <Panel title="Información Personal">
                         <div className="flex items-center gap-4 min-w-0">
-                            {profile?.photoUrl ? (
-                                <img
-                                    src={profile.photoUrl}
-                                    alt={profile.name}
-                                    className="w-16 h-16 rounded-full object-cover shrink-0"
-                                />
-                            ) : (
-                                <UserCircle2 size={64} className="text-gray-300 dark:text-gray-700 shrink-0" />
-                            )}
+                            <Avatar src={profile?.photoUrl} name={profile?.name} size={64} />
                             <div className="min-w-0">
                                 <h3 className="text-xl font-bold text-ink dark:text-white truncate sm:text-2xl">
                                     {profile?.name ?? EMPTY}
