@@ -48,6 +48,11 @@ export default function Sidebar({ onClose }: SidebarProps) {
                     </NavLink>
                 ))}
             </nav>
+
+            {/* Version publicada: coincide con el tag de Git que crea el pipeline */}
+            <div className="px-6 py-3 border-t border-white/10">
+                <span className="text-xs text-white/50">Versión {__APP_VERSION__}</span>
+            </div>
         </aside>
     );
 }
