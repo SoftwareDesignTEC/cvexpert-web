@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
     DndContext,
+    DragOverlay,
     PointerSensor,
     useDraggable,
     useDroppable,
     useSensor,
     useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { MapPin } from 'lucide-react';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { ArrowLeftRight, Check, MapPin } from 'lucide-react';
 import { CompanyLogo } from '../components/ui/Avatar';
+import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
@@ -127,7 +129,13 @@ function formatDate(iso: string) {
 }
 
 // ── Contenido visual de la card (compartido entre desktop y mobile) ──────────
-function ApplicationCardContent({ application, dimmed }: { application: JobApplication; dimmed?: boolean }) {
+function ApplicationCardContent({
+    application, dimmed, onChangeStatus,
+}: {
+    application: JobApplication;
+    dimmed?: boolean;
+    onChangeStatus?: () => void;
+}) {
     const tone = toneFor(application.status);
 
     return (
@@ -156,51 +164,70 @@ function ApplicationCardContent({ application, dimmed }: { application: JobAppli
 
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-line dark:border-gray-800">
                 <span className="text-[10px] text-muted">{formatDate(application.appliedAt)}</span>
-                {/* Sin funcionalidad por ahora: no navega a ningún lado */}
-                <button
-                    disabled
-                    className={`rounded-md px-2 py-1 text-[10px] font-medium disabled:opacity-60 disabled:cursor-not-allowed ${tone.action}`}
-                >
-                    Detalles
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Alternativa al arrastrar, que en pantallas táctiles no funciona */}
+                    {onChangeStatus && (
+                        <button
+                            onClick={e => { e.stopPropagation(); onChangeStatus(); }}
+                            // Evita que el gesto inicie un arrastre en vez de pulsar
+                            onPointerDown={e => e.stopPropagation()}
+                            title="Cambiar de estado"
+                            aria-label="Cambiar de estado"
+                            className={`rounded-md p-1.5 transition-colors ${tone.action}`}
+                        >
+                            <ArrowLeftRight size={13} />
+                        </button>
+                    )}
+                    {/* Sin funcionalidad por ahora: no navega a ningún lado */}
+                    <button
+                        disabled
+                        className={`rounded-md px-2 py-1 text-[10px] font-medium disabled:opacity-60 disabled:cursor-not-allowed ${tone.action}`}
+                    >
+                        Detalles
+                    </button>
+                </div>
             </div>
         </div>
     );
 }
 
 // ── Card arrastrable (solo desktop) ───────────────────────────────────────────
-function DraggableApplicationCard({ application, disabled }: { application: JobApplication; disabled: boolean }) {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+function DraggableApplicationCard({
+    application, disabled, onChangeStatus,
+}: {
+    application: JobApplication;
+    disabled: boolean;
+    onChangeStatus: () => void;
+}) {
+    // Sin transform propio: la copia que sigue al cursor la dibuja DragOverlay, que
+    // vive fuera del árbol y por eso no la recorta el overflow de la columna.
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: application.id,
         disabled,
     });
 
-    const style = transform
-        ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 10 }
-        : undefined;
-
     return (
         <div
             ref={setNodeRef}
-            style={style}
             {...listeners}
             {...attributes}
-            className={`touch-none ${isDragging ? 'opacity-70' : ''} ${disabled ? 'cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
+            className={`touch-none ${isDragging ? 'opacity-30' : ''} ${disabled ? 'cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
         >
-            <ApplicationCardContent application={application} dimmed={disabled} />
+            <ApplicationCardContent application={application} dimmed={disabled} onChangeStatus={onChangeStatus} />
         </div>
     );
 }
 
 // ── Columna del Kanban (droppable, solo desktop) ──────────────────────────────
 function KanbanColumn({
-                          status, label, tone, items, pendingId,
+                          status, label, tone, items, pendingId, onChangeStatus,
                       }: {
     status: ApplicationStatus;
     label: string;
     tone: ColumnTone;
     items: JobApplication[];
     pendingId: string | null;
+    onChangeStatus: (app: JobApplication) => void;
 }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
     const [expanded, setExpanded] = useState(false);
@@ -232,6 +259,7 @@ function KanbanColumn({
                             key={app.id}
                             application={app}
                             disabled={pendingId === app.id}
+                            onChangeStatus={() => onChangeStatus(app)}
                         />
                     ))
                 )}
@@ -249,6 +277,46 @@ function KanbanColumn({
     );
 }
 
+// ── Selector de estado, pensado para pantallas donde no se puede arrastrar ────
+function StatusPickerDialog({
+    application, onClose, onSelect,
+}: {
+    application: JobApplication | null;
+    onClose: () => void;
+    onSelect: (status: ApplicationStatus) => void;
+}) {
+    return (
+        <Modal
+            open={application !== null}
+            title="Cambiar de estado"
+            description={application?.jobTitle}
+            onClose={onClose}
+        >
+            <div className="flex flex-col gap-2">
+                {COLUMNS.map(col => {
+                    const current = application?.status === col.status;
+                    return (
+                        <button
+                            key={col.status}
+                            onClick={() => { if (!current) onSelect(col.status); onClose(); }}
+                            className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors
+                                ${current ? col.tone.column : 'border-line dark:border-gray-800 hover:border-primary'}`}
+                        >
+                            <span className="flex items-center gap-2 min-w-0">
+                                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${col.tone.dot}`} />
+                                <span className={`text-sm font-medium truncate ${current ? col.tone.title : 'text-ink dark:text-gray-100'}`}>
+                                    {col.label}
+                                </span>
+                            </span>
+                            {current && <Check size={16} className="text-primary shrink-0" />}
+                        </button>
+                    );
+                })}
+            </div>
+        </Modal>
+    );
+}
+
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function ApplicationsPage() {
     const [applications, setApplications] = useState<JobApplication[]>([]);
@@ -259,6 +327,8 @@ export default function ApplicationsPage() {
 
     // Estado del arrastre: se espera la confirmación de APIM antes de mover la card
     const [pendingId, setPendingId] = useState<string | null>(null);
+    const [statusFor, setStatusFor] = useState<JobApplication | null>(null);
+    const [draggingApp, setDraggingApp] = useState<JobApplication | null>(null);
     const [moveError, setMoveError] = useState<string | null>(null);
 
     // Mobile: pestañas en vez de columnas lado a lado
@@ -298,12 +368,8 @@ export default function ApplicationsPage() {
         [applications],
     );
 
-    const handleDragEnd = async (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (!over) return;
-
-        const appId = String(active.id);
-        const newStatus = over.id as ApplicationStatus;
+    // Misma lógica para el arrastre y para el selector: sólo cambia cómo se dispara
+    const changeStatus = async (appId: string, newStatus: ApplicationStatus) => {
         const app = applications.find(a => a.id === appId);
         if (!app || app.status === newStatus) return;
 
@@ -318,6 +384,17 @@ export default function ApplicationsPage() {
         } finally {
             setPendingId(null);
         }
+    };
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setDraggingApp(applications.find(a => a.id === String(event.active.id)) ?? null);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setDraggingApp(null);
+        if (!over) return;
+        void changeStatus(String(active.id), over.id as ApplicationStatus);
     };
 
     if (loading) return <LoadingSpinner />;
@@ -350,7 +427,12 @@ export default function ApplicationsPage() {
 
             {/* ── Desktop: tablero Kanban con arrastrar y soltar ─────────────── */}
             <div className="hidden lg:block">
-                <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                <DndContext
+                    sensors={sensors}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={() => setDraggingApp(null)}
+                >
                     <div className="grid grid-cols-4 gap-4">
                         {columns.map(col => (
                             <KanbanColumn
@@ -360,9 +442,19 @@ export default function ApplicationsPage() {
                                 tone={col.tone}
                                 items={col.items}
                                 pendingId={pendingId}
+                                onChangeStatus={setStatusFor}
                             />
                         ))}
                     </div>
+
+                    {/* La copia que sigue al cursor, por encima de todo el tablero */}
+                    <DragOverlay dropAnimation={null}>
+                        {draggingApp && (
+                            <div className="cursor-grabbing rotate-2 shadow-xl">
+                                <ApplicationCardContent application={draggingApp} />
+                            </div>
+                        )}
+                    </DragOverlay>
                 </DndContext>
             </div>
 
@@ -389,17 +481,28 @@ export default function ApplicationsPage() {
                 ) : (
                     <div className="flex flex-col gap-2">
                         {visibleMobile.map(app => (
-                            <ApplicationCardContent key={app.id} application={app} />
+                            <ApplicationCardContent
+                                key={app.id}
+                                application={app}
+                                dimmed={pendingId === app.id}
+                                onChangeStatus={() => setStatusFor(app)}
+                            />
                         ))}
 
-                        {!mobileExpanded && activeColumnItems.length > INITIAL_VISIBLE && (
-                            <Button variant="secondary" className="w-full" onClick={() => setMobileExpanded(true)}>
-                                Ver Todo
+                        {activeColumnItems.length > INITIAL_VISIBLE && (
+                            <Button variant="secondary" className="w-full" onClick={() => setMobileExpanded(v => !v)}>
+                                {mobileExpanded ? 'Ver menos' : 'Ver Todo'}
                             </Button>
                         )}
                     </div>
                 )}
             </div>
+
+            <StatusPickerDialog
+                application={statusFor}
+                onClose={() => setStatusFor(null)}
+                onSelect={status => { if (statusFor) void changeStatus(statusFor.id, status); }}
+            />
         </div>
     );
 }

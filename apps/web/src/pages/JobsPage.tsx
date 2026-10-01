@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Loader2, MapPin, Search } from 'lucide-react';
+import { Filter, MapPin, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { CompanyLogo } from '../components/ui/Avatar';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
+import Modal from '../components/ui/Modal';
+import { ChipGroup } from '../components/ui/FormBits';
 import { jobService } from '../services/otherServices';
 import type { JobOffer } from '../types/models';
 
-// Fase 1: primeras 3 ofertas visibles sin scroll; "Ver Todas las Ofertas" carga las siguientes hacia abajo
-const PAGE_SIZE = 3;
+// El APIM todavía no filtra, así que se descarga el catálogo completo una vez y
+// los filtros trabajan sobre todas las ofertas, no sólo sobre las que están a la vista.
+const FETCH_PAGE_SIZE = 50;
+const MAX_PAGES = 20;   // salvavidas contra bucles si el endpoint ignora la paginación
+const INITIAL_VISIBLE = 3;
+const STEP = 6;
 const MAX_REQUIREMENTS = 3;
 
 // Accesos rapidos del mockup. Filtran sobre las ofertas ya cargadas: el mock de APIM
@@ -25,6 +31,29 @@ const QUICK_FILTERS = [
 type QuickFilter = typeof QUICK_FILTERS[number]['id'];
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+const MODALITY_OPTIONS: { value: JobOffer['modality']; label: string }[] = [
+    { value: 'remote',  label: 'Remoto' },
+    { value: 'on-site', label: 'Presencial' },
+    { value: 'hybrid',  label: 'Híbrido' },
+];
+
+const TYPE_OPTIONS: { value: JobOffer['type']; label: string }[] = [
+    { value: 'full-time',  label: 'Tiempo completo' },
+    { value: 'part-time',  label: 'Medio tiempo' },
+    { value: 'freelance',  label: 'Freelance' },
+    { value: 'internship', label: 'Práctica profesional' },
+];
+
+async function fetchAllJobs(search?: string): Promise<JobOffer[]> {
+    const all: JobOffer[] = [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+        const res = await jobService.getAll({ page, pageSize: FETCH_PAGE_SIZE, search });
+        all.push(...(res.items ?? []));
+        if (!res.items?.length || all.length >= (res.totalRecords ?? 0)) break;
+    }
+    return all;
+}
 
 const modalityLabel: Record<JobOffer['modality'], string> = {
     'remote':  'Remoto',
@@ -134,13 +163,15 @@ export default function JobsPage() {
     const navigate = useNavigate();
 
     const [items, setItems] = useState<JobOffer[]>([]);
-    const [page, setPage] = useState(1);
-    const [totalRecords, setTotalRecords] = useState(0);
+    const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [modalities, setModalities] = useState<JobOffer['modality'][]>([]);
+    const [types, setTypes] = useState<JobOffer['type'][]>([]);
+    const [sectors, setSectors] = useState<string[]>([]);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
@@ -155,20 +186,18 @@ export default function JobsPage() {
         return () => clearTimeout(t);
     }, [searchInput]);
 
-    // Carga inicial y cada vez que cambia la búsqueda (vuelve a la página 1)
+    // Se descarga el catálogo entero para que los filtros vean todas las ofertas
     useEffect(() => {
         let cancelled = false;
 
         const load = async () => {
             setLoading(true);
             setError(null);
-            setLoadMoreError(null);
             try {
-                const res = await jobService.getAll({ page: 1, pageSize: PAGE_SIZE, search: search || undefined });
+                const all = await fetchAllJobs(search || undefined);
                 if (cancelled) return;
-                setItems(res.items ?? []);
-                setPage(1);
-                setTotalRecords(res.totalRecords);
+                setItems(all);
+                setVisibleCount(INITIAL_VISIBLE);
             } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'No se pudieron cargar las ofertas');
@@ -182,42 +211,43 @@ export default function JobsPage() {
         return () => { cancelled = true; };
     }, [search, reloadKey]);
 
-    // "Ver Todas las Ofertas": agrega la siguiente página hacia abajo
-    const loadMore = async () => {
-        const next = page + 1;
-        setLoadingMore(true);
-        setLoadMoreError(null);
-        try {
-            const res = await jobService.getAll({
-                page: next,
-                pageSize: PAGE_SIZE,
-                search: search || undefined,
-            });
-            setItems(prev => [...prev, ...(res.items ?? [])]);
-            setPage(next);
-            setTotalRecords(res.totalRecords);
-        } catch (err) {
-            setLoadMoreError(err instanceof Error ? err.message : 'No se pudieron cargar más ofertas');
-        } finally {
-            setLoadingMore(false);
-        }
-    };
+    // Los sectores salen de las propias ofertas: no hay catálogo fijo
+    const sectorOptions = useMemo(
+        () => [...new Set(items.map(j => j.sector).filter(Boolean))].sort(),
+        [items],
+    );
 
-    const visibleItems = useMemo(() => {
+    const toggle = <T,>(list: T[], value: T) =>
+        list.includes(value) ? list.filter(v => v !== value) : [...list, value];
+
+    const activeFilters = modalities.length + types.length + sectors.length;
+
+    const clearFilters = () => { setModalities([]); setTypes([]); setSectors([]); };
+
+    // Primero el panel de filtros, después el chip, y al final el orden
+    const filtered = useMemo(() => {
+        let list = items;
+
+        if (modalities.length) list = list.filter(j => modalities.includes(j.modality));
+        if (types.length)      list = list.filter(j => types.includes(j.type));
+        if (sectors.length)    list = list.filter(j => sectors.includes(j.sector));
+
         switch (quickFilter) {
             case 'remote':
-                return items.filter(j => j.modality === 'remote');
+                return list.filter(j => j.modality === 'remote');
             case 'hybrid':
-                return items.filter(j => j.modality === 'hybrid');
+                return list.filter(j => j.modality === 'hybrid');
             case 'recent':
-                return items.filter(j => new Date(j.postedAt).getTime() >= recentCutoff);
+                return list.filter(j => new Date(j.postedAt).getTime() >= recentCutoff);
             default:
                 // "Recomendadas": todas, de mayor a menor compatibilidad
-                return [...items].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+                return [...list].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
         }
-    }, [items, quickFilter, recentCutoff]);
+    }, [items, quickFilter, recentCutoff, modalities, types, sectors]);
 
-    const hasMore = items.length < totalRecords;
+    const visibleItems = filtered.slice(0, visibleCount);
+    const hasMore = visibleCount < filtered.length;
+    const canCollapse = visibleCount > INITIAL_VISIBLE;
 
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
@@ -226,9 +256,9 @@ export default function JobsPage() {
                 eyebrow="Oportunidades para ti"
                 title="Ofertas Laborales"
                 action={
-                    totalRecords > 0 ? (
+                    filtered.length > 0 ? (
                         <span className="inline-block rounded-full bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary-dark dark:bg-primary/15 dark:text-primary">
-                            {totalRecords} {totalRecords === 1 ? 'oferta encontrada' : 'ofertas encontradas'}
+                            {filtered.length} {filtered.length === 1 ? 'oferta encontrada' : 'ofertas encontradas'}
                         </span>
                     ) : undefined
                 }
@@ -246,10 +276,22 @@ export default function JobsPage() {
                         className="w-full rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-3 pl-12 pr-4 text-sm text-ink dark:text-white placeholder:text-muted shadow-sm focus:outline-none focus:border-primary"
                     />
                 </div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 px-4 py-3 text-sm font-medium text-body dark:text-gray-300 shadow-sm shrink-0">
+                <button
+                    onClick={() => setFiltersOpen(true)}
+                    className={`inline-flex items-center gap-2 rounded-full border bg-surface dark:bg-gray-900 px-4 py-3 text-sm font-medium shadow-sm shrink-0 transition-colors
+                        ${activeFilters > 0
+                        ? 'border-primary text-primary'
+                        : 'border-line dark:border-gray-800 text-body dark:text-gray-300 hover:border-primary'
+                    }`}
+                >
                     <Filter size={16} aria-hidden="true" />
                     <span className="hidden sm:inline">Filtros</span>
-                </span>
+                    {activeFilters > 0 && (
+                        <span className="rounded-full bg-primary px-1.5 text-xs font-bold text-white">
+                            {activeFilters}
+                        </span>
+                    )}
+                </button>
             </div>
 
             {/* ── Accesos rápidos ─────────────────────────────────────────────── */}
@@ -274,32 +316,86 @@ export default function JobsPage() {
                 <LoadingSpinner />
             ) : error ? (
                 <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />
-            ) : visibleItems.length === 0 ? (
-                <p className="text-sm text-muted">
-                    No se encontraron ofertas{search ? ` para "${search}"` : ''}
-                    {quickFilter !== 'recommended' ? ' con ese filtro' : ''}.
-                </p>
+            ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-start gap-3">
+                    <p className="text-sm text-muted">
+                        No se encontraron ofertas{search ? ` para "${search}"` : ''}
+                        {activeFilters > 0 || quickFilter !== 'recommended' ? ' con esos filtros' : ''}.
+                    </p>
+                    {activeFilters > 0 && (
+                        <Button variant="secondary" size="sm" onClick={clearFilters}>
+                            Quitar filtros
+                        </Button>
+                    )}
+                </div>
             ) : (
                 <div className="flex flex-col gap-3">
                     {visibleItems.map(job => (
                         <JobRow key={job.id} job={job} onOpen={() => navigate(`/jobs/${job.id}`)} />
                     ))}
 
-                    {hasMore && (
-                        <Button
-                            variant="secondary"
-                            className="w-full"
-                            onClick={loadMore}
-                            disabled={loadingMore}
-                        >
-                            {loadingMore && <Loader2 size={16} className="animate-spin" />}
-                            Ver Todas las Ofertas
-                        </Button>
-                    )}
-
-                    {loadMoreError && <ErrorMessage message={loadMoreError} onRetry={loadMore} />}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        {hasMore && (
+                            <Button
+                                variant="secondary"
+                                className="w-full"
+                                onClick={() => setVisibleCount(v => v + STEP)}
+                            >
+                                Ver Más Ofertas
+                            </Button>
+                        )}
+                        {canCollapse && (
+                            <Button
+                                variant="secondary"
+                                className="w-full"
+                                onClick={() => setVisibleCount(INITIAL_VISIBLE)}
+                            >
+                                Ver menos
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
+
+            {/* Panel de filtros */}
+            <Modal
+                open={filtersOpen}
+                title="Filtrar ofertas"
+                description="Se combinan con los accesos rápidos y la búsqueda."
+                onClose={() => setFiltersOpen(false)}
+            >
+                <div className="flex flex-col gap-5">
+                    <ChipGroup
+                        label="Modalidad"
+                        options={MODALITY_OPTIONS}
+                        selected={modalities}
+                        onToggle={v => setModalities(prev => toggle(prev, v))}
+                    />
+                    <ChipGroup
+                        label="Tipo de jornada"
+                        options={TYPE_OPTIONS}
+                        selected={types}
+                        onToggle={v => setTypes(prev => toggle(prev, v))}
+                    />
+                    {sectorOptions.length > 0 && (
+                        <ChipGroup
+                            label="Sector"
+                            options={sectorOptions.map(sec => ({ value: sec, label: sec }))}
+                            selected={sectors}
+                            onToggle={v => setSectors(prev => toggle(prev, v))}
+                        />
+                    )}
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                        <Button variant="secondary" size="sm" onClick={clearFilters} disabled={activeFilters === 0}>
+                            Quitar filtros
+                        </Button>
+                        <Button size="sm" onClick={() => setFiltersOpen(false)}>
+                            Ver {filtered.length} {filtered.length === 1 ? 'oferta' : 'ofertas'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
