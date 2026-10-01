@@ -142,25 +142,26 @@ export default function JobsPage() {
     // Carga inicial y cada vez que cambia la búsqueda (vuelve a la página 1)
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setError(null);
-        setLoadMoreError(null);
 
-        jobService
-            .getAll({ page: 1, pageSize: PAGE_SIZE, search: search || undefined })
-            .then(res => {
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            setLoadMoreError(null);
+            try {
+                const res = await jobService.getAll({ page: 1, pageSize: PAGE_SIZE, search: search || undefined });
                 if (cancelled) return;
                 setItems(res.items);
                 setPage(1);
                 setTotalRecords(res.totalRecords);
-            })
-            .catch(err => {
-                if (cancelled) return;
-                setError(err instanceof Error ? err.message : 'No se pudieron cargar las ofertas');
-            })
-            .finally(() => {
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'No se pudieron cargar las ofertas');
+                }
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
+        load();
 
         return () => { cancelled = true; };
     }, [search, reloadKey]);

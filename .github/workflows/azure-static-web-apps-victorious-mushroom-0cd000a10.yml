@@ -34,6 +34,16 @@ jobs:
         working-directory: apps/web
         run: npm ci
 
+      # Validacion previa al despliegue: si el analisis estatico o los tipos fallan,
+      # el job se detiene aqui y no se publica nada.
+      - name: Lint
+        working-directory: apps/web
+        run: npm run lint
+
+      - name: Verificar tipos
+        working-directory: apps/web
+        run: npx tsc --noEmit -p tsconfig.app.json
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1

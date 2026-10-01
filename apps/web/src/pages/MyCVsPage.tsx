@@ -66,25 +66,26 @@ export default function MyCVsPage() {
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setError(null);
-        setLoadMoreError(null);
 
-        cvService
-            .getAll({ page: 1, pageSize: PAGE_SIZE })
-            .then(res => {
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            setLoadMoreError(null);
+            try {
+                const res = await cvService.getAll({ page: 1, pageSize: PAGE_SIZE });
                 if (cancelled) return;
                 setItems(res.items);
                 setPage(1);
                 setTotalRecords(res.totalRecords);
-            })
-            .catch(err => {
-                if (cancelled) return;
-                setError(err instanceof Error ? err.message : 'No se pudieron cargar los currículums');
-            })
-            .finally(() => {
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'No se pudieron cargar los currículums');
+                }
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
+        load();
 
         return () => { cancelled = true; };
     }, [reloadKey]);
