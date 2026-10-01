@@ -203,7 +203,7 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         {job.matchScore !== undefined && (
-                                            <span className="shrink-0 text-[10px] font-bold text-[#2F7FD4]">
+                                            <span className="shrink-0 text-[10px] font-bold text-primary">
                                                 {job.matchScore}% match
                                             </span>
                                         )}
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                                     <div
                                         key={job.id}
                                         onClick={() => navigate(`/jobs/${job.id}`)}
-                                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md hover:border-[#2F7FD4] dark:hover:border-[#2F7FD4] transition-all cursor-pointer"
+                                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md hover:border-primary dark:hover:border-primary transition-all cursor-pointer"
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-3">
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                                                 </div>
                                             </div>
                                             {job.matchScore !== undefined && (
-                                                <span className="shrink-0 text-xs font-bold text-[#2F7FD4] bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
+                                                <span className="shrink-0 text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
                                                     {job.matchScore}% match
                                                 </span>
                                             )}

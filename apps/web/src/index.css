@@ -4,9 +4,49 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    /* Colores provisionales — se actualizan cuando Samuel mande los hex */
-    --color-primary: #2F7FD4;
-    --color-primary-dark: #1A3A6B;
-    --color-secondary: #63B3ED;
+    /* Paleta derivada de los mockups de Samuel. Los componentes usan estos tokens
+       (bg-primary, text-ink, border-line...) en vez de hex sueltos, para que un
+       cambio de identidad se haga solo aqui. */
+
+    /* Azul de marca: botones principales, enlaces y estado activo */
+    --color-primary: #2563EB;
+    --color-primary-dark: #1D4ED8;
+    --color-primary-soft: #DBEAFE;
+    --color-primary-tint: #EFF4FF;
+
+    /* Azul oscuro casi negro: botones secundarios y bloques de alto contraste */
+    --color-ink: #0F172A;
+    --color-ink-soft: #111827;
+    --color-deep: #172554;
+
+    /* Texto */
+    --color-body: #334155;
+    --color-muted: #64748B;
+
+    /* Superficies */
+    --color-surface: #FFFFFF;
+    --color-canvas: #E6EDFB;
+    --color-line: #E2E8F0;
+
+    /* Superficies del modo oscuro */
     --color-surface-dark: #0F172A;
+    --color-canvas-dark: #020617;
+    --color-line-dark: #1E293B;
+
+    /* Acentos de estado */
+    --color-success: #16A34A;
+    --color-success-soft: #DCFCE7;
+    --color-warning: #F59E0B;
+}
+
+/* Fondo general: degradado azulado muy claro, como en los mockups */
+body {
+    background: linear-gradient(180deg, var(--color-canvas) 0%, #F0F4FD 100%);
+    background-attachment: fixed;
+    color: var(--color-ink);
+}
+
+.dark body {
+    background: linear-gradient(180deg, var(--color-canvas-dark) 0%, #0B1222 100%);
+    color: #E2E8F0;
 }

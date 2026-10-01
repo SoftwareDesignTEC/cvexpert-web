@@ -8,6 +8,7 @@ export interface CourseSuggestion {
     title: string;
     url: string;
     platform: string;
+    logoUrl?: string;
     durationHours: number;
 }
 

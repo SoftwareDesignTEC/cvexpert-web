@@ -8,10 +8,11 @@ import {
     useSensors,
 } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { Briefcase, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
+import PageHeader from '../components/ui/PageHeader';
 import { applicationService } from '../services/otherServices';
 import type { ApplicationStatus, JobApplication } from '../types/models';
 
@@ -23,12 +24,84 @@ const INITIAL_VISIBLE = 3;
 const FETCH_PAGE_SIZE = 50;
 const MAX_PAGES = 20; // salvavidas contra bucles si el endpoint ignora la paginación
 
-const COLUMNS: { status: ApplicationStatus; label: string }[] = [
-    { status: 'applied',     label: 'Aplicado' },
-    { status: 'in-progress', label: 'En Proceso' },
-    { status: 'interview',   label: 'Entrevista' },
-    { status: 'rejected',    label: 'Rechazado' },
+interface ColumnTone {
+    column: string;   // borde superior y marco de la columna
+    header: string;   // fondo de la cabecera
+    title: string;
+    dot: string;
+    badge: string;
+    card: string;     // borde de cada tarjeta
+    action: string;   // botones "Detalles" y "Ver Todo"
+    avatar: string;
+    over: string;     // resaltado al arrastrar encima
+    tab: string;      // pestaña activa en movil
+}
+
+const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] = [
+    {
+        status: 'applied', label: 'Aplicado',
+        tone: {
+            column: 'border-t-4 border-t-blue-500 border border-blue-200 dark:border-blue-900',
+            header: 'bg-blue-50 dark:bg-blue-950/30',
+            title:  'text-blue-700 dark:text-blue-300',
+            dot:    'bg-blue-500',
+            badge:  'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+            card:   'border-blue-200 dark:border-blue-900',
+            action: 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300',
+            avatar: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300',
+            over:   'bg-blue-100/60 dark:bg-blue-900/20',
+            tab:    'bg-blue-500 text-white border-blue-500',
+        },
+    },
+    {
+        status: 'in-progress', label: 'En Proceso',
+        tone: {
+            column: 'border-t-4 border-t-cyan-500 border border-cyan-200 dark:border-cyan-900',
+            header: 'bg-cyan-50 dark:bg-cyan-950/30',
+            title:  'text-cyan-700 dark:text-cyan-300',
+            dot:    'bg-cyan-500',
+            badge:  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+            card:   'border-cyan-200 dark:border-cyan-900',
+            action: 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:text-cyan-300',
+            avatar: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-950/40 dark:text-cyan-300',
+            over:   'bg-cyan-100/60 dark:bg-cyan-900/20',
+            tab:    'bg-cyan-500 text-white border-cyan-500',
+        },
+    },
+    {
+        status: 'interview', label: 'Entrevista',
+        tone: {
+            column: 'border-t-4 border-t-emerald-600 border border-emerald-200 dark:border-emerald-900',
+            header: 'bg-emerald-50 dark:bg-emerald-950/30',
+            title:  'text-emerald-700 dark:text-emerald-300',
+            dot:    'bg-emerald-600',
+            badge:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+            card:   'border-emerald-200 dark:border-emerald-900',
+            action: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300',
+            avatar: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300',
+            over:   'bg-emerald-100/60 dark:bg-emerald-900/20',
+            tab:    'bg-emerald-600 text-white border-emerald-600',
+        },
+    },
+    {
+        status: 'rejected', label: 'Rechazado',
+        tone: {
+            column: 'border-t-4 border-t-rose-500 border border-rose-200 dark:border-rose-900',
+            header: 'bg-rose-50 dark:bg-rose-950/30',
+            title:  'text-rose-700 dark:text-rose-300',
+            dot:    'bg-rose-500',
+            badge:  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+            card:   'border-rose-200 dark:border-rose-900',
+            action: 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300',
+            avatar: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300',
+            over:   'bg-rose-100/60 dark:bg-rose-900/20',
+            tab:    'bg-rose-500 text-white border-rose-500',
+        },
+    },
 ];
+
+const toneFor = (status: ApplicationStatus) =>
+    COLUMNS.find(c => c.status === status)!.tone;
 
 const modalityLabel: Record<JobApplication['modality'], string> = {
     'remote':  'Remoto',
@@ -54,17 +127,19 @@ function formatDate(iso: string) {
 
 // ── Contenido visual de la card (compartido entre desktop y mobile) ──────────
 function ApplicationCardContent({ application, dimmed }: { application: JobApplication; dimmed?: boolean }) {
+    const tone = toneFor(application.status);
+
     return (
         <div
-            className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col gap-2 transition-opacity
-                ${dimmed ? 'opacity-50' : ''}`}
+            className={`bg-surface dark:bg-gray-900 border rounded-xl p-3 flex flex-col gap-2 shadow-sm transition-opacity
+                ${tone.card} ${dimmed ? 'opacity-50' : ''}`}
         >
             <div className="flex items-start gap-2">
-                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden font-bold text-sm ${tone.avatar}`}>
                     {application.companyLogoUrl ? (
                         <img src={application.companyLogoUrl} alt={application.company} className="w-full h-full object-cover" />
                     ) : (
-                        <Briefcase size={16} className="text-gray-400" />
+                        <span>{(application.company || '?').charAt(0).toUpperCase()}</span>
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -80,12 +155,15 @@ function ApplicationCardContent({ application, dimmed }: { application: JobAppli
                 </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <span className="text-[10px] text-gray-400">{formatDate(application.appliedAt)}</span>
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-line dark:border-gray-800">
+                <span className="text-[10px] text-muted">{formatDate(application.appliedAt)}</span>
                 {/* Sin funcionalidad por ahora: no navega a ningún lado */}
-                <Button variant="secondary" size="sm" disabled className="text-[10px] px-2 py-1">
+                <button
+                    disabled
+                    className={`rounded-md px-2 py-1 text-[10px] font-medium disabled:opacity-60 disabled:cursor-not-allowed ${tone.action}`}
+                >
                     Detalles
-                </Button>
+                </button>
             </div>
         </div>
     );
@@ -117,10 +195,11 @@ function DraggableApplicationCard({ application, disabled }: { application: JobA
 
 // ── Columna del Kanban (droppable, solo desktop) ──────────────────────────────
 function KanbanColumn({
-                          status, label, items, pendingId,
+                          status, label, tone, items, pendingId,
                       }: {
     status: ApplicationStatus;
     label: string;
+    tone: ColumnTone;
     items: JobApplication[];
     pendingId: string | null;
 }) {
@@ -131,28 +210,42 @@ function KanbanColumn({
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col gap-2 rounded-xl p-2 min-h-[160px] transition-colors
-                ${isOver ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-50 dark:bg-gray-800/40'}`}
+            className={`flex flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 min-h-[160px] transition-colors
+                ${tone.column} ${isOver ? tone.over : ''}`}
         >
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white px-1">{label}</h3>
+            {/* Cabecera con el color del estado, su punto y el contador */}
+            <div className={`flex items-center justify-between gap-2 px-3 py-2.5 ${tone.header}`}>
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${tone.dot}`} />
+                    <h3 className={`text-sm font-bold truncate ${tone.title}`}>{label}</h3>
+                </div>
+                <span className={`text-xs font-semibold rounded-full px-2 py-0.5 shrink-0 ${tone.badge}`}>
+                    {items.length}
+                </span>
+            </div>
 
-            {visible.length === 0 ? (
-                <p className="text-xs text-gray-400 px-1">Sin postulaciones.</p>
-            ) : (
-                visible.map(app => (
-                    <DraggableApplicationCard
-                        key={app.id}
-                        application={app}
-                        disabled={pendingId === app.id}
-                    />
-                ))
-            )}
+            <div className="flex flex-col gap-2 p-2">
+                {visible.length === 0 ? (
+                    <p className="text-xs text-muted px-1 py-2">Sin postulaciones.</p>
+                ) : (
+                    visible.map(app => (
+                        <DraggableApplicationCard
+                            key={app.id}
+                            application={app}
+                            disabled={pendingId === app.id}
+                        />
+                    ))
+                )}
 
-            {!expanded && items.length > INITIAL_VISIBLE && (
-                <Button variant="secondary" size="sm" onClick={() => setExpanded(true)}>
-                    Ver Todo
-                </Button>
-            )}
+                {!expanded && items.length > INITIAL_VISIBLE && (
+                    <button
+                        onClick={() => setExpanded(true)}
+                        className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
+                    >
+                        Ver Todo
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
@@ -237,21 +330,22 @@ export default function ApplicationsPage() {
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
 
-            {/* ── Título + contador + acción (decorativa) ────────────────────── */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
-                    Rastreador de Postulaciones
-                </h1>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1">
-                        Postulaciones: {total}
-                    </span>
-                    {/* Sin funcionalidad por ahora: no navega a ningún lado */}
-                    <Button size="sm" disabled>
-                        + Agregar Postulación
-                    </Button>
-                </div>
-            </div>
+            <PageHeader
+                eyebrow="Tu búsqueda en movimiento"
+                title="Rastreador de Postulaciones"
+                action={
+                    <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 px-4 py-2 text-sm text-body dark:text-gray-300 shadow-sm">
+                            Postulaciones
+                            <span className="font-bold text-ink dark:text-white">{total}</span>
+                        </span>
+                        {/* Sin funcionalidad por ahora: no navega a ningún lado */}
+                        <Button size="sm" disabled>
+                            + Agregar
+                        </Button>
+                    </div>
+                }
+            />
 
             {moveError && <ErrorMessage message={moveError} />}
 
@@ -264,6 +358,7 @@ export default function ApplicationsPage() {
                                 key={col.status}
                                 status={col.status}
                                 label={col.label}
+                                tone={col.tone}
                                 items={col.items}
                                 pendingId={pendingId}
                             />
@@ -281,8 +376,8 @@ export default function ApplicationsPage() {
                             onClick={() => { setActiveTab(c.status); setMobileExpanded(false); }}
                             className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors
                                 ${activeTab === c.status
-                                ? 'bg-[#2F7FD4] text-white border-[#2F7FD4]'
-                                : 'text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900'
+                                ? c.tone.tab
+                                : 'text-body dark:text-gray-300 border-line dark:border-gray-800 bg-surface dark:bg-gray-900'
                             }`}
                         >
                             {c.label}

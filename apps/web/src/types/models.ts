@@ -21,6 +21,7 @@ export interface CV {
     userId: string;
     title: string;
     templateId: string;
+    thumbnailUrl?: string;
     createdAt: string;
     updatedAt: string;
 

@@ -42,7 +42,7 @@ export default function JobCard({ job, onViewDetails }: JobCardProps) {
 
                 {/* % de compatibilidad */}
                 {job.matchScore !== undefined && (
-                    <span className="shrink-0 text-xs font-bold text-[#2F7FD4] bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
+                    <span className="shrink-0 text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
             {job.matchScore}% match
           </span>
                 )}

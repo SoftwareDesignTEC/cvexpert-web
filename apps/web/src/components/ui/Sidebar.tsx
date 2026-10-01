@@ -18,17 +18,25 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose }: SidebarProps) {
     return (
-        <aside className="w-64 h-full bg-[#1A3A6B] dark:bg-gray-900 flex flex-col">
+        <aside className="w-64 h-full bg-surface dark:bg-gray-900 border-r border-line dark:border-gray-800 flex flex-col">
             {/* Header del sidebar con botón cerrar */}
-            <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
-                <span className="text-white font-bold text-xl tracking-tight">CV Master</span>
-                <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+            <div className="h-16 flex items-center justify-between px-5 border-b border-line dark:border-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-8 h-8 rounded-lg bg-primary text-white font-bold text-lg flex items-center justify-center shrink-0">
+                        C
+                    </span>
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-ink dark:text-white font-bold text-base tracking-tight leading-tight">CVExpert</span>
+                        <span className="text-muted text-[11px] leading-tight truncate">Tu carrera, más clara</span>
+                    </div>
+                </div>
+                <button onClick={onClose} className="text-muted hover:text-ink dark:hover:text-white transition-colors">
                     <X size={20} />
                 </button>
             </div>
 
             {/* Navegación */}
-            <nav className="flex-1 py-4 overflow-y-auto">
+            <nav className="flex-1 py-4 px-3 overflow-y-auto flex flex-col gap-1">
                 {navItems.map(({ to, icon: Icon, label }) => (
                     <NavLink
                         key={to}
@@ -36,10 +44,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
                         end={to === '/'}
                         onClick={onClose}
                         className={({ isActive }) =>
-                            `flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors
+                            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
               ${isActive
-                                ? 'bg-white/20 text-white'
-                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                ? 'bg-primary-tint text-primary dark:bg-primary/15'
+                                : 'text-body dark:text-gray-400 hover:bg-primary-tint/60 hover:text-primary dark:hover:bg-gray-800'
                             }`
                         }
                     >
@@ -50,8 +58,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
             </nav>
 
             {/* Version publicada: coincide con el tag de Git que crea el pipeline */}
-            <div className="px-6 py-3 border-t border-white/10">
-                <span className="text-xs text-white/50">Versión {__APP_VERSION__}</span>
+            <div className="px-5 py-3 border-t border-line dark:border-gray-800">
+                <span className="text-xs text-muted">Versión {__APP_VERSION__}</span>
             </div>
         </aside>
     );
