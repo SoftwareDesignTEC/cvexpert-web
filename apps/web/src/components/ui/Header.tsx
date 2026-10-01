@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun, LogOut, Wifi, WifiOff, Bell } from 'lucide-react';
+import { Menu, Moon, Sun, LogOut, Wifi, WifiOff, Bell, UserCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -11,7 +11,7 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
-    const { user, logout } = useAuth();
+    const { isAuthenticated, profile, logout } = useAuth();
     const isOnline = useOnlineStatus();
 
     return (
@@ -55,12 +55,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     <Bell size={18} />
                 </button>
 
-                {user && (
+                {isAuthenticated && (
                     <div className="flex items-center gap-2">
-                        <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:block">
-                            {user.name}
-                        </span>
+                        {/* Nombre y foto vienen del APIM, no del token: sin conexión no se muestran */}
+                        {profile?.photoUrl ? (
+                            <img src={profile.photoUrl} alt={profile.name} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                            <UserCircle2 size={32} className="text-gray-400 dark:text-gray-600" />
+                        )}
+                        {profile && (
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:block">
+                                {profile.name}
+                            </span>
+                        )}
                         <button
                             onClick={logout}
                             className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

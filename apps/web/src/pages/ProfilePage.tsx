@@ -6,7 +6,6 @@ import Button from '../components/ui/Button';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import { useAuth } from '../context/AuthContext';
-import { profileService } from '../services/profileService';
 import { skillsGapService } from '../services/skillsGapService';
 import type { SkillGapApiItem } from '../services/skillsGapService';
 import type { UserProfile } from '../types/models';
@@ -72,34 +71,11 @@ function NumberedCard({
 
 export default function ProfilePage() {
     const navigate = useNavigate();
-    const { user } = useAuth();
-
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [reloadKey, setReloadKey] = useState(0);
+    const { profile, loadingProfile, profileError, reloadProfile } = useAuth();
 
     const [skills, setSkills] = useState<SkillGapApiItem[]>([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
     const [errorSkills, setErrorSkills] = useState<string | null>(null);
-
-    // El id del perfil es el `sub` del id_token de Google
-    const userId = user?.sub;
-
-    useEffect(() => {
-        if (!userId) return;
-        let cancelled = false;
-
-        profileService.getById(userId)
-            .then(res => { if (!cancelled) setProfile(res); })
-            .catch(err => {
-                if (cancelled) return;
-                setError(err instanceof Error ? err.message : 'No se pudo cargar el perfil.');
-            })
-            .finally(() => { if (!cancelled) setLoading(false); });
-
-        return () => { cancelled = true; };
-    }, [userId, reloadKey]);
 
     useEffect(() => {
         let cancelled = false;
@@ -112,20 +88,14 @@ export default function ProfilePage() {
         return () => { cancelled = true; };
     }, []);
 
-    const retry = () => {
-        setError(null);
-        setLoading(true);
-        setReloadKey(k => k + 1);
-    };
-
-    if (loading) return <LoadingSpinner />;
-    if (error) return <ErrorMessage message={error} onRetry={retry} />;
-    if (!profile) return <ErrorMessage message="No encontramos tu perfil." onRetry={retry} />;
+    if (loadingProfile) return <LoadingSpinner />;
+    if (profileError) return <ErrorMessage message={profileError} onRetry={reloadProfile} />;
+    if (!profile) return <ErrorMessage message="No encontramos tu perfil." onRetry={reloadProfile} />;
 
     const availability = joinOr(profile.types?.map(t => availabilityLabel[t]));
     const modalities   = joinOr(profile.modalities?.map(m => modalityLabel[m]));
     const sectors      = joinOr(profile.sectors);
-    const photo        = profile.photoUrl ?? user?.picture;
+    const photo        = profile.photoUrl;
 
     return (
         // En móvil se apila; en escritorio son tres columnas y el radar pasa al medio
