@@ -71,7 +71,14 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
     const userPolygon = polygonFor(s => s.userLevel);
 
     return (
-        <svg width="100%" viewBox={`0 0 ${box} ${box}`} style={{ maxWidth: box }} role="img">
+        <svg
+            viewBox={`0 0 ${box} ${box}`}
+            style={{ maxWidth: box }}
+            // w-full con h-auto respeta la proporción; max-h-full lo deja encoger
+            // cuando el contenedor tiene menos alto que ancho.
+            className="w-full h-auto max-h-full"
+            role="img"
+        >
             {/* Anillos de referencia */}
             {Array.from({ length: levels }, (_, i) => (
                 <polygon

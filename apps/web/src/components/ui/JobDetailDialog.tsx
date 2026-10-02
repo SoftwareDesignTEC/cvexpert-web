@@ -102,7 +102,6 @@ export default function JobDetailDialog({
                         </div>
                     )}
 
-                    <TagList title="Habilidades buscadas" values={job.skills ?? []} />
                     <TagList title="Requisitos" values={job.requirements} />
 
                     {job.salary && (

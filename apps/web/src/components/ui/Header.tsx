@@ -1,8 +1,9 @@
-import { Menu, Moon, Sun, LogOut, Bell } from 'lucide-react';
+import { Menu, Moon, Sun, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from './Avatar';
+import NotificationsBell from './NotificationsBell';
 
 interface HeaderProps {
     onMenuClick: () => void;
@@ -43,23 +44,23 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
             {/* Derecha: notificaciones (decorativo) + usuario + tema */}
             <div className="flex items-center gap-3">
-                {/* Campanita — meramente decorativa por ahora */}
-                <button
-                    disabled
-                    className="p-2 rounded-lg text-gray-500 cursor-not-allowed"
-                    title="Notificaciones"
-                >
-                    <Bell size={18} />
-                </button>
+                <NotificationsBell />
 
                 {isAuthenticated && (
-                    <div className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-2 shadow-sm">
-                        {/* Nombre y foto vienen del APIM, no del token: sin conexión no se muestran.
-                            Mientras tanto se usan las iniciales para no dejar el hueco vacío. */}
-                        <Avatar src={profile?.photoUrl} name={profile?.name ?? 'Mi cuenta'} size={32} />
-                        <span className="text-sm font-medium text-ink dark:text-gray-200 hidden sm:block max-w-[12rem] truncate">
-                            {profile?.name ?? 'Mi cuenta'}
-                        </span>
+                    <>
+                        {/* Nombre y foto vienen del APIM, no del token: sin conexión no se
+                            muestran, y mientras tanto se usan las iniciales. */}
+                        <button
+                            onClick={() => navigate('/profile')}
+                            title="Ir a Mi Perfil"
+                            className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-3 shadow-sm hover:border-primary transition-colors"
+                        >
+                            <Avatar src={profile?.photoUrl} name={profile?.name ?? 'Mi cuenta'} size={32} />
+                            <span className="text-sm font-medium text-ink dark:text-gray-200 hidden sm:block max-w-[12rem] truncate">
+                                {profile?.name ?? 'Mi cuenta'}
+                            </span>
+                        </button>
+
                         <button
                             onClick={logout}
                             className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -67,7 +68,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         >
                             <LogOut size={18} />
                         </button>
-                    </div>
+                    </>
                 )}
 
                 <button

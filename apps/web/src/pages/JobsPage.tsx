@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Filter, MapPin, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -8,6 +8,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Modal from '../components/ui/Modal';
 import { ChipGroup } from '../components/ui/FormBits';
 import JobDetailDialog from '../components/ui/JobDetailDialog';
+import Pagination from '../components/ui/Pagination';
 import { jobService } from '../services/otherServices';
 import type { JobOffer } from '../types/models';
 
@@ -15,8 +16,7 @@ import type { JobOffer } from '../types/models';
 // los filtros trabajan sobre todas las ofertas, no sólo sobre las que están a la vista.
 const FETCH_PAGE_SIZE = 50;
 const MAX_PAGES = 20;   // salvavidas contra bucles si el endpoint ignora la paginación
-const INITIAL_VISIBLE = 3;
-const STEP = 6;
+const PER_PAGE = 6;
 const MAX_REQUIREMENTS = 3;
 
 // Accesos rapidos del mockup. Filtran sobre las ofertas ya cargadas: el mock de APIM
@@ -155,7 +155,13 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
 export default function JobsPage() {
 
     const [items, setItems] = useState<JobOffer[]>([]);
-    const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+    const [page, setPage] = useState(1);
+    const topRef = useRef<HTMLDivElement>(null);
+
+    const goToPage = (next: number) => {
+        setPage(next);
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -163,6 +169,7 @@ export default function JobsPage() {
     const [detailJob, setDetailJob] = useState<JobOffer | null>(null);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [modalities, setModalities] = useState<JobOffer['modality'][]>([]);
+    const [minMatch, setMinMatch] = useState(0);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
@@ -188,7 +195,7 @@ export default function JobsPage() {
                 const all = await fetchAllJobs(search || undefined);
                 if (cancelled) return;
                 setItems(all);
-                setVisibleCount(INITIAL_VISIBLE);
+                setPage(1);
             } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'No se pudieron cargar las ofertas');
@@ -205,15 +212,16 @@ export default function JobsPage() {
     const toggle = <T,>(list: T[], value: T) =>
         list.includes(value) ? list.filter(v => v !== value) : [...list, value];
 
-    const activeFilters = modalities.length;
+    const activeFilters = modalities.length + (minMatch > 0 ? 1 : 0);
 
-    const clearFilters = () => setModalities([]);
+    const clearFilters = () => { setModalities([]); setMinMatch(0); };
 
     // Primero el panel de filtros, después el chip, y al final el orden
     const filtered = useMemo(() => {
         let list = items;
 
         if (modalities.length) list = list.filter(j => modalities.includes(j.modality));
+        if (minMatch > 0)      list = list.filter(j => (j.matchScore ?? 0) >= minMatch);
 
         switch (quickFilter) {
             case 'remote':
@@ -226,14 +234,15 @@ export default function JobsPage() {
                 // "Recomendadas": todas, de mayor a menor compatibilidad
                 return [...list].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
         }
-    }, [items, quickFilter, recentCutoff, modalities]);
+    }, [items, quickFilter, recentCutoff, modalities, minMatch]);
 
-    const visibleItems = filtered.slice(0, visibleCount);
-    const hasMore = visibleCount < filtered.length;
-    const canCollapse = visibleCount > INITIAL_VISIBLE;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    // Si los filtros reducen la lista, la página actual puede quedar fuera de rango
+    const currentPage = Math.min(page, totalPages);
+    const visibleItems = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
     return (
-        <div className="flex flex-col gap-3 sm:gap-6">
+        <div ref={topRef} className="flex flex-col gap-3 sm:gap-6 scroll-mt-4">
 
             <PageHeader
                 eyebrow="Oportunidades para ti"
@@ -317,26 +326,7 @@ export default function JobsPage() {
                         <JobRow key={job.id} job={job} onOpen={() => setDetailJob(job)} />
                     ))}
 
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                        {hasMore && (
-                            <Button
-                                variant="secondary"
-                                className="w-full"
-                                onClick={() => setVisibleCount(v => v + STEP)}
-                            >
-                                Ver Más Ofertas
-                            </Button>
-                        )}
-                        {canCollapse && (
-                            <Button
-                                variant="secondary"
-                                className="w-full"
-                                onClick={() => setVisibleCount(INITIAL_VISIBLE)}
-                            >
-                                Ver menos
-                            </Button>
-                        )}
-                    </div>
+                    <Pagination page={currentPage} totalPages={totalPages} onChange={goToPage} />
                 </div>
             )}
 
@@ -356,6 +346,27 @@ export default function JobsPage() {
                         selected={modalities}
                         onToggle={v => setModalities(prev => toggle(prev, v))}
                     />
+
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-baseline justify-between gap-2">
+                            <label htmlFor="min-match" className="text-xs font-medium text-body dark:text-gray-300">
+                                Compatibilidad mínima
+                            </label>
+                            <span className="text-sm font-bold text-primary">
+                                {minMatch === 0 ? 'Cualquiera' : `${minMatch}%`}
+                            </span>
+                        </div>
+                        <input
+                            id="min-match"
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={minMatch}
+                            onChange={e => setMinMatch(Number(e.target.value))}
+                            className="w-full accent-[var(--color-primary)]"
+                        />
+                    </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                         <Button variant="secondary" size="sm" onClick={clearFilters} disabled={activeFilters === 0}>

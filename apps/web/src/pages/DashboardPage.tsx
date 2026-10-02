@@ -3,8 +3,10 @@ import Card, { CardHeader, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import CVCard from '../components/ui/CVCard';
 import { CompanyLogo } from '../components/ui/Avatar';
+import JobDetailDialog from '../components/ui/JobDetailDialog';
+import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
 import SkillsRadar from '../components/ui/SkillsRadar';
-import { PlusCircle, MapPin, Loader2 } from 'lucide-react';
+import { MapPin, Loader2, FilePlus2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
@@ -28,6 +30,9 @@ export default function DashboardPage() {
     const [loadingJobs, setLoadingJobs] = useState(true);
     const [errorCvs, setErrorCvs]       = useState<string | null>(null);
     const [errorJobs, setErrorJobs]     = useState<string | null>(null);
+    const [detailJob, setDetailJob]     = useState<JobOffer | null>(null);
+    const [viewingCv, setViewingCv]     = useState<CV | null>(null);
+    const [downloadCv, setDownloadCv]   = useState<CV | null>(null);
     const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
     const [errorSkills, setErrorSkills]     = useState<string | null>(null);
@@ -66,18 +71,14 @@ export default function DashboardPage() {
                         ¡Bienvenido! Aquí está tu resumen...
                     </p>
                 </div>
-                <Button onClick={() => navigate('/cvs')} className="hidden sm:inline-flex">
-                    <PlusCircle size={16} />
-                    Crear CV con IA
-                </Button>
             </div>
 
             {/* ── Fila 1: CVs + Radar ────────────────────────────────────────── */}
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-6">
+            <div className="flex flex-col gap-3 lg:h-[24rem] lg:flex-row lg:items-stretch lg:gap-6">
 
                 {/* CVs */}
                 <div className="flex-1 min-w-0">
-                    <Card>
+                    <Card className="h-full flex flex-col">
                         <CardHeader
                             title="Currículums Recientes"
                             action={
@@ -86,7 +87,7 @@ export default function DashboardPage() {
                                 </Button>
                             }
                         />
-                        <CardBody>
+                        <CardBody className="flex-1 min-h-0">
                             {loadingCvs ? (
                                 <div className="flex items-center justify-center py-6 text-gray-400">
                                     <Loader2 size={20} className="animate-spin" />
@@ -96,9 +97,14 @@ export default function DashboardPage() {
                             ) : cvs.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-4">No tienes currículums aún.</p>
                             ) : (
-                                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                                <div className="grid grid-cols-3 gap-2 sm:gap-4 h-full min-h-0">
                                     {cvs.map(cv => (
-                                        <CVCard key={cv.id} cv={cv} onClick={() => navigate(`/cvs/${cv.id}`)} />
+                                        <CVCard
+                                            key={cv.id}
+                                            cv={cv}
+                                            onClick={() => setViewingCv(cv)}
+                                            onDownload={() => setDownloadCv(cv)}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -106,15 +112,9 @@ export default function DashboardPage() {
                     </Card>
                 </div>
 
-                {/* Botón "Crear CV" en mobile */}
-                <Button onClick={() => navigate('/cvs')} className="sm:hidden w-full">
-                    <PlusCircle size={16} />
-                    Crear CV con IA
-                </Button>
-
                 {/* Radar */}
                 <div className="w-full lg:w-80 shrink-0">
-                    <Card>
+                    <Card className="h-full flex flex-col">
                         <CardHeader
                             title="Análisis de Brecha"
                             action={
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                                 </Button>
                             }
                         />
-                        <CardBody>
+                        <CardBody className="flex-1 min-h-0 flex flex-col justify-center">
                             {loadingSkills ? (
                                 <div className="flex items-center justify-center py-6 text-gray-400">
                                     <Loader2 size={20} className="animate-spin" />
@@ -133,8 +133,8 @@ export default function DashboardPage() {
                             ) : skills.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-4">Aún no hay análisis de brecha.</p>
                             ) : (
-                                <div className="flex items-start gap-3 lg:flex-col">
-                                    <div className="shrink-0">
+                                <div className="flex h-full items-center gap-3 lg:flex-col lg:items-stretch">
+                                    <div className="flex flex-1 min-h-0 items-center justify-center min-w-0">
                                         {/* SkillsRadar espera `name`; APIM devuelve `skillName` */}
                                         <SkillsRadar
                                             skills={skills.map(s => ({
@@ -142,10 +142,10 @@ export default function DashboardPage() {
                                                 userLevel: s.userLevel,
                                                 marketLevel: s.marketLevel,
                                             }))}
-                                            size={120}
+                                            size={200}
                                         />
                                     </div>
-                                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                    <div className="flex flex-col gap-1 flex-1 min-w-0 lg:flex-none">
                                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                                             Habilidades por mejorar
                                         </p>
@@ -162,6 +162,28 @@ export default function DashboardPage() {
                     </Card>
                 </div>
 
+            </div>
+
+            {/* ── Barra de creación ───────────────────────────────────────────── */}
+            <div className="rounded-2xl border border-primary/20 bg-primary-tint px-4 py-3 flex flex-col gap-3 dark:border-primary/20 dark:bg-primary/10 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-10 h-10 rounded-xl bg-surface dark:bg-gray-900 flex items-center justify-center shrink-0 text-primary">
+                        <FilePlus2 size={18} />
+                    </span>
+                    <div className="min-w-0">
+                        <p className="text-sm font-bold text-ink dark:text-white">Crear Nuevo Currículum</p>
+                        <p className="text-xs text-muted">Empieza desde cero o usa una plantilla</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                    <Button size="sm" onClick={() => navigate('/cvs')} className="px-8 sm:px-10">
+                        <Sparkles size={15} />
+                        IA
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => navigate('/templates')} className="px-8 sm:px-10">
+                        Offline
+                    </Button>
+                </div>
             </div>
 
             {/* ── Fila 2: Ofertas laborales ───────────────────────────────────── */}
@@ -188,7 +210,7 @@ export default function DashboardPage() {
                                 {jobs.map(job => (
                                     <div
                                         key={job.id}
-                                        onClick={() => navigate(`/jobs/${job.id}`)}
+                                        onClick={() => setDetailJob(job)}
                                         className="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-1 px-1 rounded-lg transition-colors"
                                     >
                                         <CompanyLogo
@@ -219,7 +241,7 @@ export default function DashboardPage() {
                                 {jobs.map(job => (
                                     <div
                                         key={job.id}
-                                        onClick={() => navigate(`/jobs/${job.id}`)}
+                                        onClick={() => setDetailJob(job)}
                                         className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md hover:border-primary dark:hover:border-primary transition-all cursor-pointer"
                                     >
                                         <div className="flex items-start justify-between gap-2">
@@ -247,7 +269,7 @@ export default function DashboardPage() {
                                                 <span>{job.location}</span>
                                             </div>
                                         </div>
-                                        <Button variant="secondary" size="sm" onClick={e => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
+                                        <Button variant="secondary" size="sm" onClick={e => { e.stopPropagation(); setDetailJob(job); }}>
                                             Ver detalles
                                         </Button>
                                     </div>
@@ -258,6 +280,20 @@ export default function DashboardPage() {
                 </CardBody>
             </Card>
 
+
+            <JobDetailDialog job={detailJob} onClose={() => setDetailJob(null)} />
+            <TemplateViewerDialog
+                key={`cv-view-${viewingCv?.id ?? ''}`}
+                template={viewingCv && { id: viewingCv.id, name: viewingCv.title, imageUrl: viewingCv.thumbnailUrl }}
+                onClose={() => setViewingCv(null)}
+            />
+            <DownloadTemplateDialog
+                key={`cv-dl-${downloadCv?.id ?? ''}`}
+                template={downloadCv && { id: downloadCv.id, name: downloadCv.title }}
+                onClose={() => setDownloadCv(null)}
+                title="¿Descargar este currículum?"
+                notice="La descarga de currículums todavía no está implementada."
+            />
         </div>
     );
 }

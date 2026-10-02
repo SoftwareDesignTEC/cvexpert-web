@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { Eye, FileText, Pencil, X } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
-import type { CVTemplate } from '../../types/models';
+
+// Lo mínimo que necesitan estos diálogos, sirva para una plantilla o un currículum
+export interface PreviewItem {
+    id: string;
+    name: string;
+    description?: string;
+    imageUrl?: string;
+}
 
 // Aviso flotante que se desvanece solo. Se puede cerrar antes con la equis.
 const VISIBLE_MS = 1700;   // tiempo en pantalla antes de empezar a desaparecer
@@ -40,7 +47,7 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 export function TemplateViewerDialog({
     template, onClose,
 }: {
-    template: CVTemplate | null;
+    template: PreviewItem | null;
     onClose: () => void;
 }) {
     const [imgFailed, setImgFailed] = useState(false);
@@ -68,9 +75,9 @@ export function TemplateViewerDialog({
                 </div>
 
                 <div className="rounded-xl bg-canvas dark:bg-gray-800 p-3 flex items-center justify-center min-h-[20rem]">
-                    {template?.previewUrl && !imgFailed ? (
+                    {template?.imageUrl && !imgFailed ? (
                         <img
-                            src={template.previewUrl}
+                            src={template.imageUrl}
                             alt={`Vista previa de ${template.name}`}
                             onError={() => setImgFailed(true)}
                             className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-md"
@@ -91,10 +98,12 @@ export function TemplateViewerDialog({
 
 // ── Confirmación de descarga ──────────────────────────────────────────────────
 export function DownloadTemplateDialog({
-    template, onClose,
+    template, onClose, title = '¿Descargar esta plantilla?', notice = 'La descarga de plantillas todavía no está implementada.',
 }: {
-    template: CVTemplate | null;
+    template: PreviewItem | null;
     onClose: () => void;
+    title?: string;
+    notice?: string;
 }) {
     const [answered, setAnswered] = useState(false);
 
@@ -106,7 +115,7 @@ export function DownloadTemplateDialog({
     return (
         <Modal
             open={template !== null}
-            title="¿Descargar esta plantilla?"
+            title={title}
             description={template?.name}
             onClose={close}
         >
@@ -115,7 +124,7 @@ export function DownloadTemplateDialog({
                     // Cualquiera de las dos respuestas termina igual: todavía no se puede
                     <>
                         <p className="rounded-xl bg-primary-tint dark:bg-primary/10 px-4 py-3 text-sm text-body dark:text-gray-300">
-                            La descarga de plantillas todavía no está implementada.
+                            {notice}
                         </p>
                         <div className="flex justify-end">
                             <Button size="sm" onClick={close}>Entendido</Button>

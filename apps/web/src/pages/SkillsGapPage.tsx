@@ -3,8 +3,14 @@ import { ExternalLink, GraduationCap } from 'lucide-react';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
+import Button from '../components/ui/Button';
+import GalleryDialog from '../components/ui/GalleryDialog';
 import { skillsGapService } from '../services/skillsGapService';
-import type { SkillGapApiItem } from '../services/skillsGapService';
+import type { CourseSuggestion, SkillGapApiItem } from '../services/skillsGapService';
+
+// Cuántos cursos se ven en la pantalla y cuántos entran por página en el panel
+const COURSES_PREVIEW = 3;
+const COURSES_PER_PAGE = 6;
 
 // El logo de la plataforma viene del APIM; si falta o la URL falla, se usa el icono.
 function CoursePlatformLogo({ logoUrl, platform }: { logoUrl?: string; platform: string }) {
@@ -28,11 +34,42 @@ function CoursePlatformLogo({ logoUrl, platform }: { logoUrl?: string; platform:
     );
 }
 
+type CourseWithSkill = CourseSuggestion & { skillName: string };
+
+function CourseCard({ course }: { course: CourseWithSkill }) {
+    return (
+        <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+                <CoursePlatformLogo logoUrl={course.logoUrl} platform={course.platform} />
+                <span className="text-[11px] text-muted truncate">{course.platform}</span>
+            </div>
+
+            <h3 className="text-xs font-semibold text-ink dark:text-white line-clamp-2">
+                {course.title}
+            </h3>
+            <p className="text-[11px] text-muted">
+                {course.durationHours} h · {course.skillName}
+            </p>
+
+            {/* Costo aún no viene en la respuesta de APIM — se omite en vez de inventarlo */}
+            <a
+                href={course.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-auto inline-flex items-center justify-center gap-1 text-xs font-medium text-primary border border-primary rounded-lg px-2 py-1.5 hover:bg-primary-tint dark:hover:bg-primary/10 transition-colors"
+            >
+                Ver Curso <ExternalLink size={12} />
+            </a>
+        </div>
+    );
+}
+
 export default function SkillsGapPage() {
     const [items, setItems] = useState<SkillGapApiItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0); // sube al presionar "Reintentar"
+    const [coursesOpen, setCoursesOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -162,49 +199,46 @@ export default function SkillsGapPage() {
 
                     {/* ── Cursos de Mejora ─────────────────────────────────────────── */}
                     <div className="flex flex-col gap-3">
-                        <h2 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
-                            Cursos de Mejora
-                        </h2>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="w-1 h-5 rounded-full bg-primary shrink-0" />
+                                <h2 className="text-lg font-bold text-ink dark:text-white">Cursos de Mejora</h2>
+                            </div>
+                            {allCourses.length > COURSES_PREVIEW && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setCoursesOpen(true)}
+                                >
+                                    Ver más
+                                </Button>
+                            )}
+                        </div>
 
                         {allCourses.length === 0 ? (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                No hay cursos recomendados por ahora.
-                            </p>
+                            <p className="text-sm text-muted">No hay cursos recomendados por ahora.</p>
                         ) : (
-                            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                                {allCourses.map(course => (
-                                    <div
-                                        key={course.id}
-                                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col gap-2"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <CoursePlatformLogo logoUrl={course.logoUrl} platform={course.platform} />
-                                            <span className="text-[11px] text-gray-400 truncate">{course.platform}</span>
-                                        </div>
-
-                                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white line-clamp-2">
-                                            {course.title}
-                                        </h3>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            {course.durationHours} h · {course.skillName}
-                                        </p>
-
-                                        {/* Costo aún no viene en la respuesta de APIM — se omite en vez de inventarlo */}
-                                        <a
-                                            href={course.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="mt-auto inline-flex items-center justify-center gap-1 text-xs font-medium text-primary border border-primary rounded-lg px-2 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                        >
-                                            Ver Curso <ExternalLink size={12} />
-                                        </a>
-                                    </div>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                                {allCourses.slice(0, COURSES_PREVIEW).map(course => (
+                                    <CourseCard key={course.id} course={course} />
                                 ))}
                             </div>
                         )}
                     </div>
                 </>
             )}
+
+            {/* Todos los cursos, en una ventana amplia con su propia paginación */}
+            <GalleryDialog
+                open={coursesOpen}
+                title="Cursos de Mejora"
+                description={`${allCourses.length} ${allCourses.length === 1 ? 'curso recomendado' : 'cursos recomendados'}`}
+                items={allCourses}
+                perPage={COURSES_PER_PAGE}
+                onClose={() => setCoursesOpen(false)}
+                keyOf={course => course.id}
+                renderItem={course => <CourseCard course={course} />}
+            />
         </div>
     );
 }
