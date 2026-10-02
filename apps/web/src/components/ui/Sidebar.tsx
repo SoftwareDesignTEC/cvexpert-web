@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import logo from '../../assets/logo.png';
 import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Settings } from 'lucide-react';
 
 const navItems = [
@@ -22,9 +23,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             {/* Header del sidebar con botón cerrar */}
             <div className="h-16 flex items-center justify-between px-5 border-b border-line dark:border-gray-800">
                 <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-8 h-8 rounded-lg bg-primary text-white font-bold text-lg flex items-center justify-center shrink-0">
-                        C
-                    </span>
+                    <img src={logo} alt="" aria-hidden="true" className="w-9 h-9 shrink-0 object-contain" />
                     <div className="flex flex-col min-w-0">
                         <span className="text-ink dark:text-white font-bold text-base tracking-tight leading-tight">CVExpert</span>
                         <span className="text-muted text-[11px] leading-tight truncate">Tu carrera, más clara</span>

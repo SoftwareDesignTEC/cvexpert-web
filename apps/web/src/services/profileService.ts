@@ -46,10 +46,43 @@ function toApiPayload(data: Partial<UserProfile>): Partial<ProfileApiResponse> {
     return payload;
 }
 
+// Sesiones abiertas del usuario, para el apartado de seguridad
+export interface ActiveSession {
+    id: string;
+    deviceName: string;
+    platform: string;
+    client: string;
+    lastActiveAt: string;
+    current: boolean;
+}
+
+interface SessionsResponse {
+    items: ActiveSession[];
+    totalRecords: number;
+    page: number;
+    pageSize: number;
+}
+
+// Copia de los datos del usuario, para "Descargar mis datos"
+export interface DataExport {
+    exportVersion: string;
+    generatedAt: string;
+    profile: { name: string; email: string; phone?: string; location?: string };
+    cvs: { id: string; title: string }[];
+    applications: { id: string; jobTitle: string; company: string; status: string }[];
+    notificationSettings: Record<string, boolean>;
+}
+
 export const profileService = {
     getById: (id: string) =>
         http.get<ProfileApiResponse>(`/profiles/${id}`).then(toUserProfile),
 
     update: (id: string, data: Partial<UserProfile>) =>
         http.put<ProfileApiResponse>(`/profiles/${id}`, toApiPayload(data)).then(toUserProfile),
+
+    getSessions: (id: string) =>
+        http.get<SessionsResponse>(`/profiles/${id}/sessions`).then(res => res.items ?? []),
+
+    exportData: (id: string) =>
+        http.get<DataExport>(`/profiles/${id}/export`),
 };

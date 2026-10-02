@@ -7,6 +7,7 @@ import GalleryDialog from '../components/ui/GalleryDialog';
 import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { templateService } from '../services/otherServices';
+import { describeError } from '../services/http';
 import type { CVTemplate } from '../types/models';
 
 // Cuántas plantillas entran en cada página
@@ -109,7 +110,19 @@ function TemplateSection({
                         </div>
                         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
                     </div>
+                    {hasMore && (
+                        <Button variant="secondary" size="sm" onClick={onShowAll} className="shrink-0">
+                            Ver más
+                        </Button>
+                    )}
+                </div>
+            )}
 
+            {main && hasMore && (
+                <div className="flex justify-end">
+                    <Button variant="secondary" size="sm" onClick={onShowAll}>
+                        Ver más
+                    </Button>
                 </div>
             )}
 
@@ -122,13 +135,6 @@ function TemplateSection({
                             <TemplateCard key={t.id} template={t} actionLabel={cardActionLabel} onAction={onCardAction} />
                         ))}
                     </div>
-                    {hasMore && (
-                        <div className="flex justify-center">
-                            <Button variant="secondary" size="sm" onClick={onShowAll}>
-                                Ver más
-                            </Button>
-                        </div>
-                    )}
                 </div>
             )}
         </section>
@@ -159,7 +165,7 @@ export default function TemplatesPage() {
                 if (!cancelled) setTemplates(all);
             } catch (err) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : 'No se pudieron cargar las plantillas');
+                    setError(describeError(err, 'cargar las plantillas'));
                 }
             } finally {
                 if (!cancelled) setLoading(false);

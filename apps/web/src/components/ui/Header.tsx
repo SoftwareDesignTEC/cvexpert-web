@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from './Avatar';
+import logo from '../../assets/logo.png';
 import NotificationsBell from './NotificationsBell';
 
 interface HeaderProps {
@@ -34,9 +35,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-primary-tint dark:hover:bg-gray-800 transition-colors"
                     title="Ir al Panel Principal"
                 >
-                    <span className="w-8 h-8 rounded-lg bg-primary text-white font-bold text-lg flex items-center justify-center shrink-0">
-                        C
-                    </span>
+                    <img src={logo} alt="" aria-hidden="true" className="w-9 h-9 shrink-0 object-contain" />
                     <span className="text-base font-bold text-ink dark:text-white">CVExpert</span>
                 </button>
 

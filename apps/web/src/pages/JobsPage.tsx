@@ -10,6 +10,7 @@ import { ChipGroup } from '../components/ui/FormBits';
 import JobDetailDialog from '../components/ui/JobDetailDialog';
 import Pagination from '../components/ui/Pagination';
 import { jobService } from '../services/otherServices';
+import { describeError } from '../services/http';
 import type { JobOffer } from '../types/models';
 
 // El APIM todavía no filtra, así que se descarga el catálogo completo una vez y
@@ -198,7 +199,7 @@ export default function JobsPage() {
                 setPage(1);
             } catch (err) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : 'No se pudieron cargar las ofertas');
+                    setError(describeError(err, 'cargar las ofertas laborales'));
                 }
             } finally {
                 if (!cancelled) setLoading(false);

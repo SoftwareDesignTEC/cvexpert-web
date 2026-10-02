@@ -76,6 +76,27 @@ export const jobService = {
 
 // ─── TRACKER DE POSTULACIONES ─────────────────────────────────────────────────
 
+// El APIM escribe los estados con guion bajo (in_progress) y a veces en mayusculas,
+// mientras el dominio usa guion medio. Sin normalizar, esas postulaciones no caen en
+// ninguna columna del tablero y desaparecen de la vista.
+const STATUS_ALIASES: Record<string, ApplicationStatus> = {
+    applied: 'applied',
+    'in-progress': 'in-progress',
+    in_progress: 'in-progress',
+    inprogress: 'in-progress',
+    interview: 'interview',
+    rejected: 'rejected',
+};
+
+function normalizeStatus(raw: unknown): ApplicationStatus {
+    const key = String(raw ?? '').trim().toLowerCase();
+    return STATUS_ALIASES[key] ?? 'applied';
+}
+
+function toApplication(res: JobApplication): JobApplication {
+    return { ...res, status: normalizeStatus(res.status) };
+}
+
 export const applicationService = {
     getAll: ({ page, pageSize, search }: PaginationParams) => {
         const params = new URLSearchParams({
@@ -83,7 +104,10 @@ export const applicationService = {
             pageSize: String(pageSize),
             ...(search ? { search } : {}),
         });
-        return http.get<unknown>(`/applications?${params}`).then(r => toPaginated<JobApplication>(r, pageSize, page));
+        return http.get<unknown>(`/applications?${params}`).then(r => {
+            const paged = toPaginated<JobApplication>(r, pageSize, page);
+            return { ...paged, items: paged.items.map(toApplication) };
+        });
     },
 
     create: (data: Omit<JobApplication, 'id' | 'appliedAt' | 'updatedAt'>) =>

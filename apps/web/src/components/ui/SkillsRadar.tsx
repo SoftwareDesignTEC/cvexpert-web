@@ -38,11 +38,21 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
 
     // Las etiquetas se dibujan por fuera del poligono, asi que el lienzo necesita un
     // margen propio: sin el, los nombres largos quedaban cortados contra el borde.
-    const labelMargin = 42;
-    const box = size + labelMargin * 2;
-    const cx = box / 2;
-    const cy = box / 2;
-    const radius = size * 0.42;
+    // El margen horizontal se calcula según la etiqueta más larga, y el vertical
+    // queda chico: reservar lo mismo en los cuatro lados desperdiciaba altura y
+    // obligaba a dibujar el polígono más pequeño de lo necesario.
+    const labelSize = 13;
+    const longest = skills.reduce((max, s) => Math.max(max, s.name.length), 0);
+    // Ajustado: con un margen mayor el poligono quedaba proporcionalmente mas chico.
+    // Lo que exceda lo absorbe el relleno de la tarjeta, gracias a overflow-visible.
+    const marginX = Math.min(70, Math.max(36, longest * labelSize * 0.45));
+    const marginY = labelSize + 10;
+
+    const boxW = size + marginX * 2;
+    const boxH = size + marginY * 2;
+    const cx = boxW / 2;
+    const cy = boxH / 2;
+    const radius = size / 2;
     const levels = 4;
     const n = skills.length;
 
@@ -72,11 +82,13 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
 
     return (
         <svg
-            viewBox={`0 0 ${box} ${box}`}
-            style={{ maxWidth: box }}
+            viewBox={`0 0 ${boxW} ${boxH}`}
+            style={{ maxWidth: boxW }}
             // w-full con h-auto respeta la proporción; max-h-full lo deja encoger
             // cuando el contenedor tiene menos alto que ancho.
-            className="w-full h-auto max-h-full"
+            // overflow-visible: las etiquetas laterales pueden sobresalir del lienzo
+            // sin recortarse, y el padding del contenedor les deja sitio.
+            className="w-full h-auto max-h-full overflow-visible"
             role="img"
         >
             {/* Anillos de referencia */}
@@ -122,14 +134,14 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
             {/* Un punto por vertice ayuda a leer el valor exacto de cada eje */}
             {skills.map((s, i) => {
                 const p = point(s.userLevel, i, radius);
-                return <circle key={i} cx={p.x} cy={p.y} r="3.5" className="fill-primary" />;
+                return <circle key={i} cx={p.x} cy={p.y} r="4" className="fill-primary" />;
             })}
 
             {/* Etiquetas: se alinean segun el lado en el que caen para no pisar el grafico */}
             {skills.map((s, i) => {
                 const angle = angleAt(i);
-                const x = cx + (radius + 16) * Math.cos(angle);
-                const y = cy + (radius + 16) * Math.sin(angle);
+                const x = cx + (radius + 14) * Math.cos(angle);
+                const y = cy + (radius + 14) * Math.sin(angle);
                 const cos = Math.cos(angle);
                 const anchor = Math.abs(cos) < 0.25 ? 'middle' : cos > 0 ? 'start' : 'end';
                 return (
@@ -139,8 +151,8 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
                         textAnchor={anchor}
                         dominantBaseline="middle"
                         className="fill-muted dark:fill-slate-400"
-                        fontSize="11"
-                        fontWeight="500"
+                        fontSize={labelSize}
+                        fontWeight="600"
                     >
                         {s.name}
                     </text>

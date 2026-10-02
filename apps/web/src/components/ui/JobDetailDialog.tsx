@@ -113,10 +113,8 @@ export default function JobDetailDialog({
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <div className="flex justify-end">
                         <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
-                        {/* Postular todavía no está implementado */}
-                        <Button size="sm" disabled title="Todavía no disponible">Postularme</Button>
                     </div>
                 </div>
             )}
