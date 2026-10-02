@@ -46,6 +46,34 @@ cv-master/
 │   │       ├── types/          # Tipos del dominio
 │   │       └── config.ts       # Origen de autenticación central
 │   └── mobile/                 # Aplicación Android (Kotlin + Jetpack Compose)
+│       ├── gradle/
+│       │   ├── libs.versions.toml           # Version catalog: todas las dependencias
+│       │   └── gradle-daemon-jvm.properties # Fija el daemon de Gradle en Java 17
+│       └── app/src/main/
+│           ├── java/com/cvpro/app/
+│           │   ├── CvApplication.kt        # @HiltAndroidApp y el ImageLoader con SVG
+│           │   ├── MainActivity.kt
+│           │   ├── data/
+│           │   │   ├── remote/api/         # Interfaces Retrofit, una por recurso
+│           │   │   ├── remote/dto/         # DTOs de la API
+│           │   │   ├── remote/             # Interceptores de token y de registro
+│           │   │   ├── mapper/             # DTO → modelo de dominio
+│           │   │   ├── repository/         # Implementaciones contra APIM
+│           │   │   ├── local/              # DataStore (tema y notificaciones)
+│           │   │   ├── pdf/                # Exportación del currículum a PDF
+│           │   │   └── download/           # Descarga de archivos a Descargas
+│           │   ├── domain/
+│           │   │   ├── model/              # Modelos limpios, con los nombres del contrato
+│           │   │   └── repository/         # Interfaces que la capa ui consume
+│           │   ├── di/                     # Módulos de Hilt (red)
+│           │   └── ui/
+│           │       ├── theme/              # Color, Type y Theme (claro y oscuro)
+│           │       ├── navigation/         # NavGraph, Routes, drawer y barra superior
+│           │       ├── components/         # Reutilizables (RemoteImage, hojas, estados…)
+│           │       └── screens/<pantalla>/ # Screen.kt + ViewModel.kt por pantalla
+│           └── res/
+│               ├── values/                 # strings.xml (español), colores, temas
+│               └── values-night/           # Variantes del tema oscuro
 ├── docs/
 │   └── capturas/               # Capturas de pantalla usadas en este README
 ├── package.json
@@ -105,16 +133,18 @@ cd apps/mobile
 
 | Pantalla | Escritorio | Móvil |
 |---|---|---|
-| Panel principal | ![Panel principal](docs/capturas/web-panel-principal.png) | _pendiente_ |
-| Mis currículums | ![Mis currículums](docs/capturas/web-mis-curriculums.png) | _pendiente_ |
-| Perfil | ![Perfil](docs/capturas/web-perfil.png) | _pendiente_ |
-| Ofertas laborales | ![Ofertas laborales](docs/capturas/web-ofertas-laborales.png) | _pendiente_ |
-| Postulaciones | ![Postulaciones](docs/capturas/web-postulaciones.png) | _pendiente_ |
-| Análisis de brechas | ![Análisis de brechas](docs/capturas/web-analisis-brechas.png) | _pendiente_ |
-| Plantillas | ![Plantillas](docs/capturas/web-plantillas.png) | _pendiente_ |
-| Configuración | ![Configuración en tema claro](docs/capturas/web-configuracion-claro.png) ![Configuración en tema oscuro](docs/capturas/web-configuracion-oscuro.png) | _pendiente_ |
+| Panel principal | ![Panel principal](docs/capturas/web-panel-principal.png) | ![Panel principal en el móvil](docs/capturas/movil-panel-principal.png) |
+| Mis currículums | ![Mis currículums](docs/capturas/web-mis-curriculums.png) | ![Mis currículums en el móvil](docs/capturas/movil-mis-curriculums.png) |
+| Perfil | ![Perfil](docs/capturas/web-perfil.png) | ![Perfil en el móvil](docs/capturas/movil-perfil.png) |
+| Ofertas laborales | ![Ofertas laborales](docs/capturas/web-ofertas-laborales.png) | ![Ofertas laborales en el móvil](docs/capturas/movil-ofertas-laborales.png) |
+| Postulaciones | ![Postulaciones](docs/capturas/web-postulaciones.png) | ![Postulaciones en el móvil](docs/capturas/movil-postulaciones.png) |
+| Análisis de brechas | ![Análisis de brechas](docs/capturas/web-analisis-brechas.png) | ![Análisis de brechas en el móvil](docs/capturas/movil-analisis-brechas.png) |
+| Plantillas | ![Plantillas](docs/capturas/web-plantillas.png) | ![Plantillas en el móvil](docs/capturas/movil-plantillas.png) |
+| Configuración | ![Configuración en tema claro](docs/capturas/web-configuracion-claro.png) ![Configuración en tema oscuro](docs/capturas/web-configuracion-oscuro.png) | ![Configuración del móvil en tema claro](docs/capturas/movil-configuracion-claro.png) ![Configuración del móvil en tema oscuro](docs/capturas/movil-configuracion-oscuro.png) |
 
 Las capturas de escritorio están tomadas en tema oscuro, salvo la de Configuración, que aparece en los dos temas para mostrar el selector y su efecto.
+
+Las del móvil siguen el mismo criterio: tema oscuro, y Configuración en los dos. Salen del emulador con la app corriendo contra los mocks de APIM, así que los currículums, las ofertas y los cursos son los que devuelve el servicio.
 
 ---
 
