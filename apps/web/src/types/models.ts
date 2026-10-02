@@ -91,6 +91,7 @@ export interface JobOffer {
     sector: string;
     description: string;
     requirements: string[];
+    skills?: string[];
     salary?: {
         min: number;
         max: number;

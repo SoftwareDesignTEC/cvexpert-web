@@ -5,9 +5,10 @@ import type { CV } from '../../types/models';
 interface CVCardProps {
     cv: CV;
     onClick?: () => void;
+    onDownload?: () => void;
 }
 
-export default function CVCard({ cv, onClick }: CVCardProps) {
+export default function CVCard({ cv, onClick, onDownload }: CVCardProps) {
     const [imgFailed, setImgFailed] = useState(false);
 
     const formattedDate = new Date(cv.updatedAt).toLocaleDateString('es-CR', {
@@ -15,11 +16,11 @@ export default function CVCard({ cv, onClick }: CVCardProps) {
     });
 
     return (
-        <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col gap-2 sm:gap-3 hover:shadow-md hover:border-primary transition-all">
+        <div className="h-full min-h-0 bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl p-2.5 sm:p-3 shadow-sm flex flex-col gap-2 hover:shadow-md hover:border-primary transition-all">
             {/* Vista previa del currículum; si el APIM no manda imagen, queda el icono */}
             <button
                 onClick={onClick}
-                className="w-full h-24 sm:h-40 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer"
+                className="w-full flex-1 min-h-0 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer"
                 title={cv.title}
             >
                 {cv.thumbnailUrl && !imgFailed ? (
@@ -27,7 +28,7 @@ export default function CVCard({ cv, onClick }: CVCardProps) {
                         src={cv.thumbnailUrl}
                         alt={cv.title}
                         onError={() => setImgFailed(true)}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-top"
                     />
                 ) : (
                     <FileText size={32} className="text-gray-300 dark:text-gray-600" />
@@ -35,7 +36,7 @@ export default function CVCard({ cv, onClick }: CVCardProps) {
             </button>
 
             {/* Título y última modificación */}
-            <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
                 <h4 className="text-xs sm:text-sm font-semibold text-ink dark:text-white truncate leading-tight">
                     {cv.title}
                 </h4>
@@ -45,19 +46,19 @@ export default function CVCard({ cv, onClick }: CVCardProps) {
                 </div>
             </div>
 
-            {/* Acciones del mockup. Siguen deshabilitadas: todavía no existe el editor
-                ni la descarga, y es preferible mostrarlas inertes a que no hagan nada. */}
-            <div className="flex flex-col gap-1.5 sm:flex-row">
+            {/* Abren la vista previa y la confirmación de descarga: el editor y la
+                descarga real todavía no existen, y los diálogos lo dejan claro. */}
+            <div className="flex flex-col gap-1.5 shrink-0 sm:flex-row">
                 <button
-                    disabled
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-1.5 text-[11px] sm:text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={onClick}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-1.5 text-[11px] sm:text-xs font-medium text-white hover:bg-primary-dark transition-colors"
                 >
                     <Pencil size={12} />
                     Ver/Editar
                 </button>
                 <button
-                    disabled
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-deep px-2 py-1.5 text-[11px] sm:text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={onDownload}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-deep px-2 py-1.5 text-[11px] sm:text-xs font-medium text-white hover:opacity-90 transition-opacity"
                 >
                     <Download size={12} />
                     Descargar

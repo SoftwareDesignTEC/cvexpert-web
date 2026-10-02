@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
     DndContext,
+    DragOverlay,
     PointerSensor,
     useDraggable,
     useDroppable,
     useSensor,
     useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { MapPin } from 'lucide-react';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { ArrowLeftRight, Check, MapPin } from 'lucide-react';
 import { CompanyLogo } from '../components/ui/Avatar';
+import Modal from '../components/ui/Modal';
+import ApplicationDetailDialog from '../components/ui/ApplicationDetailDialog';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
@@ -47,7 +50,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
             title:  'text-blue-700 dark:text-blue-300',
             dot:    'bg-blue-500',
             badge:  'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-            card:   'border-blue-200 dark:border-blue-900',
+            card:   'border-blue-400 shadow-[0_0_10px_-2px_rgba(59,130,246,0.55)] dark:border-blue-500 dark:shadow-[0_0_12px_-2px_rgba(59,130,246,0.8)]',
             action: 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300',
             avatar: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300',
             over:   'bg-blue-100/60 dark:bg-blue-900/20',
@@ -62,7 +65,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
             title:  'text-cyan-700 dark:text-cyan-300',
             dot:    'bg-cyan-500',
             badge:  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-            card:   'border-cyan-200 dark:border-cyan-900',
+            card:   'border-cyan-400 shadow-[0_0_10px_-2px_rgba(6,182,212,0.55)] dark:border-cyan-500 dark:shadow-[0_0_12px_-2px_rgba(6,182,212,0.8)]',
             action: 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:text-cyan-300',
             avatar: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-950/40 dark:text-cyan-300',
             over:   'bg-cyan-100/60 dark:bg-cyan-900/20',
@@ -77,7 +80,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
             title:  'text-emerald-700 dark:text-emerald-300',
             dot:    'bg-emerald-600',
             badge:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-            card:   'border-emerald-200 dark:border-emerald-900',
+            card:   'border-emerald-400 shadow-[0_0_10px_-2px_rgba(16,185,129,0.55)] dark:border-emerald-500 dark:shadow-[0_0_12px_-2px_rgba(16,185,129,0.8)]',
             action: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300',
             avatar: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300',
             over:   'bg-emerald-100/60 dark:bg-emerald-900/20',
@@ -92,7 +95,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
             title:  'text-rose-700 dark:text-rose-300',
             dot:    'bg-rose-500',
             badge:  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-            card:   'border-rose-200 dark:border-rose-900',
+            card:   'border-rose-400 shadow-[0_0_10px_-2px_rgba(244,63,94,0.55)] dark:border-rose-500 dark:shadow-[0_0_12px_-2px_rgba(244,63,94,0.8)]',
             action: 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300',
             avatar: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300',
             over:   'bg-rose-100/60 dark:bg-rose-900/20',
@@ -103,6 +106,9 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
 
 const toneFor = (status: ApplicationStatus) =>
     COLUMNS.find(c => c.status === status)!.tone;
+
+const labelFor = (status: ApplicationStatus) =>
+    COLUMNS.find(c => c.status === status)?.label ?? status;
 
 const modalityLabel: Record<JobApplication['modality'], string> = {
     'remote':  'Remoto',
@@ -127,12 +133,19 @@ function formatDate(iso: string) {
 }
 
 // ── Contenido visual de la card (compartido entre desktop y mobile) ──────────
-function ApplicationCardContent({ application, dimmed }: { application: JobApplication; dimmed?: boolean }) {
+function ApplicationCardContent({
+    application, dimmed, onChangeStatus, onOpenDetail,
+}: {
+    application: JobApplication;
+    dimmed?: boolean;
+    onChangeStatus?: () => void;
+    onOpenDetail?: () => void;
+}) {
     const tone = toneFor(application.status);
 
     return (
         <div
-            className={`bg-surface dark:bg-gray-900 border rounded-xl p-3 flex flex-col gap-2 shadow-sm transition-opacity
+            className={`bg-surface dark:bg-gray-900 border rounded-xl p-3 flex flex-col gap-2 transition-opacity
                 ${tone.card} ${dimmed ? 'opacity-50' : ''}`}
         >
             <div className="flex items-start gap-2">
@@ -156,51 +169,78 @@ function ApplicationCardContent({ application, dimmed }: { application: JobAppli
 
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-line dark:border-gray-800">
                 <span className="text-[10px] text-muted">{formatDate(application.appliedAt)}</span>
-                {/* Sin funcionalidad por ahora: no navega a ningún lado */}
-                <button
-                    disabled
-                    className={`rounded-md px-2 py-1 text-[10px] font-medium disabled:opacity-60 disabled:cursor-not-allowed ${tone.action}`}
-                >
-                    Detalles
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Alternativa al arrastrar, que en pantallas táctiles no funciona */}
+                    {onChangeStatus && (
+                        <button
+                            onClick={e => { e.stopPropagation(); onChangeStatus(); }}
+                            // Evita que el gesto inicie un arrastre en vez de pulsar
+                            onPointerDown={e => e.stopPropagation()}
+                            title="Cambiar de estado"
+                            aria-label="Cambiar de estado"
+                            className={`rounded-md p-1.5 transition-colors ${tone.action}`}
+                        >
+                            <ArrowLeftRight size={13} />
+                        </button>
+                    )}
+                    <button
+                        onClick={e => { e.stopPropagation(); onOpenDetail?.(); }}
+                        onPointerDown={e => e.stopPropagation()}
+                        disabled={!onOpenDetail}
+                        className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${tone.action}`}
+                    >
+                        Detalles
+                    </button>
+                </div>
             </div>
         </div>
     );
 }
 
 // ── Card arrastrable (solo desktop) ───────────────────────────────────────────
-function DraggableApplicationCard({ application, disabled }: { application: JobApplication; disabled: boolean }) {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+function DraggableApplicationCard({
+    application, disabled, onChangeStatus, onOpenDetail,
+}: {
+    application: JobApplication;
+    disabled: boolean;
+    onChangeStatus: () => void;
+    onOpenDetail: () => void;
+}) {
+    // Sin transform propio: la copia que sigue al cursor la dibuja DragOverlay, que
+    // vive fuera del árbol y por eso no la recorta el overflow de la columna.
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: application.id,
         disabled,
     });
 
-    const style = transform
-        ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 10 }
-        : undefined;
-
     return (
         <div
             ref={setNodeRef}
-            style={style}
             {...listeners}
             {...attributes}
-            className={`touch-none ${isDragging ? 'opacity-70' : ''} ${disabled ? 'cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
+            className={`touch-none ${isDragging ? 'opacity-30' : ''} ${disabled ? 'cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
         >
-            <ApplicationCardContent application={application} dimmed={disabled} />
+            <ApplicationCardContent
+                application={application}
+                dimmed={disabled}
+                onChangeStatus={onChangeStatus}
+                onOpenDetail={onOpenDetail}
+            />
         </div>
     );
 }
 
 // ── Columna del Kanban (droppable, solo desktop) ──────────────────────────────
 function KanbanColumn({
-                          status, label, tone, items, pendingId,
+                          status, label, tone, items, pendingId, onChangeStatus, onOpenDetail,
                       }: {
     status: ApplicationStatus;
     label: string;
     tone: ColumnTone;
     items: JobApplication[];
     pendingId: string | null;
+    onChangeStatus: (app: JobApplication) => void;
+    onOpenDetail: (app: JobApplication) => void;
 }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
     const [expanded, setExpanded] = useState(false);
@@ -232,6 +272,8 @@ function KanbanColumn({
                             key={app.id}
                             application={app}
                             disabled={pendingId === app.id}
+                            onChangeStatus={() => onChangeStatus(app)}
+                            onOpenDetail={() => onOpenDetail(app)}
                         />
                     ))
                 )}
@@ -249,6 +291,46 @@ function KanbanColumn({
     );
 }
 
+// ── Selector de estado, pensado para pantallas donde no se puede arrastrar ────
+function StatusPickerDialog({
+    application, onClose, onSelect,
+}: {
+    application: JobApplication | null;
+    onClose: () => void;
+    onSelect: (status: ApplicationStatus) => void;
+}) {
+    return (
+        <Modal
+            open={application !== null}
+            title="Cambiar de estado"
+            description={application?.jobTitle}
+            onClose={onClose}
+        >
+            <div className="flex flex-col gap-2">
+                {COLUMNS.map(col => {
+                    const current = application?.status === col.status;
+                    return (
+                        <button
+                            key={col.status}
+                            onClick={() => { if (!current) onSelect(col.status); onClose(); }}
+                            className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors
+                                ${current ? col.tone.column : 'border-line dark:border-gray-800 hover:border-primary'}`}
+                        >
+                            <span className="flex items-center gap-2 min-w-0">
+                                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${col.tone.dot}`} />
+                                <span className={`text-sm font-medium truncate ${current ? col.tone.title : 'text-ink dark:text-gray-100'}`}>
+                                    {col.label}
+                                </span>
+                            </span>
+                            {current && <Check size={16} className="text-primary shrink-0" />}
+                        </button>
+                    );
+                })}
+            </div>
+        </Modal>
+    );
+}
+
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function ApplicationsPage() {
     const [applications, setApplications] = useState<JobApplication[]>([]);
@@ -259,6 +341,9 @@ export default function ApplicationsPage() {
 
     // Estado del arrastre: se espera la confirmación de APIM antes de mover la card
     const [pendingId, setPendingId] = useState<string | null>(null);
+    const [statusFor, setStatusFor] = useState<JobApplication | null>(null);
+    const [draggingApp, setDraggingApp] = useState<JobApplication | null>(null);
+    const [detailApp, setDetailApp] = useState<JobApplication | null>(null);
     const [moveError, setMoveError] = useState<string | null>(null);
 
     // Mobile: pestañas en vez de columnas lado a lado
@@ -298,12 +383,8 @@ export default function ApplicationsPage() {
         [applications],
     );
 
-    const handleDragEnd = async (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (!over) return;
-
-        const appId = String(active.id);
-        const newStatus = over.id as ApplicationStatus;
+    // Misma lógica para el arrastre y para el selector: sólo cambia cómo se dispara
+    const changeStatus = async (appId: string, newStatus: ApplicationStatus) => {
         const app = applications.find(a => a.id === appId);
         if (!app || app.status === newStatus) return;
 
@@ -318,6 +399,17 @@ export default function ApplicationsPage() {
         } finally {
             setPendingId(null);
         }
+    };
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setDraggingApp(applications.find(a => a.id === String(event.active.id)) ?? null);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setDraggingApp(null);
+        if (!over) return;
+        void changeStatus(String(active.id), over.id as ApplicationStatus);
     };
 
     if (loading) return <LoadingSpinner />;
@@ -350,7 +442,12 @@ export default function ApplicationsPage() {
 
             {/* ── Desktop: tablero Kanban con arrastrar y soltar ─────────────── */}
             <div className="hidden lg:block">
-                <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                <DndContext
+                    sensors={sensors}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={() => setDraggingApp(null)}
+                >
                     <div className="grid grid-cols-4 gap-4">
                         {columns.map(col => (
                             <KanbanColumn
@@ -360,9 +457,20 @@ export default function ApplicationsPage() {
                                 tone={col.tone}
                                 items={col.items}
                                 pendingId={pendingId}
+                                onChangeStatus={setStatusFor}
+                                onOpenDetail={setDetailApp}
                             />
                         ))}
                     </div>
+
+                    {/* La copia que sigue al cursor, por encima de todo el tablero */}
+                    <DragOverlay dropAnimation={null}>
+                        {draggingApp && (
+                            <div className="cursor-grabbing rotate-2 shadow-xl">
+                                <ApplicationCardContent application={draggingApp} />
+                            </div>
+                        )}
+                    </DragOverlay>
                 </DndContext>
             </div>
 
@@ -389,17 +497,37 @@ export default function ApplicationsPage() {
                 ) : (
                     <div className="flex flex-col gap-2">
                         {visibleMobile.map(app => (
-                            <ApplicationCardContent key={app.id} application={app} />
+                            <ApplicationCardContent
+                                key={app.id}
+                                application={app}
+                                dimmed={pendingId === app.id}
+                                onChangeStatus={() => setStatusFor(app)}
+                                onOpenDetail={() => setDetailApp(app)}
+                            />
                         ))}
 
-                        {!mobileExpanded && activeColumnItems.length > INITIAL_VISIBLE && (
-                            <Button variant="secondary" className="w-full" onClick={() => setMobileExpanded(true)}>
-                                Ver Todo
+                        {activeColumnItems.length > INITIAL_VISIBLE && (
+                            <Button variant="secondary" className="w-full" onClick={() => setMobileExpanded(v => !v)}>
+                                {mobileExpanded ? 'Ver menos' : 'Ver Todo'}
                             </Button>
                         )}
                     </div>
                 )}
             </div>
+
+            <ApplicationDetailDialog
+                application={detailApp}
+                statusLabel={labelFor}
+                statusTone={status => toneFor(status).badge}
+                onClose={() => setDetailApp(null)}
+                onChangeStatus={() => { setStatusFor(detailApp); setDetailApp(null); }}
+            />
+
+            <StatusPickerDialog
+                application={statusFor}
+                onClose={() => setStatusFor(null)}
+                onSelect={status => { if (statusFor) void changeStatus(statusFor.id, status); }}
+            />
         </div>
     );
 }

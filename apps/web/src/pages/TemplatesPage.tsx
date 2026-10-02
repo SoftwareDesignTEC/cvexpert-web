@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
-import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
+import Button from '../components/ui/Button';
+import GalleryDialog from '../components/ui/GalleryDialog';
 import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { templateService } from '../services/otherServices';
 import type { CVTemplate } from '../types/models';
 
-// Cuántas plantillas se muestran al entrar y cuántas se agregan con cada clic
-const OFFLINE_INITIAL = 8;
-const OFFLINE_STEP = 8;
-const STORE_INITIAL = 4;
-const STORE_STEP = 4;
+// Cuántas plantillas entran en cada página
+// Cuántas se ven en la pantalla y cuántas entran por página en la ventana completa
+const PREVIEW_COUNT = 4;
+const PER_PAGE = 6;
 
 // APIM no filtra por availableOffline, así que se descargan todas las páginas
 // y el reparto entre "Catálogo" y "Tienda" se hace en el frontend.
@@ -83,24 +83,18 @@ interface TemplateSectionProps {
     subtitle?: string;
     main?: boolean;            // true = el encabezado lo pone PageHeader
     items: CVTemplate[];
-    visibleCount: number;
-    initialCount: number;
-    moreLabel: string;
     cardActionLabel: string;
     emptyText: string;
-    onShowMore: () => void;
-    onShowLess: () => void;
+    onShowAll: () => void;
     onCardAction: (t: CVTemplate) => void;
 }
 
 function TemplateSection({
-                             title, subtitle, main, items, visibleCount, initialCount, moreLabel,
-                             cardActionLabel, emptyText, onShowMore, onShowLess, onCardAction,
+                             title, subtitle, main, items,
+                             cardActionLabel, emptyText, onShowAll, onCardAction,
                          }: TemplateSectionProps) {
-    const visible = items.slice(0, visibleCount);
-    const hasMore = visibleCount < items.length;
-    // Sin esto, al expandir no había forma de volver atrás
-    const canCollapse = visibleCount > initialCount;
+    const visible = items.slice(0, PREVIEW_COUNT);
+    const hasMore = items.length > PREVIEW_COUNT;
 
     return (
         <section className="flex flex-col gap-4">
@@ -115,30 +109,26 @@ function TemplateSection({
                         </div>
                         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                        {canCollapse && (
-                            <Button variant="secondary" size="sm" onClick={onShowLess}>
-                                Ver menos
-                            </Button>
-                        )}
-                        {hasMore && (
-                            <Button variant="secondary" size="sm" onClick={onShowMore}>
-                                {moreLabel}
-                            </Button>
-                        )}
-                    </div>
+
                 </div>
             )}
 
             {visible.length === 0 ? (
                 <p className="text-sm text-muted">{emptyText}</p>
             ) : (
-                <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-sm p-4">
+                <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-4">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-4">
                         {visible.map(t => (
                             <TemplateCard key={t.id} template={t} actionLabel={cardActionLabel} onAction={onCardAction} />
                         ))}
                     </div>
+                    {hasMore && (
+                        <div className="flex justify-center">
+                            <Button variant="secondary" size="sm" onClick={onShowAll}>
+                                Ver más
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
         </section>
@@ -156,8 +146,7 @@ export default function TemplatesPage() {
     const [viewing, setViewing] = useState<CVTemplate | null>(null);
     const [downloading, setDownloading] = useState<CVTemplate | null>(null);
 
-    const [offlineVisible, setOfflineVisible] = useState(OFFLINE_INITIAL);
-    const [storeVisible, setStoreVisible] = useState(STORE_INITIAL);
+    const [galleryFor, setGalleryFor] = useState<'offline' | 'store' | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -193,38 +182,15 @@ export default function TemplatesPage() {
             <PageHeader
                 eyebrow="Crea donde quieras"
                 title="Plantillas sin conexión"
-                action={
-                    offlineVisible < offlineTemplates.length ? (
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setOfflineVisible(v => v + OFFLINE_STEP)}
-                        >
-                            Ver todas
-                        </Button>
-                    ) : offlineVisible > OFFLINE_INITIAL ? (
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setOfflineVisible(OFFLINE_INITIAL)}
-                        >
-                            Ver menos
-                        </Button>
-                    ) : undefined
-                }
             />
 
             <TemplateSection
                 main
                 title="Plantillas sin conexión"
                 items={offlineTemplates}
-                visibleCount={offlineVisible}
-                initialCount={OFFLINE_INITIAL}
-                moreLabel="Ver todas"
                 cardActionLabel="Usar esta plantilla"
                 emptyText="No hay plantillas disponibles sin conexión."
-                onShowMore={() => setOfflineVisible(v => v + OFFLINE_STEP)}
-                onShowLess={() => setOfflineVisible(OFFLINE_INITIAL)}
+                onShowAll={() => setGalleryFor('offline')}
                 onCardAction={setViewing}
             />
 
@@ -234,21 +200,46 @@ export default function TemplatesPage() {
                     title="Tienda de plantillas"
                     subtitle="Explora diseños premium para destacar tu experiencia."
                     items={storeTemplates}
-                    visibleCount={storeVisible}
-                    initialCount={STORE_INITIAL}
-                    moreLabel="Ver más"
                     cardActionLabel="Descargar Plantilla"
                     emptyText="No hay plantillas disponibles en la tienda."
-                    onShowMore={() => setStoreVisible(v => v + STORE_STEP)}
-                    onShowLess={() => setStoreVisible(STORE_INITIAL)}
+                    onShowAll={() => setGalleryFor('store')}
                     onCardAction={setDownloading}
                 />
             )}
 
             {/* La `key` remonta el diálogo al cambiar de plantilla, así el estado
                 interno (error de imagen, avisos) arranca limpio cada vez. */}
-            <TemplateViewerDialog key={`view-${viewing?.id ?? ''}`} template={viewing} onClose={() => setViewing(null)} />
-            <DownloadTemplateDialog key={`dl-${downloading?.id ?? ''}`} template={downloading} onClose={() => setDownloading(null)} />
+            <GalleryDialog
+                open={galleryFor !== null}
+                title={galleryFor === 'store' ? 'Tienda de plantillas' : 'Plantillas sin conexión'}
+                description={`${(galleryFor === 'store' ? storeTemplates : offlineTemplates).length} plantillas`}
+                items={galleryFor === 'store' ? storeTemplates : offlineTemplates}
+                perPage={PER_PAGE}
+                onClose={() => setGalleryFor(null)}
+                keyOf={t => t.id}
+                renderItem={t => (
+                    <TemplateCard
+                        template={t}
+                        actionLabel={galleryFor === 'store' ? 'Descargar Plantilla' : 'Usar esta plantilla'}
+                        onAction={template => {
+                            setGalleryFor(null);
+                            if (galleryFor === 'store') setDownloading(template);
+                            else setViewing(template);
+                        }}
+                    />
+                )}
+            />
+
+            <TemplateViewerDialog
+                key={`view-${viewing?.id ?? ''}`}
+                template={viewing && { id: viewing.id, name: viewing.name, description: viewing.description, imageUrl: viewing.previewUrl }}
+                onClose={() => setViewing(null)}
+            />
+            <DownloadTemplateDialog
+                key={`dl-${downloading?.id ?? ''}`}
+                template={downloading && { id: downloading.id, name: downloading.name }}
+                onClose={() => setDownloading(null)}
+            />
         </div>
     );
 }

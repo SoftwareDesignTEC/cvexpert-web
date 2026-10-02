@@ -6,6 +6,7 @@ import {
     ApplicationAlertsDialog, ChangeEmailDialog, ChangePasswordDialog,
     CourseAlertsDialog, DeleteAccountDialog, JobAlertsDialog,
 } from '../components/ui/SettingsDialogs';
+import SupportDialog from '../components/ui/SupportDialog';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -84,7 +85,7 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
-type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | null;
+type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | 'support' | null;
 
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
@@ -166,11 +167,9 @@ export default function SettingsPage() {
                             <p className="text-sm text-white/60">Contacta a nuestro equipo de soporte técnico.</p>
                         </div>
                     </div>
-                    {/* Sin funcionalidad por ahora: no hay buzón de soporte configurado */}
                     <button
-                        disabled
-                        title="Todavía no disponible"
-                        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                        onClick={() => setDialog('support')}
+                        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
                     >
                         Enviar Correo Electrónico
                     </button>
@@ -187,6 +186,7 @@ export default function SettingsPage() {
             <ApplicationAlertsDialog open={dialog === 'applications'} onClose={() => setDialog(null)} />
             <CourseAlertsDialog open={dialog === 'courses'} onClose={() => setDialog(null)} />
             <JobAlertsDialog open={dialog === 'jobs'} onClose={() => setDialog(null)} />
+            <SupportDialog open={dialog === 'support'} onClose={() => setDialog(null)} />
         </div>
     );
 }

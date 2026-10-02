@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Download, FileText, Loader2, Pencil, Search } from 'lucide-react';
+import { Clock, Download, FileText, Pencil, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
+import Pagination from '../components/ui/Pagination';
+import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
 import type { CV } from '../types/models';
 
-// 6 CVs por página; "Ver Más" agrega la siguiente página hacia abajo
+// Cada página pide su tramo al APIM, no se acumulan hacia abajo
 const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
-function CVListCard({ cv }: { cv: CV }) {
+function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; onDownload: () => void }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     const formattedDate = new Date(cv.updatedAt).toLocaleDateString('es-CR', {
@@ -51,15 +53,15 @@ function CVListCard({ cv }: { cv: CV }) {
             {/* Sin funcionalidad por ahora (no hay editor ni descarga en esta fase) */}
             <div className="flex flex-col gap-1.5 sm:flex-row">
                 <button
-                    disabled
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-2 text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={onView}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-2 text-xs font-medium text-white hover:bg-primary-dark transition-colors"
                 >
                     <Pencil size={13} />
                     Ver/Editar
                 </button>
                 <button
-                    disabled
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-deep px-2 py-2 text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={onDownload}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-deep px-2 py-2 text-xs font-medium text-white hover:opacity-90 transition-opacity"
                 >
                     <Download size={13} />
                     Descargar
@@ -78,19 +80,24 @@ export default function MyCVsPage() {
     const [totalRecords, setTotalRecords] = useState(0);
 
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
+
     const [error, setError] = useState<string | null>(null);
-    const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
     const [reloadKey, setReloadKey] = useState(0); // sube al presionar "Reintentar"
 
     // Modo IA todavía no está implementado: al intentar usarlo solo se muestra un mensaje
     const [aiMode, setAiMode] = useState(false);
+    const [viewingCv, setViewingCv] = useState<CV | null>(null);
+    const [downloadCv, setDownloadCv] = useState<CV | null>(null);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
 
     useEffect(() => {
-        const t = setTimeout(() => setSearch(searchInput.trim()), 400);
+        const t = setTimeout(() => {
+            setSearch(searchInput.trim());
+            setPage(1);   // una búsqueda nueva empieza desde la primera página
+        }, 400);
         return () => clearTimeout(t);
     }, [searchInput]);
 
@@ -100,13 +107,11 @@ export default function MyCVsPage() {
         const load = async () => {
             setLoading(true);
             setError(null);
-            setLoadMoreError(null);
             try {
-                const res = await cvService.getAll({ page: 1, pageSize: PAGE_SIZE, search: search || undefined });
+                const res = await cvService.getAll({ page, pageSize: PAGE_SIZE, search: search || undefined });
                 if (cancelled) return;
                 setItems(res.items ?? []);
-                setPage(1);
-                setTotalRecords(res.totalRecords);
+                setTotalRecords(res.totalRecords ?? 0);
             } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'No se pudieron cargar los currículums');
@@ -118,25 +123,10 @@ export default function MyCVsPage() {
         load();
 
         return () => { cancelled = true; };
-    }, [search, reloadKey]);
+    }, [search, page, reloadKey]);
 
-    const loadMore = async () => {
-        const next = page + 1;
-        setLoadingMore(true);
-        setLoadMoreError(null);
-        try {
-            const res = await cvService.getAll({ page: next, pageSize: PAGE_SIZE, search: search || undefined });
-            setItems(prev => [...prev, ...(res.items ?? [])]);
-            setPage(next);
-            setTotalRecords(res.totalRecords);
-        } catch (err) {
-            setLoadMoreError(err instanceof Error ? err.message : 'No se pudieron cargar más currículums');
-        } finally {
-            setLoadingMore(false);
-        }
-    };
 
-    const hasMore = items.length < totalRecords;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
 
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
@@ -192,25 +182,31 @@ export default function MyCVsPage() {
                 <div className="flex flex-col gap-3 sm:gap-4">
                     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                         {items.map(cv => (
-                            <CVListCard key={cv.id} cv={cv} />
+                            <CVListCard
+                                key={cv.id}
+                                cv={cv}
+                                onView={() => setViewingCv(cv)}
+                                onDownload={() => setDownloadCv(cv)}
+                            />
                         ))}
                     </div>
 
-                    {hasMore && (
-                        <Button
-                            variant="secondary"
-                            className="w-full"
-                            onClick={loadMore}
-                            disabled={loadingMore}
-                        >
-                            {loadingMore && <Loader2 size={16} className="animate-spin" />}
-                            Ver Más
-                        </Button>
-                    )}
-
-                    {loadMoreError && <ErrorMessage message={loadMoreError} onRetry={loadMore} />}
+                    <Pagination page={page} totalPages={totalPages} onChange={setPage} />
                 </div>
             )}
+
+            <TemplateViewerDialog
+                key={`cv-view-${viewingCv?.id ?? ''}`}
+                template={viewingCv && { id: viewingCv.id, name: viewingCv.title, imageUrl: viewingCv.thumbnailUrl }}
+                onClose={() => setViewingCv(null)}
+            />
+            <DownloadTemplateDialog
+                key={`cv-dl-${downloadCv?.id ?? ''}`}
+                template={downloadCv && { id: downloadCv.id, name: downloadCv.title }}
+                onClose={() => setDownloadCv(null)}
+                title="¿Descargar este currículum?"
+                notice="La descarga de currículums todavía no está implementada."
+            />
         </div>
     );
 }
