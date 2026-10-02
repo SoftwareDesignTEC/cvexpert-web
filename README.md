@@ -26,7 +26,7 @@ Esta fase no incluye backend real: toda la información proviene de mocks config
 ## Estructura del repositorio
 
 ```
-ProyectoFase1/
+cv-master/
 ├── .github/
 │   └── workflows/
 │       ├── azure-static-web-apps-victorious-mushroom-0cd000a10.yml   # CI/CD web
