@@ -46,6 +46,8 @@ cv-master/
 │   │       ├── types/          # Tipos del dominio
 │   │       └── config.ts       # Origen de autenticación central
 │   └── mobile/                 # Aplicación Android (Kotlin + Jetpack Compose)
+├── docs/
+│   └── capturas/               # Capturas de pantalla usadas en este README
 ├── package.json
 └── README.md
 ```
@@ -98,20 +100,21 @@ cd apps/mobile
 
 ## Capturas de pantalla
 
-<!-- Reemplazar cada línea por la captura correspondiente, por ejemplo:
-     ![Panel principal](docs/capturas/panel-principal.png)
-     Guardar las imágenes en docs/capturas/ -->
+<!-- Las capturas móviles siguen el mismo patrón con el prefijo movil-,
+     por ejemplo docs/capturas/movil-panel-principal.png -->
 
 | Pantalla | Escritorio | Móvil |
 |---|---|---|
-| Panel principal | _pendiente_ | _pendiente_ |
-| Mis currículums | _pendiente_ | _pendiente_ |
-| Perfil | _pendiente_ | _pendiente_ |
-| Ofertas laborales | _pendiente_ | _pendiente_ |
-| Postulaciones | _pendiente_ | _pendiente_ |
-| Análisis de brechas | _pendiente_ | _pendiente_ |
-| Plantillas | _pendiente_ | _pendiente_ |
-| Configuración (tema claro y oscuro) | _pendiente_ | _pendiente_ |
+| Panel principal | ![Panel principal](docs/capturas/web-panel-principal.png) | _pendiente_ |
+| Mis currículums | ![Mis currículums](docs/capturas/web-mis-curriculums.png) | _pendiente_ |
+| Perfil | ![Perfil](docs/capturas/web-perfil.png) | _pendiente_ |
+| Ofertas laborales | ![Ofertas laborales](docs/capturas/web-ofertas-laborales.png) | _pendiente_ |
+| Postulaciones | ![Postulaciones](docs/capturas/web-postulaciones.png) | _pendiente_ |
+| Análisis de brechas | ![Análisis de brechas](docs/capturas/web-analisis-brechas.png) | _pendiente_ |
+| Plantillas | ![Plantillas](docs/capturas/web-plantillas.png) | _pendiente_ |
+| Configuración | ![Configuración en tema claro](docs/capturas/web-configuracion-claro.png) ![Configuración en tema oscuro](docs/capturas/web-configuracion-oscuro.png) | _pendiente_ |
+
+Las capturas de escritorio están tomadas en tema oscuro, salvo la de Configuración, que aparece en los dos temas para mostrar el selector y su efecto.
 
 ---
 
