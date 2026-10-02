@@ -7,6 +7,9 @@ import {
     CourseAlertsDialog, DeleteAccountDialog, JobAlertsDialog,
 } from '../components/ui/SettingsDialogs';
 import SupportDialog from '../components/ui/SupportDialog';
+import LegalDialog from '../components/ui/LegalDialog';
+import { ActiveSessionsDialog, ExportDataDialog } from '../components/ui/AccountDialogs';
+import type { LegalKind } from '../services/legalService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -85,12 +88,13 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
-type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | 'support' | null;
+type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | 'support' | 'sessions' | 'export' | null;
 
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
-    const { profile } = useAuth();
+    const { profile, userId } = useAuth();
     const [dialog, setDialog] = useState<OpenDialog>(null);
+    const [legal, setLegal] = useState<LegalKind | null>(null);
 
     return (
         <div className="flex flex-col gap-4 sm:gap-6">
@@ -105,7 +109,7 @@ export default function SettingsPage() {
                 >
                     <ActionRow label="Cambiar Contraseña" icon={KeyRound} onClick={() => setDialog('password')} />
                     <ActionRow label="Cambiar Correo Electrónico" icon={Mail} onClick={() => setDialog('email')} />
-                    <ActionRow label="Sesiones Activas" icon={MonitorSmartphone} />
+                    <ActionRow label="Sesiones Activas" icon={MonitorSmartphone} onClick={() => setDialog('sessions')} />
                 </SettingsCard>
 
                 <SettingsCard
@@ -121,10 +125,10 @@ export default function SettingsPage() {
                     title="Datos"
                     subtitle="Controla tus datos y documentos legales."
                 >
-                    <ActionRow label="Descargar mis datos" icon={Download} />
+                    <ActionRow label="Descargar mis datos" icon={Download} onClick={() => setDialog('export')} />
                     <ActionRow label="Eliminar Cuenta" icon={Trash2} danger onClick={() => setDialog('delete')} />
-                    <ActionRow label="Políticas de Privacidad" icon={Shield} />
-                    <ActionRow label="Términos y Condiciones" icon={FileText} />
+                    <ActionRow label="Políticas de Privacidad" icon={Shield} onClick={() => setLegal('privacy')} />
+                    <ActionRow label="Términos y Condiciones" icon={FileText} onClick={() => setLegal('terms')} />
                 </SettingsCard>
             </div>
 
@@ -187,6 +191,9 @@ export default function SettingsPage() {
             <CourseAlertsDialog open={dialog === 'courses'} onClose={() => setDialog(null)} />
             <JobAlertsDialog open={dialog === 'jobs'} onClose={() => setDialog(null)} />
             <SupportDialog open={dialog === 'support'} onClose={() => setDialog(null)} />
+            <LegalDialog kind={legal} onClose={() => setLegal(null)} />
+            <ActiveSessionsDialog open={dialog === 'sessions'} userId={userId} onClose={() => setDialog(null)} />
+            <ExportDataDialog open={dialog === 'export'} userId={userId} onClose={() => setDialog(null)} />
         </div>
     );
 }

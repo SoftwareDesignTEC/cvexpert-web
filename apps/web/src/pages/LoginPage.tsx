@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CENTRAL_AUTH_URL, isAllowedReturnUrl, isAuthorizedOrigin } from '../config';
+import logo from '../assets/logo.png';
 
 // El dominio central devuelve el token en el fragmento de la URL. A diferencia del
 // query, el fragmento nunca se envia al servidor: no queda en los registros de Azure
@@ -112,9 +113,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
             <div className="w-full max-w-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 flex flex-col items-center gap-6">
                 <div className="flex items-center gap-2">
-                    <span className="w-9 h-9 rounded-lg bg-primary text-white font-bold text-xl flex items-center justify-center">
-                        C
-                    </span>
+                    <img src={logo} alt="" aria-hidden="true" className="w-11 h-11 object-contain" />
                     <h1 className="text-xl font-bold text-ink dark:text-white">CVExpert</h1>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center">

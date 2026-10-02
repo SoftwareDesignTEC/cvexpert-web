@@ -6,6 +6,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import GalleryDialog from '../components/ui/GalleryDialog';
 import { skillsGapService } from '../services/skillsGapService';
+import { describeError } from '../services/http';
 import type { CourseSuggestion, SkillGapApiItem } from '../services/skillsGapService';
 
 // Cuántos cursos se ven en la pantalla y cuántos entran por página en el panel
@@ -82,7 +83,7 @@ export default function SkillsGapPage() {
                 if (!cancelled) setItems(res.items ?? []);
             } catch (err) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : 'No se pudo cargar el análisis de brecha');
+                    setError(describeError(err, 'cargar tu análisis de brecha'));
                 }
             } finally {
                 if (!cancelled) setLoading(false);

@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
-import { UNAUTHORIZED_EVENT } from '../services/http';
+import { UNAUTHORIZED_EVENT, describeError } from '../services/http';
 import { profileService } from '../services/profileService';
 import type { UserProfile } from '../types/models';
 
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (!cancelled) setProfile(res);
             } catch (err) {
                 if (!cancelled) {
-                    setProfileError(err instanceof Error ? err.message : 'No se pudo cargar el perfil.');
+                    setProfileError(describeError(err, 'cargar tu perfil'));
                 }
             } finally {
                 if (!cancelled) setLoadingProfile(false);

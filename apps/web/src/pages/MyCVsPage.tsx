@@ -7,6 +7,7 @@ import Pagination from '../components/ui/Pagination';
 import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
+import { describeError } from '../services/http';
 import type { CV } from '../types/models';
 
 // Cada página pide su tramo al APIM, no se acumulan hacia abajo
@@ -114,7 +115,7 @@ export default function MyCVsPage() {
                 setTotalRecords(res.totalRecords ?? 0);
             } catch (err) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : 'No se pudieron cargar los currículums');
+                    setError(describeError(err, 'cargar tus currículums'));
                 }
             } finally {
                 if (!cancelled) setLoading(false);

@@ -18,6 +18,7 @@ import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import { applicationService } from '../services/otherServices';
+import { describeError } from '../services/http';
 import type { ApplicationStatus, JobApplication } from '../types/models';
 
 // Cuántas postulaciones se muestran por columna antes de "Ver Todo"
@@ -367,7 +368,7 @@ export default function ApplicationsPage() {
                 setTotal(total);
             } catch (err) {
                 if (!cancelled) {
-                    setError(err instanceof Error ? err.message : 'No se pudieron cargar las postulaciones');
+                    setError(describeError(err, 'cargar tus postulaciones'));
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -395,7 +396,7 @@ export default function ApplicationsPage() {
             // Recién ahora que APIM confirmó el cambio se mueve la card visualmente
             setApplications(prev => prev.map(a => (a.id === appId ? { ...a, status: newStatus } : a)));
         } catch (err) {
-            setMoveError(err instanceof Error ? err.message : 'No se pudo actualizar el estado de la postulación');
+            setMoveError(describeError(err, 'actualizar el estado de la postulación'));
         } finally {
             setPendingId(null);
         }

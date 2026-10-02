@@ -21,30 +21,73 @@ export class ApiError extends Error {
     }
 }
 
+// Motivo legible cuando la respuesta no trae un mensaje propio
+function defaultMessage(status: number) {
+    if (status === 400) return 'el servidor rechazó la petición por datos inválidos';
+    if (status === 403) return 'no tenés permiso para ver esta información';
+    if (status === 404) return 'el servidor no encontró esa información';
+    if (status === 408) return 'el servidor tardó demasiado en responder';
+    if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
+    if (status >= 500) return 'el servidor tuvo un problema interno';
+    return 'el servidor respondió de forma inesperada';
+}
+
+// Arma un mensaje que dice qué falló y por qué. `context` describe la acción,
+// p. ej. "cargar las ofertas"; el motivo sale del APIM o del tipo de fallo.
+export function describeError(err: unknown, context: string): string {
+    const prefix = `No pudimos ${context}`;
+
+    if (err instanceof ApiError) {
+        // status 0 = la petición nunca llegó a destino
+        if (err.status === 0) {
+            return `${prefix}: no hay conexión con el servidor. Revisá tu internet e intentá de nuevo.`;
+        }
+        if (err.status === 401) {
+            return `${prefix}: tu sesión expiró. Iniciá sesión de nuevo.`;
+        }
+        // El APIM devuelve el detalle en español; se muestra con su código para
+        // que sirva también al reportar el problema.
+        return `${prefix}: ${err.message} (código ${err.status})`;
+    }
+
+    if (err instanceof Error && err.message) {
+        return `${prefix}: ${err.message}`;
+    }
+    return `${prefix} por un error inesperado. Intentá de nuevo.`;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
     // El id_token (JWT) de Google que APIM valida en cada request
     const idToken = localStorage.getItem('id_token');
 
-    const res = await fetch(`${BASE_URL}${path}`, {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
-            ...options?.headers,
-        },
-        ...options,
-    });
+    let res: Response;
+    try {
+        res = await fetch(`${BASE_URL}${path}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+                ...options?.headers,
+            },
+            ...options,
+        });
+    } catch {
+        // fetch falla antes de tener respuesta: sin red, DNS caído o CORS.
+        // Sin esto el usuario veía el "Failed to fetch" del navegador.
+        throw new ApiError(0, 'sin conexión con el servidor');
+    }
 
     if (res.status === 401) {
         // Token vencido o inválido — APIM no tiene refresh automático. Avisamos y cortamos:
         // limpiar la sesión y navegar es responsabilidad de AuthProvider y del router.
         window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
-        throw new ApiError(401, 'Sesión expirada. Iniciá sesión de nuevo.');
+        throw new ApiError(401, 'la sesión expiró');
     }
 
     if (!res.ok) {
-        // Intenta leer el mensaje de error del body; si no, usa un genérico
+        // El APIM devuelve {statusCode, error, message} con el detalle en español;
+        // si no hay cuerpo utilizable, se arma un mensaje según el código.
         const body = await res.json().catch(() => ({}));
-        throw new ApiError(res.status, body.message ?? `Error ${res.status}`);
+        throw new ApiError(res.status, body.message ?? defaultMessage(res.status));
     }
 
     // 204 No Content (DELETE exitoso) no tiene body
