@@ -3,7 +3,9 @@
 **Curso:** Diseño de Software — Profesor Marcos Rodríguez
 **Entrega:** Fase I — 1 de octubre de 2026
 
-CVExpert es una aplicación para crear y gestionar currículums, descubrir ofertas laborales y analizar la brecha entre las habilidades propias y las que pide el mercado. Se compone de una aplicación web responsive y una aplicación móvil Android, ambas con la misma funcionalidad y consumiendo los mismos Mock Services publicados en Azure API Management.
+CVExpert es una aplicación para crear y gestionar currículums, descubrir ofertas laborales y analizar la brecha entre las habilidades propias y las que pide el mercado. Este repositorio contiene la **aplicación web**, que consume los Mock Services publicados en Azure API Management.
+
+La aplicación móvil Android vive en un repositorio aparte: <!-- TODO: enlace al repositorio movil -->.
 
 Esta fase no incluye backend real: toda la información proviene de mocks configurados en APIM.
 
@@ -18,7 +20,7 @@ Esta fase no incluye backend real: toda la información proviene de mocks config
 | Samuel Fajardo | UX/UI y diseño en Figma |
 | Justin Mayorga | Arquitectura y documentación |
 | Gabriel Pérez | Frontend web |
-| Andrés Zumbado | Frontend móvil |
+| Andrés Zumbado | Frontend móvil (en su propio repositorio) |
 | Gabriel Cabrera | DevOps, Mock Services e integración |
 
 ---
@@ -29,51 +31,21 @@ Esta fase no incluye backend real: toda la información proviene de mocks config
 cv-master/
 ├── .github/
 │   └── workflows/
-│       ├── azure-static-web-apps-victorious-mushroom-0cd000a10.yml   # CI/CD web
-│       └── mobile-ci-cd.yml                                          # CI/CD móvil
+│       └── azure-static-web-apps-victorious-mushroom-0cd000a10.yml   # CI/CD web
 ├── apps/
-│   ├── web/                    # Aplicación web (React + Vite + TypeScript)
-│   │   ├── public/
-│   │   │   └── staticwebapp.config.json   # Fallback de rutas del SPA en Azure
-│   │   └── src/
-│   │       ├── components/ui/  # Componentes reutilizables (tarjetas, diálogos, paginación…)
-│   │       ├── context/        # AuthContext y ThemeContext
-│   │       ├── hooks/          # useOnlineStatus
-│   │       ├── layouts/        # MainLayout (sidebar + header)
-│   │       ├── pages/          # Una pantalla por archivo
-│   │       ├── router/         # Rutas, ProtectedRoute y pantalla de error
-│   │       ├── services/       # Cliente HTTP y un servicio por recurso
-│   │       ├── types/          # Tipos del dominio
-│   │       └── config.ts       # Origen de autenticación central
-│   └── mobile/                 # Aplicación Android (Kotlin + Jetpack Compose)
-│       ├── gradle/
-│       │   ├── libs.versions.toml           # Version catalog: todas las dependencias
-│       │   └── gradle-daemon-jvm.properties # Fija el daemon de Gradle en Java 17
-│       └── app/src/main/
-│           ├── java/com/cvpro/app/
-│           │   ├── CvApplication.kt        # @HiltAndroidApp y el ImageLoader con SVG
-│           │   ├── MainActivity.kt
-│           │   ├── data/
-│           │   │   ├── remote/api/         # Interfaces Retrofit, una por recurso
-│           │   │   ├── remote/dto/         # DTOs de la API
-│           │   │   ├── remote/             # Interceptores de token y de registro
-│           │   │   ├── mapper/             # DTO → modelo de dominio
-│           │   │   ├── repository/         # Implementaciones contra APIM
-│           │   │   ├── local/              # DataStore (tema y notificaciones)
-│           │   │   ├── pdf/                # Exportación del currículum a PDF
-│           │   │   └── download/           # Descarga de archivos a Descargas
-│           │   ├── domain/
-│           │   │   ├── model/              # Modelos limpios, con los nombres del contrato
-│           │   │   └── repository/         # Interfaces que la capa ui consume
-│           │   ├── di/                     # Módulos de Hilt (red)
-│           │   └── ui/
-│           │       ├── theme/              # Color, Type y Theme (claro y oscuro)
-│           │       ├── navigation/         # NavGraph, Routes, drawer y barra superior
-│           │       ├── components/         # Reutilizables (RemoteImage, hojas, estados…)
-│           │       └── screens/<pantalla>/ # Screen.kt + ViewModel.kt por pantalla
-│           └── res/
-│               ├── values/                 # strings.xml (español), colores, temas
-│               └── values-night/           # Variantes del tema oscuro
+│   └── web/                    # Aplicación web (React + Vite + TypeScript)
+│       ├── public/
+│       │   └── staticwebapp.config.json   # Fallback de rutas del SPA en Azure
+│       └── src/
+│           ├── components/ui/  # Componentes reutilizables (tarjetas, diálogos, paginación…)
+│           ├── context/        # AuthContext y ThemeContext
+│           ├── hooks/          # useOnlineStatus
+│           ├── layouts/        # MainLayout (sidebar + header)
+│           ├── pages/          # Una pantalla por archivo
+│           ├── router/         # Rutas, ProtectedRoute y pantalla de error
+│           ├── services/       # Cliente HTTP y un servicio por recurso
+│           ├── types/          # Tipos del dominio
+│           └── config.ts       # Origen de autenticación central
 ├── docs/
 │   └── capturas/               # Capturas de pantalla usadas en este README
 ├── package.json
@@ -83,8 +55,6 @@ cv-master/
 ---
 
 ## Despliegue local
-
-### Aplicación web
 
 Requiere Node.js 20 o superior.
 
@@ -115,36 +85,22 @@ npm run lint      # Análisis estático con ESLint
 npm run preview   # Sirve la compilación de producción localmente
 ```
 
-### Aplicación móvil
-
-Requiere JDK 17 y Android Studio.
-
-```bash
-cd apps/mobile
-./gradlew assembleDebug
-```
-
 ---
 
 ## Capturas de pantalla
 
-<!-- Las capturas móviles siguen el mismo patrón con el prefijo movil-,
-     por ejemplo docs/capturas/movil-panel-principal.png -->
-
-| Pantalla | Escritorio | Móvil |
-|---|---|---|
-| Panel principal | ![Panel principal](docs/capturas/web-panel-principal.png) | ![Panel principal en el móvil](docs/capturas/movil-panel-principal.png) |
-| Mis currículums | ![Mis currículums](docs/capturas/web-mis-curriculums.png) | ![Mis currículums en el móvil](docs/capturas/movil-mis-curriculums.png) |
-| Perfil | ![Perfil](docs/capturas/web-perfil.png) | ![Perfil en el móvil](docs/capturas/movil-perfil.png) |
-| Ofertas laborales | ![Ofertas laborales](docs/capturas/web-ofertas-laborales.png) | ![Ofertas laborales en el móvil](docs/capturas/movil-ofertas-laborales.png) |
-| Postulaciones | ![Postulaciones](docs/capturas/web-postulaciones.png) | ![Postulaciones en el móvil](docs/capturas/movil-postulaciones.png) |
-| Análisis de brechas | ![Análisis de brechas](docs/capturas/web-analisis-brechas.png) | ![Análisis de brechas en el móvil](docs/capturas/movil-analisis-brechas.png) |
-| Plantillas | ![Plantillas](docs/capturas/web-plantillas.png) | ![Plantillas en el móvil](docs/capturas/movil-plantillas.png) |
-| Configuración | ![Configuración en tema claro](docs/capturas/web-configuracion-claro.png) ![Configuración en tema oscuro](docs/capturas/web-configuracion-oscuro.png) | ![Configuración del móvil en tema claro](docs/capturas/movil-configuracion-claro.png) ![Configuración del móvil en tema oscuro](docs/capturas/movil-configuracion-oscuro.png) |
+| Pantalla | Escritorio |
+|---|---|
+| Panel principal | ![Panel principal](docs/capturas/web-panel-principal.png) |
+| Mis currículums | ![Mis currículums](docs/capturas/web-mis-curriculums.png) |
+| Perfil | ![Perfil](docs/capturas/web-perfil.png) |
+| Ofertas laborales | ![Ofertas laborales](docs/capturas/web-ofertas-laborales.png) |
+| Postulaciones | ![Postulaciones](docs/capturas/web-postulaciones.png) |
+| Análisis de brechas | ![Análisis de brechas](docs/capturas/web-analisis-brechas.png) |
+| Plantillas | ![Plantillas](docs/capturas/web-plantillas.png) |
+| Configuración | ![Configuración en tema claro](docs/capturas/web-configuracion-claro.png) ![Configuración en tema oscuro](docs/capturas/web-configuracion-oscuro.png) |
 
 Las capturas de escritorio están tomadas en tema oscuro, salvo la de Configuración, que aparece en los dos temas para mostrar el selector y su efecto.
-
-Las del móvil siguen el mismo criterio: tema oscuro, y Configuración en los dos. Salen del emulador con la app corriendo contra los mocks de APIM, así que los currículums, las ofertas y los cursos son los que devuelve el servicio.
 
 ---
 
@@ -198,9 +154,9 @@ Ningún dato que se muestra en pantalla está escrito en el código: todo provie
 |---|---|
 | Currículums | `GET /cvs`, `GET /cvs/{id}` |
 | Ofertas | `GET /jobs`, `GET /jobs/{id}` |
-| Postulaciones | `GET /applications`, `POST /applications`, `PUT /applications/{id}` |
-| Plantillas | `GET /templates` |
-| Perfil | `GET /profiles/{id}`, `PUT /profiles/{id}` |
+| Postulaciones |
+| Plantillas |
+| Perfil |
 | Sesiones y datos | `GET /profiles/{id}/sessions`, `GET /profiles/{id}/export` |
 | Brecha de habilidades | `GET /skills-gap` |
 | Soporte y legales | `GET /help`, `GET /legal/terms`, `GET /legal/privacy` |
@@ -212,7 +168,6 @@ Ningún dato que se muestra en pantalla está escrito en el código: todo provie
 | Workflow | Qué hace | Cuándo se activa |
 |---|---|---|
 | `azure-static-web-apps-…yml` | Valida (lint y tipos), compila, despliega en Azure Static Web Apps y publica el release con GitHub CLI | Push a `main` (producción) y Pull Requests hacia `main` (vista previa) |
-| `mobile-ci-cd.yml` | Compila el APK de release y lo sube a Firebase App Distribution | Cambios en `apps/mobile/**` |
 
 Cada Pull Request abierto contra `main` genera un entorno de vista previa con URL propia, que se elimina al cerrarlo. Los despliegues a producción salen únicamente de `main`.
 
@@ -243,15 +198,6 @@ Ninguna URL ni credencial está versionada. Los valores se inyectan en tiempo de
 | [@dnd-kit/core](https://dndkit.com/) | Arrastrar y soltar en el tablero de postulaciones |
 | [ESLint](https://eslint.org/) | Análisis estático |
 
-### Aplicación móvil
-
-| Herramienta | Uso |
-|---|---|
-| [Kotlin](https://kotlinlang.org/) | Lenguaje |
-| [Jetpack Compose](https://developer.android.com/compose) | Interfaz declarativa |
-| [Hilt](https://dagger.dev/hilt/) | Inyección de dependencias |
-| [Retrofit](https://square.github.io/retrofit/) | Cliente HTTP |
-
 ### Infraestructura y diseño
 
 | Herramienta | Uso |
@@ -260,7 +206,6 @@ Ninguna URL ni credencial está versionada. Los valores se inyectan en tiempo de
 | [Azure API Management](https://azure.microsoft.com/products/api-management) | Mock Services y validación del token |
 | [GitHub Actions](https://github.com/features/actions) | Integración y despliegue continuos |
 | [GitHub CLI](https://cli.github.com/) | Creación automática de tags y releases |
-| [Firebase App Distribution](https://firebase.google.com/products/app-distribution) | Distribución del APK a testers |
 | [Google Identity Services](https://developers.google.com/identity) | Autenticación |
 | [Figma](https://www.figma.com/) | Wireframes y maquetas |
 | [Draw.io](https://www.drawio.com/) | Diagrama de arquitectura |
@@ -269,6 +214,7 @@ Ninguna URL ni credencial está versionada. Los valores se inyectan en tiempo de
 
 ## Notas sobre el alcance
 
+- Este repositorio contiene **sólo la aplicación web**. La aplicación móvil se separó a su propio repositorio; hasta la Fase I ambas convivieron aquí, así que el historial del módulo móvil está en los commits anteriores a esa separación.
 - Este repositorio corresponde únicamente a la **Fase I**: la información proviene de Mock Services, sin backend real.
 - El `id_token` de Google tiene una vigencia de una hora y no se renueva automáticamente; al expirar, la aplicación cierra la sesión y solicita iniciar sesión de nuevo.
 - Las acciones de escritura que todavía no tienen endpoint (crear y editar currículums, descargar archivos, guardar preferencias de notificación) muestran sus formularios con validación, pero avisan que la operación aún no está disponible.
