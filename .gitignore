@@ -7,14 +7,6 @@ node_modules/
 dist/
 build/
 out/
-.next/
-.expo/
-.expo-shared/
-android/app/build/
-ios/build/
-*.apk
-*.aab
-*.ipa
 
 # Environment & secrets
 .env
@@ -22,15 +14,6 @@ ios/build/
 .env.*.local
 *.pem
 *.key
-
-# Firmas y configuracion local: nunca se suben al repositorio.
-# El keystore se comparte por canal directo o vive en un secret de GitHub Actions.
-*.jks
-*.keystore
-keystore.properties
-secrets.properties
-local.properties
-google-services.json
 
 # IDE & OS
 .DS_Store
@@ -53,14 +36,6 @@ temp/
 # Testing & coverage
 coverage/
 .nyc_output/
-
-# Flutter / Dart (por si usan Flutter)
-.dart_tool/
-.packages
-.pub-cache/
-.pub/
-build/
-*.iml
 
 # Misc
 *.tsbuildinfo

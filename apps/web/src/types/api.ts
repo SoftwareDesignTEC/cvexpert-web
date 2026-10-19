@@ -1,5 +1,5 @@
-// Estructura de respuesta paginada — debe coincidir con lo que devuelve APIM
-// Andrés usa esta misma estructura como referencia para sus data classes en Kotlin
+// Estructura de respuesta paginada — debe coincidir con lo que devuelve APIM.
+// El cliente movil replica este mismo contrato desde su propio repositorio.
 export interface PaginatedResponse<T> {
     totalRecords: number;
     page: number;
