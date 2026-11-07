@@ -113,30 +113,34 @@ export interface SkillInput {
  * como estado inicial, no como error con botón de reintentar.
  */
 export function isSkillsInputRequired(err: unknown): boolean {
+    // Se exige el código, no sólo el 409: otro conflicto distinto no debe
+    // confundirse con "el usuario todavía no cargó habilidades".
     return err instanceof ApiError
         && err.status === 409
-        && (err.code === undefined || err.code === 'SKILLS_INPUT_REQUIRED');
+        && err.code === 'SKILLS_INPUT_REQUIRED';
 }
 
-// Defensivo: si falta `analysis` entero, la pantalla no debe reventar
-const EMPTY_ANALYSIS: SkillsGapAnalysis = {
-    status: 'empty',
-    comparedSkills: 0,
-    scaleKey: 'cv-skill-v1',
-    marketStatus: 'missing',
-    unresolved: [],
-};
-
+/**
+ * El contrato 0.2.0 exige `items` y `analysis`. Si falta alguno, la respuesta no
+ * es un análisis vacío: es una respuesta incompatible, y hay que decirlo. Rellenar
+ * los metadatos haría pasar por válido, por ejemplo, al mock viejo de la Fase I.
+ */
 function normalize(res: Partial<SkillsGapResponse> | null | undefined): SkillsGapResponse {
     const r = res ?? {};
-    const analysis = r.analysis ?? EMPTY_ANALYSIS;
+    const analysis = r.analysis;
+
+    if (!Array.isArray(r.items) || !analysis || typeof analysis !== 'object') {
+        throw new Error(
+            'el servidor devolvió una respuesta que no corresponde al contrato del análisis de brecha',
+        );
+    }
+
     return {
-        items: Array.isArray(r.items) ? r.items : [],
+        items: r.items,
         page: r.page ?? 1,
         pageSize: r.pageSize ?? 20,
-        totalRecords: r.totalRecords ?? 0,
+        totalRecords: r.totalRecords ?? r.items.length,
         analysis: {
-            ...EMPTY_ANALYSIS,
             ...analysis,
             unresolved: Array.isArray(analysis.unresolved) ? analysis.unresolved : [],
         },

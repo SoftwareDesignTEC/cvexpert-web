@@ -14,20 +14,11 @@ import {
     skillsGapService,
 } from '../services/skillsGapService';
 import { describeError } from '../services/http';
-import type {
-    CourseSuggestion,
-    SkillInput,
-    SkillLevel,
-    SkillsGapResponse,
-} from '../services/skillsGapService';
+import type { CourseSuggestion, SkillsGapResponse } from '../services/skillsGapService';
 
 // Cuántos cursos se ven en la pantalla y cuántos entran por página en el panel
 const COURSES_PREVIEW = 3;
 const COURSES_PER_PAGE = 6;
-
-const LEVEL_BY_VALUE: Record<number, SkillLevel> = {
-    1: 'beginner', 2: 'intermediate', 3: 'advanced', 4: 'expert',
-};
 
 // El logo de la plataforma viene del servicio; puede ser null y la URL puede fallar.
 function CoursePlatformLogo({ logoUrl, platform }: { logoUrl: string | null; platform: string }) {
@@ -158,24 +149,6 @@ export default function SkillsGapPage() {
         [items],
     );
 
-    // Para precargar el diálogo con lo que el servicio ya conoce del usuario
-    const knownSkills = useMemo<SkillInput[]>(() => {
-        const out = new Map<string, SkillInput>();
-        for (const i of items) {
-            out.set(i.skillName, { skillName: i.skillName, level: LEVEL_BY_VALUE[i.userLevel] ?? null });
-        }
-        for (const u of unresolved) {
-            if (out.has(u.skillName)) continue;
-            // MISSING_USER_SKILL es una habilidad que pide la vacante y el usuario
-            // no declaró: se precarga sin nivel para que sólo tenga que elegirlo.
-            out.set(u.skillName, {
-                skillName: u.skillName,
-                level: u.userLevel != null ? LEVEL_BY_VALUE[u.userLevel] ?? null : null,
-            });
-        }
-        return [...out.values()];
-    }, [items, unresolved]);
-
     if (loading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={error} onRetry={reload} />;
 
@@ -191,13 +164,11 @@ export default function SkillsGapPage() {
         />
     );
 
-    // Se monta sólo al abrirse, con key: así cada apertura parte de lo guardado
-    // sin necesidad de un efecto que reinicie el formulario.
+    // Se monta sólo al abrirse: así cada apertura parte de un formulario limpio
+    // sin necesidad de un efecto que lo reinicie.
     const dialog = inputOpen && (
         <SkillsInputDialog
-            key={reloadKey}
             open
-            initialSkills={knownSkills}
             onClose={() => setInputOpen(false)}
             onSaved={() => { setInputOpen(false); reload(); }}
         />

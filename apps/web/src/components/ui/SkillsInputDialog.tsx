@@ -20,24 +20,19 @@ interface Row {
 let nextId = 1;
 const emptyRow = (): Row => ({ id: nextId++, skillName: '', level: '' });
 
-function toRows(initial: SkillInput[]): Row[] {
-    if (initial.length === 0) return [emptyRow()];
-    return initial.map(s => ({ id: nextId++, skillName: s.skillName, level: s.level ?? '' }));
-}
-
 export default function SkillsInputDialog({
-    open, initialSkills, onClose, onSaved,
+    open, onClose, onSaved,
 }: {
     open: boolean;
-    /** Habilidades ya conocidas, para no obligar a reescribirlas todas. */
-    initialSkills: SkillInput[];
     onClose: () => void;
     onSaved: () => void;
 }) {
-    // El estado arranca de lo guardado y no se reinicia con un efecto: quien lo
-    // abre lo monta de nuevo cada vez (ver SkillsGapPage), que es más barato y
-    // evita el reinicio en dos pasadas.
-    const [rows, setRows] = useState<Row[]>(() => toRows(initialSkills));
+    // El formulario arranca vacío a propósito. GET /skills-gap NO devuelve la
+    // lista guardada: `items` trae sólo las brechas positivas y `unresolved` las
+    // no comparables, así que las habilidades que ya cumplen el requisito no
+    // aparecen en ninguna parte. Precargar desde ahí y mandar el PUT —que
+    // reemplaza todo— habría borrado justamente esas, sin aviso.
+    const [rows, setRows] = useState<Row[]>(() => [emptyRow()]);
     const [confirming, setConfirming] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -93,12 +88,14 @@ export default function SkillsInputDialog({
             onClose={onClose}
         >
             <div className="flex flex-col gap-4">
-                {/* El PUT reemplaza la lista completa: conviene decirlo antes, no después */}
+                {/* El PUT reemplaza la lista completa y el formulario arranca vacío:
+                    hay que ser explícito o el usuario pierde lo que ya tenía. */}
                 <div className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-500/40 dark:bg-amber-500/10">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="text-xs text-amber-900 dark:text-amber-200">
-                        Esta lista <strong>reemplaza por completo</strong> tus habilidades guardadas.
-                        Lo que borrés acá deja de contar para el análisis.
+                        Escribí <strong>todas</strong> tus habilidades, incluso las que ya hayas
+                        guardado antes. Esta lista <strong>reemplaza por completo</strong> la
+                        anterior: lo que no esté acá deja de contar para el análisis.
                     </p>
                 </div>
 
@@ -166,7 +163,7 @@ export default function SkillsInputDialog({
                         <p className="text-sm text-body dark:text-gray-300">
                             {named.length === 0
                                 ? '¿Guardar una lista vacía? Vas a quedarte sin análisis de brecha hasta que cargues habilidades de nuevo.'
-                                : `¿Reemplazar tus habilidades guardadas por estas ${named.length}?`}
+                                : `¿Reemplazar todas tus habilidades guardadas por estas ${named.length}? Las que no estén en la lista se pierden.`}
                         </p>
                         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                             <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(false)}>
