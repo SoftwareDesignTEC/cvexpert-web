@@ -1,20 +1,36 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, GraduationCap } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ExternalLink, GraduationCap, HelpCircle, Pencil } from 'lucide-react';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import GalleryDialog from '../components/ui/GalleryDialog';
-import { skillsGapService } from '../services/skillsGapService';
+import SkillsInputDialog from '../components/ui/SkillsInputDialog';
+import {
+    SKILL_SCALE_MAX,
+    UNRESOLVED_REASON_LABEL,
+    isSkillsInputRequired,
+    levelLabel,
+    skillsGapService,
+} from '../services/skillsGapService';
 import { describeError } from '../services/http';
-import type { CourseSuggestion, SkillGapApiItem } from '../services/skillsGapService';
+import type {
+    CourseSuggestion,
+    SkillInput,
+    SkillLevel,
+    SkillsGapResponse,
+} from '../services/skillsGapService';
 
 // Cuántos cursos se ven en la pantalla y cuántos entran por página en el panel
 const COURSES_PREVIEW = 3;
 const COURSES_PER_PAGE = 6;
 
-// El logo de la plataforma viene del APIM; si falta o la URL falla, se usa el icono.
-function CoursePlatformLogo({ logoUrl, platform }: { logoUrl?: string; platform: string }) {
+const LEVEL_BY_VALUE: Record<number, SkillLevel> = {
+    1: 'beginner', 2: 'intermediate', 3: 'advanced', 4: 'expert',
+};
+
+// El logo de la plataforma viene del servicio; puede ser null y la URL puede fallar.
+function CoursePlatformLogo({ logoUrl, platform }: { logoUrl: string | null; platform: string }) {
     const [failed, setFailed] = useState(false);
 
     if (!logoUrl || failed) {
@@ -38,21 +54,34 @@ function CoursePlatformLogo({ logoUrl, platform }: { logoUrl?: string; platform:
 type CourseWithSkill = CourseSuggestion & { skillName: string };
 
 function CourseCard({ course }: { course: CourseWithSkill }) {
+    // durationHours puede venir null: hay cursos sin duración publicada.
+    // Se omite el dato en vez de escribir "null h".
+    const meta = [
+        course.durationHours != null ? `${course.durationHours} h` : null,
+        course.skillName,
+    ].filter(Boolean).join(' · ');
+
     return (
         <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-xl p-3 flex flex-col gap-2">
             <div className="flex items-center gap-2">
                 <CoursePlatformLogo logoUrl={course.logoUrl} platform={course.platform} />
                 <span className="text-[11px] text-muted truncate">{course.platform}</span>
+                <span
+                    className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        course.isPaid
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
+                    }`}
+                >
+                    {course.isPaid ? 'De pago' : 'Gratis'}
+                </span>
             </div>
 
             <h3 className="text-xs font-semibold text-ink dark:text-white line-clamp-2">
                 {course.title}
             </h3>
-            <p className="text-[11px] text-muted">
-                {course.durationHours} h · {course.skillName}
-            </p>
+            <p className="text-[11px] text-muted">{meta}</p>
 
-            {/* Costo aún no viene en la respuesta de APIM — se omite en vez de inventarlo */}
             <a
                 href={course.url}
                 target="_blank"
@@ -66,11 +95,14 @@ function CourseCard({ course }: { course: CourseWithSkill }) {
 }
 
 export default function SkillsGapPage() {
-    const [items, setItems] = useState<SkillGapApiItem[]>([]);
+    const [data, setData] = useState<SkillsGapResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [reloadKey, setReloadKey] = useState(0); // sube al presionar "Reintentar"
+    // 409 SKILLS_INPUT_REQUIRED: no es una falla, es que falta el paso previo
+    const [needsInput, setNeedsInput] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
     const [coursesOpen, setCoursesOpen] = useState(false);
+    const [inputOpen, setInputOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -80,9 +112,16 @@ export default function SkillsGapPage() {
             setError(null);
             try {
                 const res = await skillsGapService.getAll();
-                if (!cancelled) setItems(res.items ?? []);
-            } catch (err) {
                 if (!cancelled) {
+                    setData(res);
+                    setNeedsInput(false);
+                }
+            } catch (err) {
+                if (cancelled) return;
+                if (isSkillsInputRequired(err)) {
+                    setNeedsInput(true);
+                    setData(null);
+                } else {
                     setError(describeError(err, 'cargar tu análisis de brecha'));
                 }
             } finally {
@@ -94,47 +133,116 @@ export default function SkillsGapPage() {
         return () => { cancelled = true; };
     }, [reloadKey]);
 
-    // SkillsRadar espera { name, userLevel, marketLevel } (SkillGapItem) — se adapta
-    // acá el `skillName` de APIM sin tocar ese componente, porque también lo usa el Dashboard.
+    const reload = useCallback(() => setReloadKey(k => k + 1), []);
+
+    // Memorizados: sin esto cada render crea arreglos nuevos y los useMemo de
+    // abajo se recalculan siempre.
+    const items = useMemo(() => data?.items ?? [], [data]);
+    const unresolved = useMemo(() => data?.analysis.unresolved ?? [], [data]);
+    const analysis = data?.analysis;
+
+    // El radar escala contra 4, no contra 100: los niveles son ordinales.
     const radarData = useMemo(
         () => items.map(i => ({ name: i.skillName, userLevel: i.userLevel, marketLevel: i.marketLevel })),
         [items],
     );
 
-    // Habilidades donde el mercado pide más de lo que tiene el usuario, ordenadas por brecha
+    // items[] ya trae sólo brechas positivas; deficitSteps dice cuántos niveles faltan
     const gaps = useMemo(
-        () => items
-            .map(i => ({ skillName: i.skillName, gap: i.marketLevel - i.userLevel }))
-            .filter(i => i.gap > 0)
-            .sort((a, b) => b.gap - a.gap),
+        () => [...items].sort((a, b) => b.deficitSteps - a.deficitSteps),
         [items],
     );
 
-    // Todos los cursos recomendados, con la habilidad a la que ayudan
     const allCourses = useMemo(
         () => items.flatMap(i => i.courses.map(c => ({ ...c, skillName: i.skillName }))),
         [items],
     );
 
+    // Para precargar el diálogo con lo que el servicio ya conoce del usuario
+    const knownSkills = useMemo<SkillInput[]>(() => {
+        const out = new Map<string, SkillInput>();
+        for (const i of items) {
+            out.set(i.skillName, { skillName: i.skillName, level: LEVEL_BY_VALUE[i.userLevel] ?? null });
+        }
+        for (const u of unresolved) {
+            if (out.has(u.skillName)) continue;
+            // MISSING_USER_SKILL es una habilidad que pide la vacante y el usuario
+            // no declaró: se precarga sin nivel para que sólo tenga que elegirlo.
+            out.set(u.skillName, {
+                skillName: u.skillName,
+                level: u.userLevel != null ? LEVEL_BY_VALUE[u.userLevel] ?? null : null,
+            });
+        }
+        return [...out.values()];
+    }, [items, unresolved]);
+
     if (loading) return <LoadingSpinner />;
-    if (error) return <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />;
+    if (error) return <ErrorMessage message={error} onRetry={reload} />;
+
+    const header = (
+        <PageHeader
+            eyebrow="Crecimiento profesional"
+            title="Análisis de Brecha"
+            action={
+                <Button variant="secondary" size="sm" onClick={() => setInputOpen(true)}>
+                    <Pencil size={14} /> Mis habilidades
+                </Button>
+            }
+        />
+    );
+
+    // Se monta sólo al abrirse, con key: así cada apertura parte de lo guardado
+    // sin necesidad de un efecto que reinicie el formulario.
+    const dialog = inputOpen && (
+        <SkillsInputDialog
+            key={reloadKey}
+            open
+            initialSkills={knownSkills}
+            onClose={() => setInputOpen(false)}
+            onSaved={() => { setInputOpen(false); reload(); }}
+        />
+    );
+
+    // ── Falta la instantánea de habilidades (409) ────────────────────────────
+    if (needsInput) {
+        return (
+            <div className="flex flex-col gap-3 sm:gap-6">
+                {header}
+                <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-sm p-6 flex flex-col items-start gap-3">
+                    <h2 className="text-lg font-bold text-ink dark:text-white">
+                        Contanos qué sabés hacer
+                    </h2>
+                    <p className="text-sm text-body dark:text-gray-300 max-w-prose">
+                        Todavía no guardaste tus habilidades, así que no hay nada con qué comparar.
+                        Cargalas una vez y calculamos tu brecha frente a la vacante de referencia.
+                    </p>
+                    <Button size="sm" onClick={() => setInputOpen(true)}>
+                        Cargar mis habilidades
+                    </Button>
+                </div>
+                {dialog}
+            </div>
+        );
+    }
+
+    // `items: []` NO significa que el usuario cumpla todo: puede ser que no haya
+    // datos comparables o que falte el contexto laboral. El texto se arma con
+    // analysis.status y marketStatus para no afirmar algo falso.
+    const emptyMessage =
+        analysis?.marketStatus === 'missing'
+            ? 'No hay una vacante de referencia disponible en este momento, así que no se puede calcular la brecha.'
+            : analysis?.status === 'empty'
+                ? 'No hay habilidades comparables todavía. Revisá las que cargaste o agregá las que falten.'
+                : 'No se encontraron brechas calculables con las habilidades que tenés cargadas.';
 
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
-            <PageHeader
-                eyebrow="Crecimiento profesional"
-                title="Análisis de Brecha"
-                action={
-                    <span className="inline-block rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 px-4 py-2 text-sm text-body dark:text-gray-300 shadow-sm">
-                        Actualizado hoy
-                    </span>
-                }
-            />
+            {header}
 
             {items.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Todavía no hay un análisis de brecha disponible.
-                </p>
+                <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-sm p-5">
+                    <p className="text-sm text-body dark:text-gray-300">{emptyMessage}</p>
+                </div>
             ) : (
                 <>
                     {/* ── Radar + Puntos a Mejorar ────────────────────────────────── */}
@@ -149,7 +257,12 @@ export default function SkillsGapPage() {
                                 </h2>
                             </div>
                             <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                                <SkillsRadar skills={radarData} size={220} />
+                                <SkillsRadar
+                                    skills={radarData}
+                                    size={220}
+                                    max={SKILL_SCALE_MAX}
+                                    formatValue={levelLabel}
+                                />
                                 <div className="flex gap-4 text-sm text-body dark:text-gray-300 sm:flex-col">
                                     <span className="flex items-center gap-2">
                                         <span className="w-4 h-4 rounded bg-primary/30 border border-primary" /> Tu Perfil
@@ -168,33 +281,34 @@ export default function SkillsGapPage() {
                                 </h2>
                                 <p className="text-sm text-muted">Habilidades por mejorar</p>
                             </div>
-                            {gaps.length === 0 ? (
-                                <p className="text-sm text-muted">
-                                    Tu perfil ya alcanza el nivel del mercado en todas las habilidades evaluadas.
-                                </p>
-                            ) : (
-                                <ol className="flex flex-col gap-3">
-                                    {/* El fondo se aclara al bajar en la lista, para que la brecha
-                                        mayor sea la que más pesa visualmente, como en el mockup. */}
-                                    {gaps.map((g, i) => (
-                                        <li
-                                            key={g.skillName}
-                                            className="flex items-center justify-between gap-3 rounded-lg border-l-4 border-primary bg-surface dark:bg-gray-800/60 px-4 py-3 shadow-sm"
-                                            style={{ backgroundColor: i < 3 ? `rgba(37, 99, 235, ${0.10 - i * 0.035})` : undefined }}
-                                        >
+                            <ol className="flex flex-col gap-3">
+                                {/* El fondo se aclara al bajar en la lista, para que la brecha
+                                    mayor sea la que más pesa visualmente, como en el mockup. */}
+                                {gaps.map((g, i) => (
+                                    <li
+                                        key={g.skillName}
+                                        className="flex items-center justify-between gap-3 rounded-lg border-l-4 border-primary bg-surface dark:bg-gray-800/60 px-4 py-3 shadow-sm"
+                                        style={{ backgroundColor: i < 3 ? `rgba(37, 99, 235, ${0.10 - i * 0.035})` : undefined }}
+                                    >
+                                        <span className="flex min-w-0 flex-col">
                                             <span className="flex items-center gap-2 min-w-0">
                                                 <span className="text-sm font-bold text-primary shrink-0">{i + 1}.</span>
                                                 <span className="text-sm font-semibold text-ink dark:text-gray-100 truncate">
                                                     {g.skillName}
                                                 </span>
                                             </span>
-                                            <span className="text-xs font-medium text-muted shrink-0">
-                                                -{g.gap}% brecha
+                                            <span className="pl-5 text-[11px] text-muted">
+                                                {levelLabel(g.userLevel)} → {levelLabel(g.marketLevel)}
                                             </span>
-                                        </li>
-                                    ))}
-                                </ol>
-                            )}
+                                        </span>
+                                        {/* Pasos ordinales, no porcentaje: de Principiante a Avanzado
+                                            son dos niveles, no un 50 %. */}
+                                        <span className="shrink-0 text-xs font-medium text-muted">
+                                            {g.deficitSteps} {g.deficitSteps === 1 ? 'nivel' : 'niveles'}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
                         </div>
                     </div>
 
@@ -206,11 +320,7 @@ export default function SkillsGapPage() {
                                 <h2 className="text-lg font-bold text-ink dark:text-white">Cursos de Mejora</h2>
                             </div>
                             {allCourses.length > COURSES_PREVIEW && (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => setCoursesOpen(true)}
-                                >
+                                <Button variant="secondary" size="sm" onClick={() => setCoursesOpen(true)}>
                                     Ver más
                                 </Button>
                             )}
@@ -229,6 +339,42 @@ export default function SkillsGapPage() {
                 </>
             )}
 
+            {/* ── No comparables ──────────────────────────────────────────────── */}
+            {unresolved.length > 0 && (
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                        <span className="w-1 h-5 rounded-full bg-slate-400 shrink-0" />
+                        <h2 className="text-lg font-bold text-ink dark:text-white">
+                            Sin comparar
+                        </h2>
+                        <span className="rounded-full bg-canvas px-2 py-0.5 text-[11px] font-medium text-muted dark:bg-gray-800">
+                            {unresolved.length}
+                        </span>
+                    </div>
+                    <p className="text-sm text-muted">
+                        Estas habilidades no entraron en el cálculo de la brecha.
+                    </p>
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                        {unresolved.map(u => (
+                            <li
+                                key={u.skillName}
+                                className="flex items-start gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900"
+                            >
+                                <HelpCircle size={15} className="mt-0.5 shrink-0 text-muted" />
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-ink dark:text-gray-100">
+                                        {u.skillName}
+                                    </p>
+                                    <p className="text-xs text-muted">
+                                        {UNRESOLVED_REASON_LABEL[u.reason] ?? 'No se pudo comparar'}
+                                    </p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             {/* Todos los cursos, en una ventana amplia con su propia paginación */}
             <GalleryDialog
                 open={coursesOpen}
@@ -240,6 +386,8 @@ export default function SkillsGapPage() {
                 keyOf={course => course.id}
                 renderItem={course => <CourseCard course={course} />}
             />
+
+            {dialog}
         </div>
     );
 }

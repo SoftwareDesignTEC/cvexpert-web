@@ -7,12 +7,17 @@ import JobDetailDialog from '../components/ui/JobDetailDialog';
 import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { MapPin, Loader2, FilePlus2, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
 import { cvService } from '../services/cvService';
 import { jobService } from '../services/otherServices';
-import { skillsGapService } from '../services/skillsGapService';
+import {
+    SKILL_SCALE_MAX,
+    isSkillsInputRequired,
+    levelLabel,
+    skillsGapService,
+} from '../services/skillsGapService';
 import type { SkillGapApiItem } from '../services/skillsGapService';
 
 const modalityLabel: Record<JobOffer['modality'], string> = {
@@ -36,6 +41,7 @@ export default function DashboardPage() {
     const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
     const [errorSkills, setErrorSkills]     = useState<string | null>(null);
+    const [needsSkills, setNeedsSkills]     = useState(false);
 
     useEffect(() => {
         cvService.getAll({ page: 1, pageSize: 3 })
@@ -53,8 +59,13 @@ export default function DashboardPage() {
 
     useEffect(() => {
         skillsGapService.getAll()
-            .then(res => setSkills(res.items ?? []))
-            .catch(() => setErrorSkills('No se pudo cargar el análisis de brecha.'))
+            .then(res => setSkills(res.items))
+            .catch(err => {
+                // Un 409 significa que faltan las habilidades, no que algo falló:
+                // en vez de un error rojo se invita a cargarlas desde su pantalla.
+                if (isSkillsInputRequired(err)) setNeedsSkills(true);
+                else setErrorSkills('No se pudo cargar el análisis de brecha.');
+            })
             .finally(() => setLoadingSkills(false));
     }, []);
 
@@ -130,6 +141,15 @@ export default function DashboardPage() {
                                 </div>
                             ) : errorSkills ? (
                                 <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
+                            ) : needsSkills ? (
+                                <div className="flex flex-col items-center gap-2 py-4 text-center">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        Cargá tus habilidades para ver tu brecha.
+                                    </p>
+                                    <Link to="/skills-gap" className="text-xs font-medium text-primary hover:underline">
+                                        Cargarlas ahora
+                                    </Link>
+                                </div>
                             ) : skills.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-4">Aún no hay análisis de brecha.</p>
                             ) : (
@@ -143,16 +163,22 @@ export default function DashboardPage() {
                                                 marketLevel: s.marketLevel,
                                             }))}
                                             size={200}
+                                            max={SKILL_SCALE_MAX}
+                                            formatValue={levelLabel}
                                         />
                                     </div>
                                     <div className="flex flex-col gap-1 flex-1 min-w-0 lg:flex-none">
                                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                                             Habilidades por mejorar
                                         </p>
-                                        {skills.filter(s => s.userLevel < s.marketLevel).map(s => (
+                                        {/* items[] ya trae sólo brechas positivas. El faltante se
+                                            cuenta en niveles ordinales, no en porcentaje. */}
+                                        {skills.map(s => (
                                             <div key={s.skillName} className="flex items-center justify-between gap-1 text-xs">
                                                 <span className="text-gray-700 dark:text-gray-300 truncate">{s.skillName}</span>
-                                                <span className="text-amber-500 font-medium shrink-0">{s.userLevel}%</span>
+                                                <span className="text-amber-500 font-medium shrink-0">
+                                                    -{s.deficitSteps} {s.deficitSteps === 1 ? 'nivel' : 'niveles'}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>

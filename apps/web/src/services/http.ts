@@ -13,18 +13,31 @@ const BASE_URL = API_BASE_URL;
 // React con el usuario vivo mientras localStorage ya estaba vacío.
 export const UNAUTHORIZED_EVENT = 'auth:unauthorized';
 
-// Error tipado para poder distinguir errores de API en los componentes
+// Error tipado para poder distinguir errores de API en los componentes.
+// `code` es el identificador que mandan los microservicios en {error, message}
+// (p. ej. SKILLS_INPUT_REQUIRED); permite distinguir casos sin leer el texto,
+// que cambia. Queda opcional porque APIM responde antes que el servicio en
+// varios casos y entonces no viene.
 export class ApiError extends Error {
     status: number;
     // Detalle por campo que algunos 400 traen, p. ej. { email: 'ya está en uso' }.
     // Es opcional para no romper a quien construye el error con dos argumentos.
     errors?: Record<string, string>;
+    // Identificador que mandan los microservicios junto al mensaje, p. ej.
+    // SKILLS_INPUT_REQUIRED. Permite distinguir un caso del texto, que cambia.
+    code?: string;
 
-    constructor(status: number, message: string, errors?: Record<string, string>) {
+    constructor(
+        status: number,
+        message: string,
+        errors?: Record<string, string>,
+        code?: string,
+    ) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
         this.errors = errors;
+        this.code = code;
     }
 }
 
@@ -47,7 +60,10 @@ function defaultMessage(status: number) {
     if (status === 403) return 'no tenés permiso para ver esta información';
     if (status === 404) return 'el servidor no encontró esa información';
     if (status === 408) return 'el servidor tardó demasiado en responder';
+    if (status === 409) return 'falta un paso previo para poder continuar';
+    if (status === 413) return 'la información enviada es demasiado grande';
     if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
+    if (status === 503) return 'el servicio no está disponible en este momento';
     if (status >= 500) return 'el servidor tuvo un problema interno';
     return 'el servidor respondió de forma inesperada';
 }
@@ -109,7 +125,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         // El APIM devuelve {statusCode, error, message} con el detalle en español;
         // si no hay cuerpo utilizable, se arma un mensaje según el código.
         const body = await res.json().catch(() => ({}));
-        throw new ApiError(res.status, body.message ?? defaultMessage(res.status), readFieldErrors(body.errors));
+        throw new ApiError(
+            res.status,
+            body.message ?? defaultMessage(res.status),
+            readFieldErrors(body.errors),
+            typeof body.error === 'string' ? body.error : undefined,
+        );
     }
 
     // 204 No Content (DELETE exitoso) no tiene body
