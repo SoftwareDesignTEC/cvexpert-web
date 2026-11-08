@@ -11,6 +11,7 @@ import ProtectedRoute from './ProtectedRoute';
 import LoginPage from '../pages/LoginPage';
 import ErrorPage from '../pages/ErrorPage';
 import ProfilePage from '../pages/ProfilePage';
+import NotificationsPage from '../pages/NotificationsPage';
 
 export const router = createBrowserRouter([
     {
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
                     { path: 'templates',     element: <TemplatesPage /> },
                     { path: 'jobs',          element: <JobsPage /> },
                     { path: 'applications',  element: <ApplicationsPage /> },
+                    { path: 'notifications', element: <NotificationsPage /> },
                     { path: 'settings',      element: <SettingsPage /> },
                 ],
             },

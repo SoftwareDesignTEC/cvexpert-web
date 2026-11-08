@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Eye, FileText, Pencil, X } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, FileText, Pencil } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
+import Toast from './Toast';
 
 // Lo mínimo que necesitan estos diálogos, sirva para una plantilla o un currículum
 export interface PreviewItem {
@@ -9,38 +10,6 @@ export interface PreviewItem {
     name: string;
     description?: string;
     imageUrl?: string;
-}
-
-// Aviso flotante que se desvanece solo. Se puede cerrar antes con la equis.
-const VISIBLE_MS = 1700;   // tiempo en pantalla antes de empezar a desaparecer
-const FADE_MS = 300;       // duración del desvanecido
-
-function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
-    const [leaving, setLeaving] = useState(false);
-
-    useEffect(() => {
-        const fade = setTimeout(() => setLeaving(true), VISIBLE_MS);
-        const remove = setTimeout(onDismiss, VISIBLE_MS + FADE_MS);
-        return () => { clearTimeout(fade); clearTimeout(remove); };
-    }, [onDismiss]);
-
-    return (
-        <div
-            role="status"
-            className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-xl bg-ink px-4 py-2.5 shadow-lg transition-opacity
-                ${leaving ? 'opacity-0' : 'opacity-100'}`}
-            style={{ transitionDuration: `${FADE_MS}ms` }}
-        >
-            <span className="text-sm text-white">{message}</span>
-            <button
-                onClick={onDismiss}
-                aria-label="Cerrar aviso"
-                className="shrink-0 text-white/60 hover:text-white transition-colors"
-            >
-                <X size={15} />
-            </button>
-        </div>
-    );
 }
 
 // ── Vista previa de la plantilla ──────────────────────────────────────────────

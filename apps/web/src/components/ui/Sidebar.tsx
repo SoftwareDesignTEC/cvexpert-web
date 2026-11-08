@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
-import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Settings } from 'lucide-react';
+import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Bell, Settings } from 'lucide-react';
 
 const navItems = [
     { to: '/',             icon: LayoutDashboard, label: 'Panel Principal'      },
@@ -10,6 +10,7 @@ const navItems = [
     { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline' },
     { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'    },
     { to: '/applications', icon: Kanban,           label: 'Postulaciones'        },
+    { to: '/notifications', icon: Bell,            label: 'Notificaciones'       },
     { to: '/settings',     icon: Settings,         label: 'Configuración'        },
 ];
 

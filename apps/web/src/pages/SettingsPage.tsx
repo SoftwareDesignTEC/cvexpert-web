@@ -11,7 +11,9 @@ import LegalDialog from '../components/ui/LegalDialog';
 import { ActiveSessionsDialog, ExportDataDialog } from '../components/ui/AccountDialogs';
 import type { LegalKind } from '../services/legalService';
 import { useAuth } from '../context/AuthContext';
+import { NOTIFICATION_LANGUAGES, useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import type { NotificationLanguage } from '../types/models';
 
 // ── Tarjeta con título y descripción ─────────────────────────────────────────
 function SettingsCard({
@@ -93,6 +95,7 @@ type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' |
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const { profile, userId } = useAuth();
+    const { notificationLanguage, setNotificationLanguage } = useLanguage();
     const [dialog, setDialog] = useState<OpenDialog>(null);
     const [legal, setLegal] = useState<LegalKind | null>(null);
 
@@ -119,6 +122,23 @@ export default function SettingsPage() {
                     <ActionRow label="Estado de Postulación" icon={Bell} onClick={() => setDialog('applications')} />
                     <ActionRow label="Recomendación de Curso" icon={GraduationCap} onClick={() => setDialog('courses')} />
                     <ActionRow label="Alertas de Empleo" icon={Briefcase} onClick={() => setDialog('jobs')} />
+
+                    {/* El cambio se guarda en el dispositivo y AuthProvider lo envía al servicio */}
+                    <div className="mt-1 flex flex-col gap-1.5">
+                        <label htmlFor="notification-language" className="text-xs font-medium text-muted">
+                            Idioma de las notificaciones
+                        </label>
+                        <select
+                            id="notification-language"
+                            value={notificationLanguage}
+                            onChange={e => setNotificationLanguage(e.target.value as NotificationLanguage)}
+                            className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
+                        >
+                            {NOTIFICATION_LANGUAGES.map(l => (
+                                <option key={l.value} value={l.value}>{l.label}</option>
+                            ))}
+                        </select>
+                    </div>
                 </SettingsCard>
 
                 <SettingsCard

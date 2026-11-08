@@ -2,7 +2,10 @@
 
 import type { PaginatedResponse } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_APIM_BASE_URL;
+// Ya incluye el prefijo /api/v1: las rutas se escriben sin él (`/jobs`, `/notifications`).
+// Se exporta para quien no pasa por fetch, como la conexión SignalR del centro de notificaciones.
+export const API_BASE_URL: string = import.meta.env.VITE_APIM_BASE_URL;
+const BASE_URL = API_BASE_URL;
 
 // AuthProvider escucha este evento para cerrar la sesión. Antes acá se hacía
 // window.location.href = '/login', que es una navegación dura del navegador por cada
@@ -13,12 +16,29 @@ export const UNAUTHORIZED_EVENT = 'auth:unauthorized';
 // Error tipado para poder distinguir errores de API en los componentes
 export class ApiError extends Error {
     status: number;
+    // Detalle por campo que algunos 400 traen, p. ej. { email: 'ya está en uso' }.
+    // Es opcional para no romper a quien construye el error con dos argumentos.
+    errors?: Record<string, string>;
 
-    constructor(status: number, message: string) {
+    constructor(status: number, message: string, errors?: Record<string, string>) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
+        this.errors = errors;
     }
+}
+
+// El detalle por campo puede venir como texto o como lista de textos (formato de
+// ASP.NET); se aplana a un texto por campo para que los formularios lo pinten directo.
+function readFieldErrors(raw: unknown): Record<string, string> | undefined {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+
+    const out: Record<string, string> = {};
+    for (const [field, value] of Object.entries(raw)) {
+        if (typeof value === 'string') out[field] = value;
+        else if (Array.isArray(value)) out[field] = value.filter(v => typeof v === 'string').join(' ');
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
 }
 
 // Motivo legible cuando la respuesta no trae un mensaje propio
@@ -56,19 +76,21 @@ export function describeError(err: unknown, context: string): string {
     return `${prefix} por un error inesperado. Intentá de nuevo.`;
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     // El id_token (JWT) de Google que APIM valida en cada request
     const idToken = localStorage.getItem('id_token');
 
     let res: Response;
     try {
         res = await fetch(`${BASE_URL}${path}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
-                ...options?.headers,
-            },
             ...options,
+            headers: {
+                // Sin cuerpo no se declara JSON: hay backends que rechazan un POST
+                // vacío con Content-Type application/json.
+                ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+                ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+                ...options.headers,
+            },
         });
     } catch {
         // fetch falla antes de tener respuesta: sin red, DNS caído o CORS.
@@ -87,7 +109,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         // El APIM devuelve {statusCode, error, message} con el detalle en español;
         // si no hay cuerpo utilizable, se arma un mensaje según el código.
         const body = await res.json().catch(() => ({}));
-        throw new ApiError(res.status, body.message ?? defaultMessage(res.status));
+        throw new ApiError(res.status, body.message ?? defaultMessage(res.status), readFieldErrors(body.errors));
     }
 
     // 204 No Content (DELETE exitoso) no tiene body
@@ -113,10 +135,16 @@ export function toPaginated<T>(res: unknown, pageSize: number, page = 1): Pagina
     };
 }
 
+// Serializa el cuerpo sólo si lo hay: `post('/x')` sale sin cuerpo ni Content-Type
+function withBody(method: string, body: unknown): RequestInit {
+    return body === undefined ? { method } : { method, body: JSON.stringify(body) };
+}
+
 // Métodos HTTP exportados — los servicios los usan directamente
 export const http = {
     get:    <T>(path: string)                  => request<T>(path),
-    post:   <T>(path: string, body: unknown)   => request<T>(path, { method: 'POST',   body: JSON.stringify(body) }),
-    put:    <T>(path: string, body: unknown)   => request<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
+    post:   <T>(path: string, body?: unknown)  => request<T>(path, withBody('POST', body)),
+    put:    <T>(path: string, body: unknown)   => request<T>(path, withBody('PUT', body)),
+    patch:  <T>(path: string, body?: unknown)  => request<T>(path, withBody('PATCH', body)),
     delete: <T>(path: string)                  => request<T>(path, { method: 'DELETE' }),
 };

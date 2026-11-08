@@ -4,6 +4,8 @@ import { googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { UNAUTHORIZED_EVENT, describeError } from '../services/http';
 import { profileService } from '../services/profileService';
+import { notificationService } from '../services/notificationService';
+import { useLanguage } from './LanguageContext';
 import type { UserProfile } from '../types/models';
 
 // Del id_token sólo se leen la identidad y la vigencia. Los datos que se muestran
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
+    const { notificationLanguage } = useLanguage();
 
     const loginWithCredential = useCallback((idToken: string) => {
         const { sub } = jwtDecode<TokenClaims>(idToken);
@@ -101,6 +104,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         return () => { cancelled = true; };
     }, [userId, reloadKey]);
+
+    // El servicio de notificaciones necesita saber que este usuario existe y en qué
+    // idioma escribirle. Se reenvía al iniciar sesión y cada vez que cambia el idioma.
+    useEffect(() => {
+        if (!userId) return;
+        notificationService.updateDirectory(notificationLanguage).catch(() => {
+            // Mientras el APIM no publique la API de notificaciones esto responde 404 o
+            // falla la red; no debe afectar la sesión. Un 401 ya lo atiende http.ts.
+        });
+    }, [userId, notificationLanguage]);
 
     // Un 401 del APIM cierra la sesión acá, así el estado y el token no se desincronizan.
     useEffect(() => {

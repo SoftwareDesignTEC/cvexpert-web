@@ -159,6 +159,33 @@ export interface CourseRecommendation {
     isPaid: boolean;
     duration?: string;
 }
+// ─── NOTIFICACIONES ──────────────────────────────────────────────────────────
+
+// Idioma en que el servicio de notificaciones redacta los avisos de este usuario.
+// La interfaz sigue en español; esto sólo afecta el texto que llega del servidor.
+export type NotificationLanguage = 'es' | 'en';
+
+// A diferencia del resto del dominio, el servicio de notificaciones manda las
+// fechas como epoch en milisegundos, no como texto ISO.
+export interface AppNotification {
+    id: string;
+    type: string;                       // categoría libre, p. ej. 'application' o 'job'
+    title: string;
+    message: string;
+    link?: string;                      // ruta interna a la que lleva el aviso
+    createdAt: number;                  // epoch ms
+    readAt: number | null;              // epoch ms; null = sin leer
+}
+
+export interface UnreadCountResponse {
+    count: number;
+}
+
+// Lo que el servicio necesita saber del usuario para enviarle avisos
+export interface NotificationDirectoryEntry {
+    language: NotificationLanguage;
+}
+
 //Paginación
 
 // Reemplaza PaginatedResponse<T> en api.ts — nombres exactos del enunciado
