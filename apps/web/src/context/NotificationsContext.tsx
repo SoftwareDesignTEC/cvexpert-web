@@ -16,8 +16,8 @@ interface NotificationsContextValue {
     // Sube con cada aviso en vivo o reconexión; la campana y la página recargan su lista
     liveVersion: number;
     refreshUnreadCount: () => void;
-    // Resuelve con la hora de lectura (epoch ms)
-    markAsRead: (id: string) => Promise<number>;
+    // Resuelve con la notificación que devuelve el servidor, ya leída y con su readAt
+    markAsRead: (id: string) => Promise<AppNotification>;
     markAllAsRead: () => Promise<void>;
 }
 
@@ -75,6 +75,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
                     .configureLogging(signalR.LogLevel.Warning)
                     .build();
 
+                // Mismo esquema que un item de GET /notifications (llega con read: false)
                 connection.on('notification', (notification: AppNotification) => {
                     setUnreadCount(c => (c ?? 0) + 1);
                     setLiveVersion(v => v + 1);
@@ -89,9 +90,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
                 await connection.start();
             } catch {
-                // Hub no publicado, sin red o chunk sin descargar: se sigue sin tiempo real.
-                // No se dispara auth:unauthorized desde acá: un rechazo del hub no prueba
-                // que el token haya vencido, y cerrar la sesión por eso sería peor.
+                // Negotiate rechazado, sin red o chunk sin descargar: se sigue sin tiempo
+                // real. No se dispara auth:unauthorized desde acá: la conexión final va a
+                // Azure SignalR con su propio token, y un rechazo ahí no prueba que la
+                // sesión de Google haya vencido. Los 401 del APIM ya los atiende http.ts.
             }
         };
         connect();
@@ -103,9 +105,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }, [userId]);
 
     const markAsRead = useCallback(async (id: string) => {
-        const readAt = await notificationService.markAsRead(id);
+        const updated = await notificationService.markAsRead(id);
         setUnreadCount(c => (c === null ? c : Math.max(0, c - 1)));
-        return readAt;
+        return updated;
     }, []);
 
     const markAllAsRead = useCallback(async () => {

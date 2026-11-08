@@ -76,12 +76,15 @@ export default function NotificationsPage() {
         setBusyId(notification.id);
         setActionError(null);
         try {
-            const readAt = await markAsRead(notification.id);
+            const updated = await markAsRead(notification.id);
             if (filter === 'unread') {
                 // Deja de pertenecer a este filtro: se pide la página de nuevo
                 setReloadKey(k => k + 1);
             } else {
-                setItems(prev => prev.map(n => (n.id === notification.id ? { ...n, readAt } : n)));
+                // read y readAt salen de la respuesta del PATCH, no del reloj local
+                setItems(prev => prev.map(n => (n.id === notification.id
+                    ? { ...n, read: updated.read, readAt: updated.readAt }
+                    : n)));
             }
         } catch (err) {
             setActionError(describeError(err, 'marcar la notificación como leída'));
@@ -104,7 +107,7 @@ export default function NotificationsPage() {
     };
 
     const openNotification = (notification: AppNotification, link: string) => {
-        if (notification.readAt === null) markAsRead(notification.id).catch(() => {});
+        if (!notification.read) markAsRead(notification.id).catch(() => {});
         navigate(link);
     };
 
@@ -163,11 +166,11 @@ export default function NotificationsPage() {
                 <div className="flex flex-col gap-3 sm:gap-4">
                     <ul className="flex flex-col gap-2">
                         {items.map(n => {
-                            const link = internalLink(n.link);
+                            const link = internalLink(n.type);
                             return (
                                 <li
                                     key={n.id}
-                                    className={`rounded-xl border p-3 sm:p-4 ${n.readAt === null
+                                    className={`rounded-xl border p-3 sm:p-4 ${!n.read
                                         ? 'border-primary/30 bg-primary-tint/40 dark:border-primary/30 dark:bg-primary/10'
                                         : 'border-line bg-surface dark:border-gray-800 dark:bg-gray-900'
                                     }`}
@@ -175,7 +178,7 @@ export default function NotificationsPage() {
                                     <NotificationItem
                                         notification={n}
                                         onOpen={link ? () => openNotification(n, link) : undefined}
-                                        action={n.readAt === null && (
+                                        action={!n.read && (
                                             <Button
                                                 variant="secondary"
                                                 size="sm"

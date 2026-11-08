@@ -165,24 +165,40 @@ export interface CourseRecommendation {
 // La interfaz sigue en español; esto sólo afecta el texto que llega del servidor.
 export type NotificationLanguage = 'es' | 'en';
 
-// A diferencia del resto del dominio, el servicio de notificaciones manda las
-// fechas como epoch en milisegundos, no como texto ISO.
+// Tipo de evento que originó la notificación (enum NotificationType del contrato)
+export type NotificationType =
+    | 'application.status_changed'
+    | 'job.new'
+    | 'cv.generated'
+    | 'course.recommended';
+
+// Esquema Notification de openapi.yaml: cada item de GET /notifications y también el
+// argumento del evento "notification" de SignalR. A diferencia del resto del dominio,
+// las fechas son epoch en milisegundos, no texto ISO.
 export interface AppNotification {
     id: string;
-    type: string;                       // categoría libre, p. ej. 'application' o 'job'
-    title: string;
-    message: string;
-    link?: string;                      // ruta interna a la que lleva el aviso
+    type: NotificationType;
+    title: string;                      // ya renderizado en el idioma del usuario
+    body: string;
+    data: Record<string, unknown>;      // el data del evento original, sin cambios
+    read: boolean;
     createdAt: number;                  // epoch ms
-    readAt: number | null;              // epoch ms; null = sin leer
+    readAt?: number;                    // epoch ms; se omite mientras read es false
 }
 
 export interface UnreadCountResponse {
     count: number;
 }
 
-// Lo que el servicio necesita saber del usuario para enviarle avisos
+// Cuerpo de PUT /notifications/directory/me
+export interface NotificationDirectoryUpdate {
+    language: NotificationLanguage;
+}
+
+// Respuesta de PUT /notifications/directory/me. El correo lo pone APIM desde el token.
 export interface NotificationDirectoryEntry {
+    userId: string;
+    email: string;
     language: NotificationLanguage;
 }
 

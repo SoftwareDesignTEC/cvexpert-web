@@ -1,13 +1,16 @@
-import { Bell, Briefcase, GraduationCap, Kanban } from 'lucide-react';
+import { Bell, Briefcase, FileText, GraduationCap, Kanban } from 'lucide-react';
 import type { AppNotification } from '../../types/models';
 
-// Mismas categorías que los interruptores de Configuración; lo demás usa la campana
-function renderIcon(type: string | undefined) {
-    const key = (type ?? '').toLowerCase();
-    if (key.includes('application')) return <Kanban size={15} />;
-    if (key.includes('job')) return <Briefcase size={15} />;
-    if (key.includes('course')) return <GraduationCap size={15} />;
-    return <Bell size={15} />;
+// El mismo ícono que la sección del Sidebar a la que lleva cada tipo
+function renderIcon(type: AppNotification['type']) {
+    switch (type) {
+        case 'application.status_changed': return <Kanban size={15} />;
+        case 'job.new':                    return <Briefcase size={15} />;
+        case 'cv.generated':               return <FileText size={15} />;
+        case 'course.recommended':         return <GraduationCap size={15} />;
+        // Un tipo que se agregue en el servidor antes que acá
+        default:                           return <Bell size={15} />;
+    }
 }
 
 // Las fechas llegan en epoch ms. Lo reciente se dice en relativo; lo viejo, con fecha.
@@ -32,15 +35,15 @@ interface NotificationItemProps {
 }
 
 export default function NotificationItem({ notification, compact, onOpen, action }: NotificationItemProps) {
-    const unread = notification.readAt === null;
+    const unread = !notification.read;
 
     const content = (
         <>
             <p className={`text-sm truncate ${unread ? 'font-semibold text-ink dark:text-white' : 'font-medium text-body dark:text-gray-300'}`}>
                 {notification.title}
             </p>
-            {notification.message && (
-                <p className={`text-xs text-muted ${compact ? 'line-clamp-2' : ''}`}>{notification.message}</p>
+            {notification.body && (
+                <p className={`text-xs text-muted ${compact ? 'line-clamp-2' : ''}`}>{notification.body}</p>
             )}
             <p className="mt-0.5 text-[11px] text-muted">{formatWhen(notification.createdAt)}</p>
         </>

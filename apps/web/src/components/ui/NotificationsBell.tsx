@@ -59,11 +59,11 @@ export default function NotificationsBell() {
     };
 
     const openNotification = (notification: AppNotification) => {
-        if (notification.readAt === null) {
+        if (!notification.read) {
             // Si falla queda sin leer; desde el centro de notificaciones se puede reintentar
             markAsRead(notification.id).catch(() => {});
         }
-        goTo(internalLink(notification.link) ?? '/notifications');
+        goTo(internalLink(notification.type) ?? '/notifications');
     };
 
     // null = el servicio no respondió: no se muestra un número que no sabemos

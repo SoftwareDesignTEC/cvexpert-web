@@ -161,10 +161,10 @@ Ningún dato que se muestra en pantalla está escrito en el código: todo provie
 | Sesiones y datos | `GET /profiles/{id}/sessions`, `GET /profiles/{id}/export` |
 | Brecha de habilidades | `GET /skills-gap` |
 | Soporte y legales | `GET /help`, `GET /legal/terms`, `GET /legal/privacy` |
-| Notificaciones | `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `POST /notifications/read-all`, `PUT /notifications/directory/me` |
-| Notificaciones en vivo | Hub SignalR en `/notifications/hub`, evento `notification` |
+| Notificaciones | `GET /notifications?unread=true`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `POST /notifications/read-all`, `PUT /notifications/directory/me` |
+| Notificaciones en vivo | `POST /notifications/hub/negotiate` vía APIM, que devuelve la URL de Azure SignalR Service; la conexión va directo ahí y recibe el evento `notification` |
 
-Las rutas son relativas a `VITE_APIM_BASE_URL`, que ya incluye el prefijo `/api/v1`. Las fechas del servicio de notificaciones llegan como epoch en milisegundos. Mientras la API de notificaciones no esté publicada en el APIM, la campana oculta el contador y el centro de notificaciones muestra el error con opción de reintentar; el resto de la aplicación no se ve afectado.
+Las rutas son relativas a `VITE_APIM_BASE_URL`, que ya incluye el prefijo `/api/v1`. El contrato del servicio de notificaciones está en `docs/contratos/openapi.yaml` del repositorio `cvexpert-ms-notificaciones`; sus fechas llegan como epoch en milisegundos y cada notificación lleva a la pantalla que corresponde a su tipo. Mientras la API de notificaciones no esté publicada en el APIM, la campana oculta el contador y el centro de notificaciones muestra el error con opción de reintentar; el resto de la aplicación no se ve afectado.
 
 ---
 
