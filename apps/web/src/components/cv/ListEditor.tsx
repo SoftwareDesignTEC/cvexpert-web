@@ -8,6 +8,11 @@ export interface FieldSpec {
     label: string;
     kind: FieldKind;
     options?: { value: string; label: string }[];
+    /**
+     * Sugerencias para un campo de texto. Se ofrecen mientras se escribe pero
+     * no obligan: en un currículum siempre puede aparecer algo fuera de la lista.
+     */
+    suggestions?: readonly string[];
     /** Ocupa toda la fila en vez de media */
     wide?: boolean;
 }
@@ -87,13 +92,21 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                     className={inputClass}
                 />
             ) : (
-                <input
-                    type="text"
-                    value={typeof value === 'string' ? value : ''}
-                    onChange={e => onChange(e.target.value)}
-                    onBlur={onBlur}
-                    className={error ? inputClassError : inputClass}
-                />
+                <>
+                    <input
+                        type="text"
+                        list={spec.suggestions ? `sug-${spec.key}` : undefined}
+                        value={typeof value === 'string' ? value : ''}
+                        onChange={e => onChange(e.target.value)}
+                        onBlur={onBlur}
+                        className={error ? inputClassError : inputClass}
+                    />
+                    {spec.suggestions && (
+                        <datalist id={`sug-${spec.key}`}>
+                            {spec.suggestions.map(o => <option key={o} value={o} />)}
+                        </datalist>
+                    )}
+                </>
             )}
             {error && <p className="text-[11px] text-rose-500">{error}</p>}
         </label>

@@ -143,7 +143,7 @@ function ListItem({ item, source, fields, colors, locale }: {
 
     const extras: string[] = [];
     if (has('field')) { const v = asText(item.field); if (v) extras.push(v); }
-    if (has('category')) { const v = asText(item.category); if (v) extras.push(v); }
+    // `category` no se repite acá: cuando está, es el encabezado del grupo
     if (has('type')) { const v = WORK_TYPE[locale][String(item.type)]; if (v) extras.push(v); }
     if (has('expiresAt')) {
         const v = formatLongDate(item.expiresAt, locale);
@@ -227,6 +227,35 @@ function List({ section, cv, colors, locale }: {
         (ITEM_FIELDS[section.source] as readonly string[]).includes(f));
     if (fields.length === 0) return null;
 
+    const renderItems = (lista: Raw[]) => (
+        <ul className="flex flex-col gap-2.5">
+            {lista.map((item, i) => (
+                <ListItem
+                    key={asText(item.id) ?? i}
+                    item={item}
+                    source={section.source}
+                    fields={fields}
+                    colors={colors}
+                    locale={locale}
+                />
+            ))}
+        </ul>
+    );
+
+    // Las habilidades se agrupan por categoría —técnicas y blandas— porque es
+    // como se leen en un currículum. Si ninguna la trae, se listan sin agrupar.
+    const grupos = section.source === 'skills' && fields.includes('category')
+        ? [...items.reduce((mapa, item) => {
+            const clave = asText(item.category);
+            if (clave) mapa.set(clave, [...(mapa.get(clave) ?? []), item]);
+            return mapa;
+        }, new Map<string, Raw[]>())]
+        : [];
+
+    const sinCategoria = grupos.length > 0
+        ? items.filter(i => !asText(i.category))
+        : [];
+
     return (
         <section className="flex flex-col gap-2">
             <h2
@@ -235,18 +264,20 @@ function List({ section, cv, colors, locale }: {
             >
                 {SECTION_TITLE[locale][section.source]}
             </h2>
-            <ul className="flex flex-col gap-2.5">
-                {items.map((item, i) => (
-                    <ListItem
-                        key={asText(item.id) ?? i}
-                        item={item}
-                        source={section.source}
-                        fields={fields}
-                        colors={colors}
-                        locale={locale}
-                    />
-                ))}
-            </ul>
+
+            {grupos.length > 0 ? (
+                <div className="flex flex-col gap-2.5">
+                    {grupos.map(([categoria, lista]) => (
+                        <div key={categoria} className="flex flex-col gap-1.5">
+                            <h3 className="text-[11px] font-semibold" style={{ color: colors.secondary }}>
+                                {categoria}
+                            </h3>
+                            {renderItems(lista)}
+                        </div>
+                    ))}
+                    {sinCategoria.length > 0 && renderItems(sinCategoria)}
+                </div>
+            ) : renderItems(items)}
         </section>
     );
 }

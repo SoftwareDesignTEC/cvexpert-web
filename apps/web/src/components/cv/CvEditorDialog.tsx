@@ -6,6 +6,7 @@ import ListEditor, { Field } from './ListEditor';
 import type { FieldSpec, Row } from './ListEditor';
 import CvDocument from './CvDocument';
 import { ApiError, describeError } from '../../services/http';
+import { dropEmptyRows, humanizeFieldErrors } from './cvErrors';
 import { cvService, emptyCvInput, toCvInput } from '../../services/cvService';
 import type { CvInput } from '../../services/cvService';
 import type { CV, CVTemplate } from '../../types/models';
@@ -52,14 +53,29 @@ const EDUCATION_FIELDS: FieldSpec[] = [
     { key: 'current', label: 'En curso', kind: 'checkbox' },
 ];
 
+// Separar técnicas de blandas es práctica estándar en un currículum: quien
+// recluta busca unas u otras según el puesto. El contrato deja `category` como
+// texto libre, así que acá se fija a estos dos valores para que la lista salga
+// agrupada y no con categorías escritas de veinte formas distintas.
+const SKILL_CATEGORIES = [
+    { value: 'Técnica', label: 'Técnica (dura)' },
+    { value: 'Blanda', label: 'Blanda' },
+];
+
+// Los más frecuentes en la región; el campo igual acepta cualquier otro
+const COMMON_LANGUAGES = [
+    'Español', 'Inglés', 'Portugués', 'Francés', 'Alemán', 'Italiano',
+    'Mandarín', 'Japonés', 'Coreano', 'Árabe', 'Ruso', 'Lengua de señas costarricense',
+] as const;
+
 const SKILL_FIELDS: FieldSpec[] = [
     { key: 'name', label: 'Habilidad', kind: 'text' },
+    { key: 'category', label: 'Tipo', kind: 'select', options: SKILL_CATEGORIES },
     { key: 'level', label: 'Nivel', kind: 'select', options: SKILL_LEVELS },
-    { key: 'category', label: 'Categoría', kind: 'text' },
 ];
 
 const LANGUAGE_FIELDS: FieldSpec[] = [
-    { key: 'name', label: 'Idioma', kind: 'text' },
+    { key: 'name', label: 'Idioma', kind: 'text', suggestions: COMMON_LANGUAGES },
     { key: 'level', label: 'Nivel', kind: 'select', options: LANGUAGE_LEVELS },
 ];
 
@@ -105,7 +121,8 @@ export default function CvEditorDialog({
     const [tab, setTab] = useState<'form' | 'preview'>('form');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    // Ya traducidos a frases; nunca se muestran las rutas del contrato
+    const [problems, setProblems] = useState<string[]>([]);
 
     const patch = (p: Partial<CvInput>) => setInput(prev => ({ ...prev, ...p }));
     const patchPersonal = (key: string, v: unknown) =>
@@ -119,9 +136,11 @@ export default function CvEditorDialog({
     const save = async () => {
         setSaving(true);
         setError(null);
-        setFieldErrors({});
+        setProblems([]);
         try {
-            // Las cuatro listas van siempre, aunque estén vacías: omitirlas es 400
+            // Las cuatro listas van siempre, aunque queden vacías: omitirlas es 400.
+            // Las filas en blanco sí se descartan: son filas que el usuario agregó
+            // y no llegó a completar, no datos que el servicio deba rechazar.
             const body: CvInput = {
                 ...input,
                 title: input.title.trim(),
@@ -130,19 +149,27 @@ export default function CvEditorDialog({
                     fullName: input.personalInfo.fullName.trim(),
                     email: input.personalInfo.email.trim(),
                 },
-                workExperiences: input.workExperiences ?? [],
-                education: input.education ?? [],
-                skills: input.skills ?? [],
-                languages: input.languages ?? [],
+                workExperiences: dropEmptyRows(input.workExperiences ?? []),
+                education: dropEmptyRows(input.education ?? []),
+                skills: dropEmptyRows(input.skills ?? []),
+                languages: dropEmptyRows(input.languages ?? []),
+                ...(input.certifications
+                    ? { certifications: dropEmptyRows(input.certifications) }
+                    : {}),
             };
             const saved = cv
                 ? await cvService.update(cv.id, body)
                 : await cvService.create(body);
             onSaved(saved);
         } catch (err) {
-            // El 400 trae el detalle por campo; se muestra junto al general
-            if (err instanceof ApiError && err.errors) setFieldErrors(err.errors);
-            setError(describeError(err, cv ? 'guardar los cambios' : 'crear el currículum'));
+            // Un 400 con detalle por campo se explica en palabras y sin el código:
+            // el número no le dice nada a quien tiene que corregir el formulario.
+            if (err instanceof ApiError && err.errors) {
+                setProblems(humanizeFieldErrors(err.errors));
+                setError('Revisá lo siguiente antes de volver a guardar:');
+            } else {
+                setError(describeError(err, cv ? 'guardar los cambios' : 'crear el currículum'));
+            }
         } finally {
             setSaving(false);
         }
@@ -291,14 +318,16 @@ export default function CvEditorDialog({
                     )}
                 </div>
 
-                {Object.keys(fieldErrors).length > 0 && (
-                    <ul className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300">
-                        {Object.entries(fieldErrors).map(([field, msg]) => (
-                            <li key={field}><strong>{field}:</strong> {msg}</li>
-                        ))}
-                    </ul>
+                {error && (
+                    <div className="flex flex-col gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 dark:border-rose-500/40 dark:bg-rose-500/10">
+                        <p className="text-sm font-medium text-rose-700 dark:text-rose-300">{error}</p>
+                        {problems.length > 0 && (
+                            <ul className="list-disc pl-4 text-xs text-rose-700 dark:text-rose-300">
+                                {problems.map(p => <li key={p}>{p}</li>)}
+                            </ul>
+                        )}
+                    </div>
                 )}
-                {error && <p className="text-sm text-rose-500">{error}</p>}
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     {missing.length > 0 && (
