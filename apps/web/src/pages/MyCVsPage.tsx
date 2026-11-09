@@ -4,7 +4,9 @@ import { Clock, Download, FileText, Pencil, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
-import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
+import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
+import CvViewerDialog from '../components/cv/CvViewerDialog';
+import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
 import { describeError } from '../services/http';
@@ -17,9 +19,8 @@ const PAGE_SIZE = 6;
 function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; onDownload: () => void }) {
     const [imgFailed, setImgFailed] = useState(false);
 
-    const formattedDate = new Date(cv.updatedAt).toLocaleDateString('es-CR', {
-        day: '2-digit', month: 'short', year: 'numeric',
-    });
+    // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
+    const formattedDate = formatLongDate(cv.updatedAt) ?? '';
 
     return (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2 sm:p-4 flex flex-col gap-2 sm:gap-3 min-w-0">
@@ -196,9 +197,10 @@ export default function MyCVsPage() {
                 </div>
             )}
 
-            <TemplateViewerDialog
+            {/* Dibuja el CV con el layout de su plantilla; si no hay, muestra la miniatura */}
+            <CvViewerDialog
                 key={`cv-view-${viewingCv?.id ?? ''}`}
-                template={viewingCv && { id: viewingCv.id, name: viewingCv.title, imageUrl: viewingCv.thumbnailUrl }}
+                cv={viewingCv}
                 onClose={() => setViewingCv(null)}
             />
             <DownloadTemplateDialog

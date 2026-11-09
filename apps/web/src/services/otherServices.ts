@@ -13,6 +13,9 @@ export const templateService = {
         });
         return http.get<unknown>(`/templates?${params}`).then(r => toPaginated<CVTemplate>(r, pageSize, page));
     },
+
+    /** Trae una plantilla puntual; de acá sale el `layout` con el que se dibuja el CV. */
+    getById: (id: string) => http.get<CVTemplate>(`/templates/${id}`),
 };
 
 // OFERTAS LABORALES

@@ -50,3 +50,50 @@ body {
     background: linear-gradient(180deg, var(--color-canvas-dark) 0%, #0B1222 100%);
     color: #E2E8F0;
 }
+
+/* ── Impresión del currículum ──────────────────────────────────────────────
+   "Descargar PDF" es imprimir: el navegador ofrece guardar como PDF y el
+   texto queda seleccionable. Mientras se imprime, CvDocumentDialog monta el
+   documento en un portal sobre body con la clase .cv-print-area; acá se
+   oculta todo lo demás para que al papel llegue sólo el currículum. */
+@page {
+    size: A4;
+    margin: 12mm;
+}
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .cv-print-area,
+    .cv-print-area * {
+        visibility: visible !important;
+    }
+
+    .cv-print-area {
+        position: absolute !important;
+        inset: 0 auto auto 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* El degradado del fondo y las sombras gastan tinta y no aportan nada */
+    body,
+    .dark body {
+        background: #FFF !important;
+    }
+
+    .cv-print-area .cv-document {
+        max-width: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Que un puesto o un estudio no quede partido entre dos páginas */
+    .cv-print-area li,
+    .cv-print-area section {
+        break-inside: avoid;
+    }
+}

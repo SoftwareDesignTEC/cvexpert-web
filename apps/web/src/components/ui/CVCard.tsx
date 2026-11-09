@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Clock, Download, FileText, Pencil } from 'lucide-react';
 import type { CV } from '../../types/models';
+import { formatLongDate } from '../cv/cvLabels';
 
 interface CVCardProps {
     cv: CV;
@@ -11,9 +12,8 @@ interface CVCardProps {
 export default function CVCard({ cv, onClick, onDownload }: CVCardProps) {
     const [imgFailed, setImgFailed] = useState(false);
 
-    const formattedDate = new Date(cv.updatedAt).toLocaleDateString('es-CR', {
-        day: '2-digit', month: 'short', year: 'numeric',
-    });
+    // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
+    const formattedDate = formatLongDate(cv.updatedAt) ?? '';
 
     return (
         <div className="h-full min-h-0 bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl p-2.5 sm:p-3 shadow-sm flex flex-col gap-2 hover:shadow-md hover:border-primary transition-all">
