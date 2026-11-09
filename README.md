@@ -115,6 +115,7 @@ Las capturas de escritorio están tomadas en tema oscuro, salvo la de Configurac
 - **Plantillas**, separadas entre disponibles sin conexión y tienda, con vista previa ampliada.
 - **Perfil**, con datos personales, preferencias y análisis de habilidades.
 - **Centro de notificaciones**: campana con el contador de no leídas y las últimas cinco, página con filtro entre todas y no leídas, paginación y acciones para marcar una o todas como leídas. Los avisos nuevos llegan en vivo por SignalR y se anuncian con un aviso flotante.
+- **Plantillas de notificaciones** (sólo administradores): las 8 plantillas de título y cuerpo (4 tipos × español e inglés), con su estado (texto por defecto o la fecha y el autor de la última edición) y un editor que inserta con un clic los marcadores `{{campo}}` permitidos para cada tipo. La entrada del menú y la ruta `/admin/notification-templates` sólo aparecen si el servicio responde a `GET /notifications/templates`; con `403`, `404` o sin conexión quedan ocultas sin mostrar error.
 - **Configuración**: seguridad de la cuenta, preferencias de notificación, idioma de las notificaciones, datos personales, documentos legales y contacto con soporte.
 - **Tema claro y oscuro** con persistencia en `localStorage`, respetando la preferencia del sistema en el primer ingreso.
 - **Diseño responsive** en todas las pantallas.
@@ -163,8 +164,11 @@ Ningún dato que se muestra en pantalla está escrito en el código: todo provie
 | Soporte y legales | `GET /help`, `GET /legal/terms`, `GET /legal/privacy` |
 | Notificaciones | `GET /notifications?unread=true`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `POST /notifications/read-all`, `PUT /notifications/directory/me` |
 | Notificaciones en vivo | `POST /notifications/hub/negotiate` vía APIM, que devuelve la URL de Azure SignalR Service; la conexión va directo ahí y recibe el evento `notification` |
+| Plantillas de notificaciones (admin) | `GET /notifications/templates`, `GET /notifications/templates/{type}/{language}`, `PUT /notifications/templates/{type}/{language}` |
 
 Las rutas son relativas a `VITE_APIM_BASE_URL`, que ya incluye el prefijo `/api/v1`. El contrato del servicio de notificaciones está en `docs/contratos/openapi.yaml` del repositorio `cvexpert-ms-notificaciones`; sus fechas llegan como epoch en milisegundos y cada notificación lleva a la pantalla que corresponde a su tipo. Mientras la API de notificaciones no esté publicada en el APIM, la campana oculta el contador y el centro de notificaciones muestra el error con opción de reintentar; el resto de la aplicación no se ve afectado.
+
+Las rutas de plantillas exigen el rol de administrador: APIM agrega el encabezado `X-User-Role` y el servicio responde `403` a cualquier otro usuario. La web no conoce el rol, así que al montar el layout consulta una vez `GET /notifications/templates` y sólo con `200` muestra la sección. Al guardar, un marcador que no está permitido para el tipo devuelve `400` con el detalle en `errors.title` o `errors.body`, y el editor lo muestra debajo del campo correspondiente.
 
 ---
 
