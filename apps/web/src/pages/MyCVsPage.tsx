@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, Download, FileText, Pencil, Search } from 'lucide-react';
+import { Clock, Download, Eye, FileText, Pencil, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
 import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
 import CvViewerDialog from '../components/cv/CvViewerDialog';
+import CvEditorDialog from '../components/cv/CvEditorDialog';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
+import { templateService } from '../services/otherServices';
+import { useAuth } from '../context/AuthContext';
 import { describeError } from '../services/http';
-import type { CV } from '../types/models';
+import type { CV, CVTemplate } from '../types/models';
 
 // Cada página pide su tramo al APIM, no se acumulan hacia abajo
 const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
-function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; onDownload: () => void }) {
+function CVListCard({ cv, onView, onEdit, onDownload }: { cv: CV; onView: () => void; onEdit: () => void; onDownload: () => void }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
@@ -52,14 +54,20 @@ function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; on
                 </div>
             </div>
 
-            {/* Sin funcionalidad por ahora (no hay editor ni descarga en esta fase) */}
             <div className="flex flex-col gap-1.5 sm:flex-row">
                 <button
                     onClick={onView}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-2 text-xs font-medium text-white hover:bg-primary-dark transition-colors"
                 >
+                    <Eye size={13} />
+                    Ver
+                </button>
+                <button
+                    onClick={onEdit}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-2 text-xs font-medium text-body hover:border-primary hover:text-primary transition-colors dark:border-gray-700 dark:text-gray-300"
+                >
                     <Pencil size={13} />
-                    Ver/Editar
+                    Editar
                 </button>
                 <button
                     onClick={onDownload}
@@ -75,7 +83,7 @@ function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; on
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function MyCVsPage() {
-    const navigate = useNavigate();
+    const { profile } = useAuth();
 
     const [items, setItems] = useState<CV[]>([]);
     const [page, setPage] = useState(1);
@@ -91,9 +99,21 @@ export default function MyCVsPage() {
     const [aiMode, setAiMode] = useState(false);
     const [viewingCv, setViewingCv] = useState<CV | null>(null);
     const [downloadCv, setDownloadCv] = useState<CV | null>(null);
+    // null = cerrado; { cv: null } = crear uno nuevo
+    const [editing, setEditing] = useState<{ cv: CV | null } | null>(null);
+    const [templates, setTemplates] = useState<CVTemplate[]>([]);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
+
+    // El catálogo alimenta el selector de plantilla y la vista previa del editor
+    useEffect(() => {
+        let cancelled = false;
+        templateService.getAll({ page: 1, pageSize: 50 })
+            .then(res => { if (!cancelled) setTemplates(res.items ?? []); })
+            .catch(() => { if (!cancelled) setTemplates([]); });
+        return () => { cancelled = true; };
+    }, []);
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -161,7 +181,7 @@ export default function MyCVsPage() {
                         Modo IA
                     </Button>
                     <button
-                        onClick={() => navigate('/templates')}
+                        onClick={() => setEditing({ cv: null })}
                         className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 transition-colors"
                     >
                         Offline / Plantilla
@@ -188,6 +208,7 @@ export default function MyCVsPage() {
                                 key={cv.id}
                                 cv={cv}
                                 onView={() => setViewingCv(cv)}
+                                onEdit={() => setEditing({ cv })}
                                 onDownload={() => setDownloadCv(cv)}
                             />
                         ))}
@@ -203,6 +224,18 @@ export default function MyCVsPage() {
                 cv={viewingCv}
                 onClose={() => setViewingCv(null)}
             />
+            {/* Se monta sólo al abrirse: cada apertura parte del CV actual */}
+            {editing && (
+                <CvEditorDialog
+                    open
+                    cv={editing.cv}
+                    templates={templates}
+                    defaultFullName={profile?.name}
+                    defaultEmail={profile?.email}
+                    onClose={() => setEditing(null)}
+                    onSaved={() => { setEditing(null); setReloadKey(k => k + 1); }}
+                />
+            )}
             <DownloadTemplateDialog
                 key={`cv-dl-${downloadCv?.id ?? ''}`}
                 template={downloadCv && { id: downloadCv.id, name: downloadCv.title }}

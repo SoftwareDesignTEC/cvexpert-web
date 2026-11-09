@@ -28,20 +28,13 @@ export interface CvDocumentProps {
     locale?: Locale;
 }
 
-// El contrato nombra los campos personales como fullName y address. El resto de
-// la aplicación los traduce a name y location al leer /profiles, así que se
-// aceptan los dos nombres: según de dónde venga el objeto llega uno u otro.
-const PERSONAL_ALIASES: Record<string, string[]> = {
-    fullName: ['fullName', 'name'],
-    address: ['address', 'location'],
-};
-
+// Sólo los nombres del contrato: fullName y address. El modelo del backend usa
+// extra="ignore", así que si se mandara `name` o `location` los descartaría en
+// silencio y después rechazaría el envío por fullName faltante. Mantener un
+// alias acá habría escondido justo ese error.
 function readPersonal(personal: Raw, leaf: string): unknown {
-    for (const key of PERSONAL_ALIASES[leaf] ?? [leaf]) {
-        const v = personal[key];
-        if (v != null && v !== '') return v;
-    }
-    return undefined;
+    const v = personal[leaf];
+    return v != null && v !== '' ? v : undefined;
 }
 
 function asText(v: unknown): string | null {
