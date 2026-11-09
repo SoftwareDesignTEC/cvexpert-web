@@ -1,40 +1,47 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Sparkles } from 'lucide-react';
-import { CompanyLogo } from './Avatar';
-import { jobService } from '../../services/otherServices';
-import type { JobOffer } from '../../types/models';
+import { Bell } from 'lucide-react';
+import NotificationItem from './NotificationItem';
+import { LoadingSpinner } from './Feedback';
+import { useNotifications } from '../../context/NotificationsContext';
+import { internalLink, notificationService } from '../../services/notificationService';
+import { describeError } from '../../services/http';
+import type { AppNotification } from '../../types/models';
 
-// Al abrir la aplicación se avisa de la oferta con mayor compatibilidad. No hay
-// endpoint de notificaciones todavía, así que se deriva de las ofertas existentes.
-const FETCH_SIZE = 50;
+// La campana sólo adelanta lo último; el historial completo está en /notifications
+const LATEST_COUNT = 5;
 
 export default function NotificationsBell() {
     const navigate = useNavigate();
-    const [job, setJob] = useState<JobOffer | null>(null);
+    const { unreadCount, liveVersion, markAsRead } = useNotifications();
     const [open, setOpen] = useState(false);
-    const [seen, setSeen] = useState(false);
+    const [items, setItems] = useState<AppNotification[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
+    // La lista se pide al abrir el panel, y otra vez si llega un aviso con el panel abierto
     useEffect(() => {
+        if (!open) return;
         let cancelled = false;
 
         const load = async () => {
+            setLoading(true);
+            setError(null);
             try {
-                const res = await jobService.getAll({ page: 1, pageSize: FETCH_SIZE });
-                if (cancelled) return;
-                // La más compatible es la que vale la pena anunciar
-                const best = [...(res.items ?? [])]
-                    .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))[0];
-                setJob(best ?? null);
-            } catch {
-                // Sin ofertas no hay nada que notificar; la campana queda apagada
+                const res = await notificationService.getAll({ page: 1, pageSize: LATEST_COUNT });
+                if (!cancelled) setItems(res.items.slice(0, LATEST_COUNT));
+            } catch (err) {
+                // Sin la API publicada (404) o sin red el panel lo explica; el Header sigue igual
+                if (!cancelled) setError(describeError(err, 'cargar tus notificaciones'));
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         };
         load();
 
         return () => { cancelled = true; };
-    }, []);
+    }, [open, liveVersion]);
 
     // Un clic fuera del panel lo cierra
     useEffect(() => {
@@ -46,67 +53,70 @@ export default function NotificationsBell() {
         return () => document.removeEventListener('mousedown', onClick);
     }, [open]);
 
-    const toggle = () => {
-        setOpen(v => !v);
-        setSeen(true);
+    const goTo = (path: string) => {
+        setOpen(false);
+        navigate(path);
     };
+
+    const openNotification = (notification: AppNotification) => {
+        if (!notification.read) {
+            // Si falla queda sin leer; desde el centro de notificaciones se puede reintentar
+            markAsRead(notification.id).catch(() => {});
+        }
+        goTo(internalLink(notification.type) ?? '/notifications');
+    };
+
+    // null = el servicio no respondió: no se muestra un número que no sabemos
+    const badge = unreadCount !== null && unreadCount > 0 ? (unreadCount > 9 ? '9+' : String(unreadCount)) : null;
 
     return (
         <div className="relative" ref={panelRef}>
             <button
-                onClick={toggle}
+                onClick={() => setOpen(v => !v)}
                 title="Notificaciones"
-                aria-label="Notificaciones"
+                aria-label={badge ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones'}
+                aria-expanded={open}
                 className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
                 <Bell size={18} />
-                {job && !seen && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-surface dark:ring-gray-900" />
+                {badge && (
+                    <span className="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-[1.1rem] text-center ring-2 ring-surface dark:ring-gray-900">
+                        {badge}
+                    </span>
                 )}
             </button>
 
             {open && (
                 <div className="fixed inset-x-3 top-16 z-40 rounded-2xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 shadow-xl overflow-hidden sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 sm:z-30">
-                    <div className="border-b border-line dark:border-gray-800 px-4 py-3">
+                    <div className="flex items-center justify-between gap-2 border-b border-line dark:border-gray-800 px-4 py-3">
                         <h3 className="text-sm font-bold text-ink dark:text-white">Notificaciones</h3>
+                        {badge && <span className="text-xs font-medium text-primary">{unreadCount} sin leer</span>}
                     </div>
 
-                    {job ? (
-                        <div className="flex flex-col gap-3 p-4">
-                            <div className="flex items-start gap-2">
-                                <span className="w-7 h-7 rounded-lg bg-primary-tint text-primary flex items-center justify-center shrink-0 dark:bg-primary/15">
-                                    <Sparkles size={14} />
-                                </span>
-                                <p className="text-sm font-medium text-ink dark:text-gray-100">
-                                    Nueva oferta compatible con tu perfil
-                                </p>
-                            </div>
+                    <div className="max-h-[60vh] overflow-y-auto">
+                        {loading && items.length === 0 ? (
+                            <LoadingSpinner />
+                        ) : error ? (
+                            <p className="px-4 py-6 text-sm text-muted text-center">{error}</p>
+                        ) : items.length === 0 ? (
+                            <p className="px-4 py-6 text-sm text-muted text-center">No tenés notificaciones.</p>
+                        ) : (
+                            <ul className="divide-y divide-line dark:divide-gray-800">
+                                {items.map(n => (
+                                    <li key={n.id} className="px-4 py-3">
+                                        <NotificationItem notification={n} compact onOpen={() => openNotification(n)} />
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
 
-                            <div className="flex items-center gap-3 rounded-xl bg-canvas/70 dark:bg-gray-800/60 p-3">
-                                <CompanyLogo
-                                    src={job.companyLogoUrl}
-                                    name={job.company}
-                                    className="w-10 h-10 rounded-lg bg-surface text-primary text-xs dark:bg-gray-900"
-                                />
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold text-ink dark:text-white truncate">{job.title}</p>
-                                    <p className="text-xs text-muted truncate">{job.company}</p>
-                                </div>
-                                {job.matchScore !== undefined && (
-                                    <span className="text-xs font-bold text-primary shrink-0">{job.matchScore}%</span>
-                                )}
-                            </div>
-
-                            <button
-                                onClick={() => { setOpen(false); navigate('/jobs'); }}
-                                className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
-                            >
-                                Ver
-                            </button>
-                        </div>
-                    ) : (
-                        <p className="px-4 py-6 text-sm text-muted text-center">No tenés notificaciones.</p>
-                    )}
+                    <button
+                        onClick={() => goTo('/notifications')}
+                        className="w-full border-t border-line dark:border-gray-800 px-4 py-3 text-sm font-semibold text-primary hover:bg-primary-tint/60 dark:hover:bg-gray-800 transition-colors"
+                    >
+                        Ver todas las notificaciones
+                    </button>
                 </div>
             )}
         </div>

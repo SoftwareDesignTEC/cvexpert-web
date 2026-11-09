@@ -38,7 +38,7 @@ cv-master/
 │       │   └── staticwebapp.config.json   # Fallback de rutas del SPA en Azure
 │       └── src/
 │           ├── components/ui/  # Componentes reutilizables (tarjetas, diálogos, paginación…)
-│           ├── context/        # AuthContext y ThemeContext
+│           ├── context/        # AuthContext, ThemeContext, LanguageContext y NotificationsContext
 │           ├── hooks/          # useOnlineStatus
 │           ├── layouts/        # MainLayout (sidebar + header)
 │           ├── pages/          # Una pantalla por archivo
@@ -114,14 +114,15 @@ Las capturas de escritorio están tomadas en tema oscuro, salvo la de Configurac
 - **Análisis de brechas**, con gráfico de radar, puntos a mejorar y cursos recomendados.
 - **Plantillas**, separadas entre disponibles sin conexión y tienda, con vista previa ampliada.
 - **Perfil**, con datos personales, preferencias y análisis de habilidades.
-- **Configuración**: seguridad de la cuenta, preferencias de notificación, datos personales, documentos legales y contacto con soporte.
+- **Centro de notificaciones**: campana con el contador de no leídas y las últimas cinco, página con filtro entre todas y no leídas, paginación y acciones para marcar una o todas como leídas. Los avisos nuevos llegan en vivo por SignalR y se anuncian con un aviso flotante.
+- **Configuración**: seguridad de la cuenta, preferencias de notificación, idioma de las notificaciones, datos personales, documentos legales y contacto con soporte.
 - **Tema claro y oscuro** con persistencia en `localStorage`, respetando la preferencia del sistema en el primer ingreso.
 - **Diseño responsive** en todas las pantallas.
 - **Manejo de errores** con estados de carga, mensajes que explican la causa (sin conexión, sesión expirada, error del servidor) y opción de reintentar.
 
 ### Sobre los datos del usuario
 
-En el dispositivo sólo se guardan el `id_token` de la sesión y la preferencia de tema. El perfil, los currículums, las postulaciones y el resto de la información se piden al APIM en cada carga y viven únicamente en memoria: al recargar sin conexión no queda rastro del usuario.
+En el dispositivo sólo se guardan el `id_token` de la sesión y las preferencias de tema y de idioma de las notificaciones. El perfil, los currículums, las postulaciones y el resto de la información se piden al APIM en cada carga y viven únicamente en memoria: al recargar sin conexión no queda rastro del usuario.
 
 ### Autenticación desde entornos de vista previa
 
@@ -154,12 +155,16 @@ Ningún dato que se muestra en pantalla está escrito en el código: todo provie
 |---|---|
 | Currículums | `GET /cvs`, `GET /cvs/{id}` |
 | Ofertas | `GET /jobs`, `GET /jobs/{id}` |
-| Postulaciones |
-| Plantillas |
-| Perfil |
+| Postulaciones | `GET /applications`, `POST /applications`, `PUT /applications/{id}` |
+| Plantillas | `GET /templates` |
+| Perfil | `GET /profiles/{id}`, `PUT /profiles/{id}` |
 | Sesiones y datos | `GET /profiles/{id}/sessions`, `GET /profiles/{id}/export` |
 | Brecha de habilidades | `GET /skills-gap` |
 | Soporte y legales | `GET /help`, `GET /legal/terms`, `GET /legal/privacy` |
+| Notificaciones | `GET /notifications?unread=true`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `POST /notifications/read-all`, `PUT /notifications/directory/me` |
+| Notificaciones en vivo | `POST /notifications/hub/negotiate` vía APIM, que devuelve la URL de Azure SignalR Service; la conexión va directo ahí y recibe el evento `notification` |
+
+Las rutas son relativas a `VITE_APIM_BASE_URL`, que ya incluye el prefijo `/api/v1`. El contrato del servicio de notificaciones está en `docs/contratos/openapi.yaml` del repositorio `cvexpert-ms-notificaciones`; sus fechas llegan como epoch en milisegundos y cada notificación lleva a la pantalla que corresponde a su tipo. Mientras la API de notificaciones no esté publicada en el APIM, la campana oculta el contador y el centro de notificaciones muestra el error con opción de reintentar; el resto de la aplicación no se ve afectado.
 
 ---
 
@@ -196,6 +201,7 @@ Ninguna URL ni credencial está versionada. Los valores se inyectan en tiempo de
 | [jwt-decode](https://github.com/auth0/jwt-decode) | Lectura del `id_token` |
 | [Lucide React](https://lucide.dev/) | Iconos |
 | [@dnd-kit/core](https://dndkit.com/) | Arrastrar y soltar en el tablero de postulaciones |
+| [@microsoft/signalr](https://learn.microsoft.com/aspnet/core/signalr/javascript-client) | Notificaciones en vivo (se carga bajo demanda) |
 | [ESLint](https://eslint.org/) | Análisis estático |
 
 ### Infraestructura y diseño
