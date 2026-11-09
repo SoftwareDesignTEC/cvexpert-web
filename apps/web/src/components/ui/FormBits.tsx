@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Info } from 'lucide-react';
 import Button from './Button';
 
@@ -36,7 +37,7 @@ export function Field({
 }
 
 export function TextArea({
-    label, value, onChange, error, placeholder, rows = 4,
+    label, value, onChange, error, placeholder, rows = 4, textareaRef, onFocus,
 }: {
     label: string;
     value: string;
@@ -44,15 +45,23 @@ export function TextArea({
     error?: string;
     placeholder?: string;
     rows?: number;
+    // Para quien necesita el cursor, p. ej. insertar un marcador donde está escribiendo
+    textareaRef?: React.Ref<HTMLTextAreaElement>;
+    onFocus?: () => void;
 }) {
+    const id = useId();
     return (
         <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-body dark:text-gray-300">{label}</label>
+            <label htmlFor={id} className="text-xs font-medium text-body dark:text-gray-300">{label}</label>
             <textarea
+                id={id}
+                ref={textareaRef}
                 value={value}
                 onChange={e => onChange(e.target.value)}
+                onFocus={onFocus}
                 placeholder={placeholder}
                 rows={rows}
+                aria-invalid={!!error}
                 className={`rounded-xl border px-3 py-2.5 text-sm bg-surface dark:bg-gray-800 text-ink dark:text-white placeholder:text-muted focus:outline-none resize-y
                     ${error
                     ? 'border-rose-400 focus:border-rose-500'

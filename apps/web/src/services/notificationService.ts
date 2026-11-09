@@ -1,7 +1,8 @@
 import { API_BASE_URL, http, toPaginated } from './http';
 import type {
     AppNotification, NotificationDirectoryEntry, NotificationDirectoryUpdate,
-    NotificationLanguage, NotificationType, UnreadCountResponse,
+    NotificationLanguage, NotificationTemplate, NotificationTemplateUpdate,
+    NotificationType, UnreadCountResponse,
 } from '../types/models';
 import type { PaginatedResponse, PaginationParams } from '../types/api';
 
@@ -24,6 +25,25 @@ const LINKS: Record<NotificationType, string> = {
 
 export function internalLink(type: string): string | null {
     return LINKS[type as NotificationType] ?? null;
+}
+
+// Tipos en el orden del enum del contrato; el editor de plantillas los muestra así
+export const NOTIFICATION_TYPES: NotificationType[] = [
+    'application.status_changed', 'cv.generated', 'job.new', 'course.recommended',
+];
+
+// Marcadores {{campo}} que el servidor acepta en cada tipo: los campos de data de
+// evento-notificacion.schema.json (tabla "Plantillas" del README del contrato).
+// Un PUT con cualquier otro responde 400 con el detalle en errors.title / errors.body.
+export const TEMPLATE_PLACEHOLDERS: Record<NotificationType, string[]> = {
+    'application.status_changed': ['applicationId', 'jobOfferId', 'jobTitle', 'company', 'previousStatus', 'newStatus'],
+    'cv.generated':               ['cvId', 'title', 'templateId'],
+    'job.new':                    ['jobOfferId', 'title', 'company', 'location', 'modality', 'matchScore'],
+    'course.recommended':         ['title', 'platform', 'url', 'isPaid', 'duration', 'skill'],
+};
+
+function templatePath(type: NotificationType, language: NotificationLanguage) {
+    return `${BASE}/templates/${encodeURIComponent(type)}/${encodeURIComponent(language)}`;
 }
 
 export const notificationService = {
@@ -56,4 +76,18 @@ export const notificationService = {
     // Registra o actualiza al usuario en el directorio; responde la entrada guardada
     updateDirectory: (language: NotificationLanguage) =>
         http.put<NotificationDirectoryEntry>(`${BASE}/directory/me`, { language } satisfies NotificationDirectoryUpdate),
+
+    // ─── Plantillas (solo admin: sin X-User-Role admin, APIM/servidor responde 403) ───
+
+    // Las 8 plantillas (4 tipos × 2 idiomas) como arreglo, sin paginar
+    getTemplates: () =>
+        http.get<NotificationTemplate[]>(`${BASE}/templates`).then(r => (Array.isArray(r) ? r : [])),
+
+    getTemplate: (type: NotificationType, language: NotificationLanguage) =>
+        http.get<NotificationTemplate>(templatePath(type, language)),
+
+    // Reemplaza título y cuerpo; responde 200 con la plantilla guardada (updatedAt y
+    // updatedBy los pone el servidor)
+    updateTemplate: (type: NotificationType, language: NotificationLanguage, update: NotificationTemplateUpdate) =>
+        http.put<NotificationTemplate>(templatePath(type, language), update),
 };

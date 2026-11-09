@@ -202,6 +202,23 @@ export interface NotificationDirectoryEntry {
     language: NotificationLanguage;
 }
 
+// Esquema Template de openapi.yaml: título y cuerpo con que el servicio redacta cada tipo
+// de aviso en cada idioma. Solo los administradores lo ven y lo editan.
+export interface NotificationTemplate {
+    type: NotificationType;
+    language: NotificationLanguage;
+    title: string;                      // con marcadores {{campo}}
+    body: string;
+    updatedAt: number;                  // epoch ms; 0 = nunca se editó (texto por defecto)
+    updatedBy?: string;                 // correo del admin; se omite en las por defecto
+}
+
+// Cuerpo de PUT /notifications/templates/{type}/{language}
+export interface NotificationTemplateUpdate {
+    title: string;
+    body: string;
+}
+
 //Paginación
 
 // Reemplaza PaginatedResponse<T> en api.ts — nombres exactos del enunciado

@@ -1,7 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
-import { X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Bell, Settings } from 'lucide-react';
+import {
+    X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Bell, MessageSquareText, Settings,
+} from 'lucide-react';
+import { useNotificationAdmin } from '../../context/NotificationAdminContext';
 
+// adminOnly: sólo se muestra si el usuario puede editar las plantillas de notificaciones
 const navItems = [
     { to: '/',             icon: LayoutDashboard, label: 'Panel Principal'      },
     { to: '/cvs',          icon: FileText,         label: 'Mis Currículums'      },
@@ -11,6 +15,7 @@ const navItems = [
     { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'    },
     { to: '/applications', icon: Kanban,           label: 'Postulaciones'        },
     { to: '/notifications', icon: Bell,            label: 'Notificaciones'       },
+    { to: '/admin/notification-templates', icon: MessageSquareText, label: 'Plantillas de notificaciones', adminOnly: true },
     { to: '/settings',     icon: Settings,         label: 'Configuración'        },
 ];
 
@@ -19,6 +24,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ onClose }: SidebarProps) {
+    const { canEditTemplates } = useNotificationAdmin();
+    const visibleItems = navItems.filter(item => !item.adminOnly || canEditTemplates === true);
+
     return (
         <aside className="w-64 h-full bg-surface dark:bg-gray-900 border-r border-line dark:border-gray-800 flex flex-col">
             {/* Header del sidebar con botón cerrar */}
@@ -37,7 +45,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
             {/* Navegación */}
             <nav className="flex-1 py-4 px-3 overflow-y-auto flex flex-col gap-1">
-                {navItems.map(({ to, icon: Icon, label }) => (
+                {visibleItems.map(({ to, icon: Icon, label }) => (
                     <NavLink
                         key={to}
                         to={to}

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/ui/Sidebar';
 import Header from '../components/ui/Header';
 import { NotificationsProvider } from '../context/NotificationsContext';
+import { NotificationAdminProvider } from '../context/NotificationAdminContext';
 
 export default function MainLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -10,6 +11,7 @@ export default function MainLayout() {
     // Las notificaciones sólo existen con sesión, y este layout sólo se monta con sesión
     return (
         <NotificationsProvider>
+        <NotificationAdminProvider>
             <div className="flex h-screen overflow-hidden">
 
                 {/* Overlay oscuro cuando el sidebar está abierto */}
@@ -36,6 +38,7 @@ export default function MainLayout() {
                 </div>
 
             </div>
+        </NotificationAdminProvider>
         </NotificationsProvider>
     );
 }

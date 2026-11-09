@@ -12,6 +12,8 @@ import LoginPage from '../pages/LoginPage';
 import ErrorPage from '../pages/ErrorPage';
 import ProfilePage from '../pages/ProfilePage';
 import NotificationsPage from '../pages/NotificationsPage';
+import NotificationTemplatesPage from '../pages/NotificationTemplatesPage';
+import NotificationAdminRoute from './NotificationAdminRoute';
 
 export const router = createBrowserRouter([
     {
@@ -31,6 +33,10 @@ export const router = createBrowserRouter([
                     { path: 'jobs',          element: <JobsPage /> },
                     { path: 'applications',  element: <ApplicationsPage /> },
                     { path: 'notifications', element: <NotificationsPage /> },
+                    {
+                        path: 'admin/notification-templates',
+                        element: <NotificationAdminRoute><NotificationTemplatesPage /></NotificationAdminRoute>,
+                    },
                     { path: 'settings',      element: <SettingsPage /> },
                 ],
             },
