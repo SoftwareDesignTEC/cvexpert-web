@@ -141,20 +141,31 @@ export default function CvEditorDialog({
             onSaved(saved);
         } catch (err) {
             // El 400 trae el detalle por campo; se muestra junto al general
-            if (err instanceof ApiError && err.fieldErrors) setFieldErrors(err.fieldErrors);
+            if (err instanceof ApiError && err.errors) setFieldErrors(err.errors);
             setError(describeError(err, cv ? 'guardar los cambios' : 'crear el currículum'));
         } finally {
             setSaving(false);
         }
     };
 
-    // El servicio exige fullName y email: sin ellos el envío vuelve con 400,
-    // así que se bloquea acá en vez de gastar el viaje.
-    const canSave = input.title.trim() !== ''
-        && input.personalInfo.fullName.trim() !== ''
-        && input.personalInfo.email.trim() !== ''
-        && input.templateId !== ''
-        && !saving;
+    // El servicio exige título, plantilla, fullName y email. En vez de un
+    // booleano suelto se arma la lista de lo que falta: un botón apagado sin
+    // explicación deja al usuario sin saber qué corregir.
+    const missing = [
+        input.title.trim() === '' && 'el título',
+        input.templateId === '' && 'la plantilla',
+        input.personalInfo.fullName.trim() === '' && 'el nombre completo',
+        input.personalInfo.email.trim() === '' && 'el correo',
+    ].filter((m): m is string => typeof m === 'string');
+
+    const canSave = missing.length === 0 && !saving;
+
+    // Un campo se marca en rojo sólo después de que el usuario pasó por él:
+    // señalar errores en un formulario recién abierto es ruido, no ayuda.
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const touch = (key: string) => setTouched(t => ({ ...t, [key]: true }));
+    const errorFor = (key: string, value: string) =>
+        touched[key] && value.trim() === '' ? 'Este campo es obligatorio' : undefined;
 
     return (
         <Modal
@@ -199,9 +210,11 @@ export default function CvEditorDialog({
                         <div className="flex flex-col gap-5">
                             <section className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <Field
-                                    spec={{ key: 'title', label: 'Título del currículum', kind: 'text' }}
+                                    spec={{ key: 'title', label: 'Título del currículum *', kind: 'text' }}
                                     value={input.title}
                                     onChange={v => patch({ title: String(v) })}
+                                    onBlur={() => touch('title')}
+                                    error={errorFor('title', input.title)}
                                 />
                                 <Field
                                     spec={{
@@ -222,11 +235,15 @@ export default function CvEditorDialog({
                                         spec={{ key: 'fullName', label: 'Nombre completo *', kind: 'text' }}
                                         value={input.personalInfo.fullName}
                                         onChange={v => patchPersonal('fullName', String(v))}
+                                        onBlur={() => touch('fullName')}
+                                        error={errorFor('fullName', input.personalInfo.fullName)}
                                     />
                                     <Field
                                         spec={{ key: 'email', label: 'Correo *', kind: 'text' }}
                                         value={input.personalInfo.email}
                                         onChange={v => patchPersonal('email', String(v))}
+                                        onBlur={() => touch('email')}
+                                        error={errorFor('email', input.personalInfo.email)}
                                     />
                                     {PERSONAL_FIELDS.map(f => (
                                         <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
@@ -283,7 +300,12 @@ export default function CvEditorDialog({
                 )}
                 {error && <p className="text-sm text-rose-500">{error}</p>}
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    {missing.length > 0 && (
+                        <p className="text-xs text-muted sm:mr-auto">
+                            Falta completar: <strong>{missing.join(', ')}</strong>
+                        </p>
+                    )}
                     <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
                     <Button type="button" size="sm" disabled={!canSave} onClick={save}>
                         {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}

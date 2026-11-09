@@ -30,11 +30,19 @@ function fromInputDate(s: string): number | null {
     return Number.isNaN(ms) ? null : ms;
 }
 
-const inputClass =
-    'w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white';
+const inputBase =
+    'w-full rounded-lg bg-surface px-2.5 py-2 text-sm text-ink placeholder:text-muted focus:outline-none dark:bg-gray-800 dark:text-white';
 
-export function Field({ spec, value, onChange }: {
-    spec: FieldSpec; value: unknown; onChange: (v: unknown) => void;
+const inputClass = `${inputBase} border border-line focus:border-primary dark:border-gray-700`;
+const inputClassError = `${inputBase} border border-rose-400 focus:border-rose-500`;
+
+export function Field({ spec, value, onChange, error, onBlur }: {
+    spec: FieldSpec;
+    value: unknown;
+    onChange: (v: unknown) => void;
+    /** Mensaje bajo el campo; también lo pinta de rojo */
+    error?: string;
+    onBlur?: () => void;
 }) {
     if (spec.kind === 'checkbox') {
         return (
@@ -83,9 +91,11 @@ export function Field({ spec, value, onChange }: {
                     type="text"
                     value={typeof value === 'string' ? value : ''}
                     onChange={e => onChange(e.target.value)}
-                    className={inputClass}
+                    onBlur={onBlur}
+                    className={error ? inputClassError : inputClass}
                 />
             )}
+            {error && <p className="text-[11px] text-rose-500">{error}</p>}
         </label>
     );
 }
