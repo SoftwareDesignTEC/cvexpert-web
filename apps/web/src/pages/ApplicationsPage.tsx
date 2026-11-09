@@ -522,6 +522,12 @@ export default function ApplicationsPage() {
                 statusTone={status => toneFor(status).badge}
                 onClose={() => setDetailApp(null)}
                 onChangeStatus={() => { setStatusFor(detailApp); setDetailApp(null); }}
+                onWithdraw={async id => {
+                    await applicationService.remove(id);
+                    // Se quita del tablero sin recargar todo
+                    setApplications(prev => prev.filter(a => a.id !== id));
+                    setDetailApp(null);
+                }}
             />
 
             <StatusPickerDialog
