@@ -127,20 +127,15 @@ export interface JobApplication {
 
 // ─── ANÁLISIS DE BRECHA DE HABILIDADES ───────────────────────────────────────
 
-// Un ítem del radar: nivel del usuario vs lo que se frecuenta en el mercado actual
+// Un ítem del radar: nivel del usuario vs el que pide la vacante de referencia.
+// La escala la define quien consume el componente mediante su prop `max`; con
+// el microservicio de Brecha/Cursos son ordinales del 1 al 4 (cv-skill-v1),
+// no porcentajes. Ver SKILL_SCALE_MAX en services/skillsGapService.ts.
 export interface SkillGapItem {
     name: string;
-    userLevel: number;                  // 0-100
-    marketLevel: number;                // 0-100
+    userLevel: number;
+    marketLevel: number;
 }
-
-// Conversión de nivel categórico a numérico para el radar
-export const levelToNumber: Record<Skill['level'], number> = {
-    beginner:     25,
-    intermediate: 50,
-    advanced:     75,
-    expert:       100,
-};
 
 export interface SkillsGapAnalysis {
     id: string;

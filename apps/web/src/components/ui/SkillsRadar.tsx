@@ -3,9 +3,23 @@ import type { SkillGapItem } from '../../types/models';
 interface SkillsRadarProps {
     skills: SkillGapItem[];
     size?: number;
+    /**
+     * Valor máximo de la escala. La brecha usa niveles ordinales de 1 a 4
+     * (cv-skill-v1), no porcentajes: con el 100 de antes un nivel 4 se dibujaba
+     * al 4 % del radio y el polígono colapsaba en un punto.
+     */
+    max?: number;
+    /** Cómo se escribe cada valor junto al nombre. Por defecto, "3/4". */
+    formatValue?: (value: number) => string;
 }
 
-export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
+export default function SkillsRadar({
+    skills,
+    size = 200,
+    max = 100,
+    formatValue = v => `${v}/${max}`,
+}: SkillsRadarProps) {
+    const pct = (value: number) => Math.min(Math.max(value / max, 0), 1);
     // Un radar necesita al menos 3 ejes: con menos, el poligono degenera en una linea
     // o un punto. En ese caso se comparan los niveles con barras, que se leen igual de bien.
     if (skills.length < 3) {
@@ -15,16 +29,18 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
                     <div key={s.name} className="flex flex-col gap-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2 text-xs">
                             <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{s.name}</span>
-                            <span className="text-gray-400 shrink-0">{s.userLevel}% / {s.marketLevel}%</span>
+                            <span className="text-gray-400 shrink-0">
+                                {formatValue(s.userLevel)} / {formatValue(s.marketLevel)}
+                            </span>
                         </div>
                         <div className="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
                             <div
                                 className="absolute inset-y-0 left-0 rounded-full bg-gray-300 dark:bg-gray-600"
-                                style={{ width: `${Math.min(s.marketLevel, 100)}%` }}
+                                style={{ width: `${pct(s.marketLevel) * 100}%` }}
                             />
                             <div
                                 className="absolute inset-y-0 left-0 rounded-full bg-primary"
-                                style={{ width: `${Math.min(s.userLevel, 100)}%` }}
+                                style={{ width: `${pct(s.userLevel) * 100}%` }}
                             />
                         </div>
                     </div>
@@ -42,7 +58,7 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
     // queda chico: reservar lo mismo en los cuatro lados desperdiciaba altura y
     // obligaba a dibujar el polígono más pequeño de lo necesario.
     const labelSize = 13;
-    const longest = skills.reduce((max, s) => Math.max(max, s.name.length), 0);
+    const longest = skills.reduce((largo, s) => Math.max(largo, s.name.length), 0);
     // Ajustado: con un margen mayor el poligono quedaba proporcionalmente mas chico.
     // Lo que exceda lo absorbe el relleno de la tarjeta, gracias a overflow-visible.
     const marginX = Math.min(70, Math.max(36, longest * labelSize * 0.45));
@@ -61,8 +77,8 @@ export default function SkillsRadar({ skills, size = 200 }: SkillsRadarProps) {
     const point = (value: number, index: number, r: number) => {
         const angle = angleAt(index);
         return {
-            x: cx + r * (value / 100) * Math.cos(angle),
-            y: cy + r * (value / 100) * Math.sin(angle),
+            x: cx + r * pct(value) * Math.cos(angle),
+            y: cy + r * pct(value) * Math.sin(angle),
         };
     };
 

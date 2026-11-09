@@ -8,7 +8,12 @@ import SkillsRadar from '../components/ui/SkillsRadar';
 import { LoadingSpinner } from '../components/ui/Feedback';
 import { EditContactDialog, EditPreferencesDialog, EditProfileDialog } from '../components/ui/ProfileDialogs';
 import { useAuth } from '../context/AuthContext';
-import { skillsGapService } from '../services/skillsGapService';
+import {
+    SKILL_SCALE_MAX,
+    isSkillsInputRequired,
+    levelLabel,
+    skillsGapService,
+} from '../services/skillsGapService';
 import type { SkillGapApiItem } from '../services/skillsGapService';
 import type { UserProfile } from '../types/models';
 
@@ -94,9 +99,16 @@ export default function ProfilePage() {
             setErrorSkills(null);
             try {
                 const res = await skillsGapService.getAll();
-                if (!cancelled) setSkills(res.items ?? []);
-            } catch {
-                if (!cancelled) setErrorSkills('No se pudo cargar el análisis de habilidades.');
+                if (!cancelled) setSkills(res.items);
+            } catch (err) {
+                // 409: faltan las habilidades. No es un fallo, así que no se pinta
+                // en rojo; la pantalla de brecha es la que las pide.
+                if (cancelled) return;
+                setErrorSkills(
+                    isSkillsInputRequired(err)
+                        ? null
+                        : 'No se pudo cargar el análisis de habilidades.',
+                );
             } finally {
                 if (!cancelled) setLoadingSkills(false);
             }
@@ -191,6 +203,8 @@ export default function ProfilePage() {
                                         marketLevel: s.marketLevel,
                                     }))}
                                     size={200}
+                                    max={SKILL_SCALE_MAX}
+                                    formatValue={levelLabel}
                                 />
                             </div>
                         )}
