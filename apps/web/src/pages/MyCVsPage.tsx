@@ -3,9 +3,9 @@ import { Clock, Download, Eye, Pencil, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
-import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
 import CvViewerDialog from '../components/cv/CvViewerDialog';
 import CvThumbnail from '../components/cv/CvThumbnail';
+import { downloadCvPdf } from '../components/cv/cvPdf';
 import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
 import { formatLongDate } from '../components/cv/cvLabels';
@@ -91,7 +91,6 @@ export default function MyCVsPage() {
     // Modo IA todavía no está implementado: al intentar usarlo solo se muestra un mensaje
     const [aiMode, setAiMode] = useState(false);
     const [viewingCv, setViewingCv] = useState<CV | null>(null);
-    const [downloadCv, setDownloadCv] = useState<CV | null>(null);
     // null = cerrado; { cv: null } = crear uno nuevo
     const [editing, setEditing] = useState<{ cv: CV | null } | null>(null);
 
@@ -196,7 +195,14 @@ export default function MyCVsPage() {
                                 layout={layoutFor(templates, cv)}
                                 onView={() => setViewingCv(cv)}
                                 onEdit={() => setEditing({ cv })}
-                                onDownload={() => setDownloadCv(cv)}
+                                onDownload={() => {
+                                    const problema = downloadCvPdf(
+                                        cv as unknown as Record<string, unknown>,
+                                        layoutFor(templates, cv),
+                                        cv.title,
+                                    );
+                                    if (problema) setError(problema);
+                                }}
                             />
                         ))}
                     </div>
@@ -223,13 +229,6 @@ export default function MyCVsPage() {
                     onSaved={() => { setEditing(null); setReloadKey(k => k + 1); }}
                 />
             )}
-            <DownloadTemplateDialog
-                key={`cv-dl-${downloadCv?.id ?? ''}`}
-                template={downloadCv && { id: downloadCv.id, name: downloadCv.title }}
-                onClose={() => setDownloadCv(null)}
-                title="¿Descargar este currículum?"
-                notice="La descarga de currículums todavía no está implementada."
-            />
         </div>
     );
 }

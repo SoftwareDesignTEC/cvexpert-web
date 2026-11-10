@@ -4,9 +4,11 @@ import Button from '../components/ui/Button';
 import CVCard from '../components/ui/CVCard';
 import { CompanyLogo } from '../components/ui/Avatar';
 import JobDetailDialog from '../components/ui/JobDetailDialog';
-import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
 import CvViewerDialog from '../components/cv/CvViewerDialog';
 import { layoutFor, useTemplates } from '../hooks/useTemplates';
+import { downloadCvPdf } from '../components/cv/cvPdf';
+import CvEditorDialog from '../components/cv/CvEditorDialog';
+import { useAuth } from '../context/AuthContext';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { MapPin, Loader2, FilePlus2, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -29,6 +31,7 @@ const modalityLabel: Record<JobOffer['modality'], string> = {
 };
 
 export default function DashboardPage() {
+    const { profile } = useAuth();
     const navigate = useNavigate();
 
     const [cvs, setCvs]         = useState<CV[]>([]);
@@ -39,7 +42,7 @@ export default function DashboardPage() {
     const [errorJobs, setErrorJobs]     = useState<string | null>(null);
     const [detailJob, setDetailJob]     = useState<JobOffer | null>(null);
     const [viewingCv, setViewingCv]     = useState<CV | null>(null);
-    const [downloadCv, setDownloadCv]   = useState<CV | null>(null);
+    const [editingCv, setEditingCv]     = useState<CV | null>(null);
     const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
     const [errorSkills, setErrorSkills]     = useState<string | null>(null);
@@ -118,7 +121,15 @@ export default function DashboardPage() {
                                             cv={cv}
                                             layout={layoutFor(templates, cv)}
                                             onClick={() => setViewingCv(cv)}
-                                            onDownload={() => setDownloadCv(cv)}
+                                            onEdit={() => setEditingCv(cv)}
+                                            onDownload={() => {
+                                                const problema = downloadCvPdf(
+                                                    cv as unknown as Record<string, unknown>,
+                                                    layoutFor(templates, cv),
+                                                    cv.title,
+                                                );
+                                                if (problema) setErrorCvs(problema);
+                                            }}
                                         />
                                     ))}
                                 </div>
@@ -318,13 +329,21 @@ export default function DashboardPage() {
                 cv={viewingCv}
                 onClose={() => setViewingCv(null)}
             />
-            <DownloadTemplateDialog
-                key={`cv-dl-${downloadCv?.id ?? ''}`}
-                template={downloadCv && { id: downloadCv.id, name: downloadCv.title }}
-                onClose={() => setDownloadCv(null)}
-                title="¿Descargar este currículum?"
-                notice="La descarga de currículums todavía no está implementada."
-            />
+            {/* Mismo editor que Mis Currículums; al guardar se recarga la lista */}
+            {editingCv && (
+                <CvEditorDialog
+                    open
+                    cv={editingCv}
+                    templates={templates}
+                    defaultFullName={profile?.name}
+                    defaultEmail={profile?.email}
+                    onClose={() => setEditingCv(null)}
+                    onSaved={saved => {
+                        setEditingCv(null);
+                        setCvs(prev => prev.map(c => (c.id === saved.id ? saved : c)));
+                    }}
+                />
+            )}
         </div>
     );
 }

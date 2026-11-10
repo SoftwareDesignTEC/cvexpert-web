@@ -1,4 +1,4 @@
-import { Clock, Download, Pencil } from 'lucide-react';
+import { Clock, Download, Eye, Pencil } from 'lucide-react';
 import type { CV } from '../../types/models';
 import CvThumbnail from '../cv/CvThumbnail';
 import { formatLongDate } from '../cv/cvLabels';
@@ -7,11 +7,14 @@ interface CVCardProps {
     cv: CV;
     /** Diseño de su plantilla, para dibujar la miniatura */
     layout?: unknown;
+    /** Abre el visor */
     onClick?: () => void;
+    /** Abre el editor */
+    onEdit?: () => void;
     onDownload?: () => void;
 }
 
-export default function CVCard({ cv, layout, onClick, onDownload }: CVCardProps) {
+export default function CVCard({ cv, layout, onClick, onEdit, onDownload }: CVCardProps) {
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -43,22 +46,30 @@ export default function CVCard({ cv, layout, onClick, onDownload }: CVCardProps)
                 </div>
             </div>
 
-            {/* Abren la vista previa y la confirmación de descarga: el editor y la
-                descarga real todavía no existen, y los diálogos lo dejan claro. */}
-            <div className="flex flex-col gap-1.5 shrink-0 sm:flex-row">
+            {/* La tarjeta es angosta —van tres por fila—, así que descargar queda
+                como icono y el texto se reserva para las dos acciones principales. */}
+            <div className="flex gap-1.5 shrink-0">
                 <button
                     onClick={onClick}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-1.5 text-[11px] sm:text-xs font-medium text-white hover:bg-primary-dark transition-colors"
                 >
+                    <Eye size={12} />
+                    Ver
+                </button>
+                <button
+                    onClick={onEdit}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-1.5 text-[11px] sm:text-xs font-medium text-body transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-300"
+                >
                     <Pencil size={12} />
-                    Ver/Editar
+                    Editar
                 </button>
                 <button
                     onClick={onDownload}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-deep px-2 py-1.5 text-[11px] sm:text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                    title="Descargar PDF"
+                    aria-label={`Descargar ${cv.title} en PDF`}
+                    className="shrink-0 rounded-lg bg-deep px-2.5 py-1.5 text-white transition-opacity hover:opacity-90"
                 >
                     <Download size={12} />
-                    Descargar
                 </button>
             </div>
         </div>

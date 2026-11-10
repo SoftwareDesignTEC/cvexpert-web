@@ -243,3 +243,18 @@ export function pdfFileName(title: string): string {
         .toLowerCase();
     return `${limpio || 'curriculum'}.pdf`;
 }
+
+/**
+ * Arma y descarga el PDF. Devuelve null si salió bien, o el motivo si no, para
+ * que cada pantalla lo muestre a su manera.
+ */
+export function downloadCvPdf(cv: Raw, layout: unknown, title: string, locale: Locale = 'es'): string | null {
+    try {
+        const doc = buildCvPdf(cv, layout, locale);
+        if (!doc) return 'Esta plantilla no tiene diseño estructurado, así que no se puede generar el PDF.';
+        doc.save(pdfFileName(title));
+        return null;
+    } catch {
+        return 'No pudimos generar el PDF. Intentá de nuevo.';
+    }
+}
