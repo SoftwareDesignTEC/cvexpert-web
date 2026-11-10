@@ -88,23 +88,52 @@ class Flow {
     }
 }
 
+const PHOTO_MM = 22;
+
 function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: Locale) {
     const personal = (cv.personalInfo ?? {}) as Raw;
     const leaves = fields
         .map(p => { const [root, leaf] = p.split('.'); return root === 'personalInfo' ? leaf : null; })
         .filter((l): l is string => !!l && (HEADER_FIELDS as readonly string[]).includes(l));
 
+    // Sólo se puede incrustar lo que ya está en el documento. Una URL remota
+    // habría que descargarla, y esto es síncrono; la foto que carga la web es
+    // siempre un data URL, así que ese es el caso que importa.
+    const foto = leaves.includes('photoUrl') ? text(personal.photoUrl) : null;
+    const fotoIncrustable = foto?.startsWith('data:image') ? foto : null;
+
+    const yInicio = f.y;
+    let texto = f;
+
+    if (fotoIncrustable) {
+        try {
+            f.doc.addImage(fotoIncrustable, 'JPEG', f.x, f.y, PHOTO_MM, PHOTO_MM);
+            // El bloque de texto se corre a la derecha de la foto
+            texto = new Flow(f.doc, f.x + PHOTO_MM + 5, f.width - PHOTO_MM - 5);
+            texto.y = f.y;
+            texto.page = f.page;
+        } catch {
+            // Una imagen ilegible no debe tumbar el PDF entero
+            texto = f;
+        }
+    }
+
     const nombre = leaves.includes('fullName') ? text(personal.fullName) : null;
-    if (nombre) f.write(nombre, 20, 'bold', c.accent, 2);
+    if (nombre) texto.write(nombre, 20, 'bold', c.accent, 2);
 
     const contacto = leaves
         .filter(l => !['photoUrl', 'fullName', 'bio'].includes(l))
         .map(l => (l === 'birthDate' ? formatLongDate(personal[l], locale) : text(personal[l])))
         .filter((v): v is string => !!v);
-    if (contacto.length > 0) f.write(contacto.join('  ·  '), 9, 'normal', c.secondary, 1.5);
+    if (contacto.length > 0) texto.write(contacto.join('  ·  '), 9, 'normal', c.secondary, 1.5);
 
     const bio = leaves.includes('bio') ? text(personal.bio) : null;
-    if (bio) f.write(bio, 9.5, 'normal', c.text, 2);
+    if (bio) texto.write(bio, 9.5, 'normal', c.text, 2);
+
+    // La línea va debajo de lo más alto de los dos: foto o texto
+    f.y = texto === f
+        ? texto.y
+        : Math.max(texto.y, yInicio + PHOTO_MM + 2);
 
     f.line(c.accent);
     f.y += 1.5;
