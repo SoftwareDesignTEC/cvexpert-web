@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, Download, FileText, Pencil, Search } from 'lucide-react';
+import { Clock, Download, Eye, Pencil, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
-import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
+import CvViewerDialog from '../components/cv/CvViewerDialog';
+import CvThumbnail from '../components/cv/CvThumbnail';
+import { downloadCvPdf } from '../components/cv/cvPdf';
+import { layoutFor, useTemplates } from '../hooks/useTemplates';
+import CvEditorDialog from '../components/cv/CvEditorDialog';
+import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
+import { useAuth } from '../context/AuthContext';
 import { describeError } from '../services/http';
 import type { CV } from '../types/models';
 
@@ -14,30 +19,21 @@ import type { CV } from '../types/models';
 const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
-function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; onDownload: () => void }) {
-    const [imgFailed, setImgFailed] = useState(false);
+function CVListCard({ cv, layout, onView, onEdit, onDownload }: { cv: CV; layout: unknown; onView: () => void; onEdit: () => void; onDownload: () => void }) {
 
-    const formattedDate = new Date(cv.updatedAt).toLocaleDateString('es-CR', {
-        day: '2-digit', month: 'short', year: 'numeric',
-    });
+    // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
+    const formattedDate = formatLongDate(cv.updatedAt) ?? '';
 
     return (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2 sm:p-4 flex flex-col gap-2 sm:gap-3 min-w-0">
             {/* Vista previa */}
             <div className="w-full h-36 sm:h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex flex-col items-center justify-center gap-1">
-                {cv.thumbnailUrl && !imgFailed ? (
-                    <img
-                        src={cv.thumbnailUrl}
-                        alt={cv.title}
-                        onError={() => setImgFailed(true)}
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    <>
-                        <FileText size={32} className="text-gray-300 dark:text-gray-600" />
-                        <span className="text-[10px] sm:text-xs text-gray-400">Vista Previa</span>
-                    </>
-                )}
+                <CvThumbnail
+                    cv={cv as unknown as Record<string, unknown>}
+                    layout={layout}
+                    title={cv.title}
+                    fallbackImageUrl={cv.thumbnailUrl}
+                />
             </div>
 
             {/* Título y fecha de última modificación */}
@@ -51,14 +47,20 @@ function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; on
                 </div>
             </div>
 
-            {/* Sin funcionalidad por ahora (no hay editor ni descarga en esta fase) */}
             <div className="flex flex-col gap-1.5 sm:flex-row">
                 <button
                     onClick={onView}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-2 text-xs font-medium text-white hover:bg-primary-dark transition-colors"
                 >
+                    <Eye size={13} />
+                    Ver
+                </button>
+                <button
+                    onClick={onEdit}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-2 text-xs font-medium text-body hover:border-primary hover:text-primary transition-colors dark:border-gray-700 dark:text-gray-300"
+                >
                     <Pencil size={13} />
-                    Ver/Editar
+                    Editar
                 </button>
                 <button
                     onClick={onDownload}
@@ -74,7 +76,7 @@ function CVListCard({ cv, onView, onDownload }: { cv: CV; onView: () => void; on
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function MyCVsPage() {
-    const navigate = useNavigate();
+    const { profile } = useAuth();
 
     const [items, setItems] = useState<CV[]>([]);
     const [page, setPage] = useState(1);
@@ -89,10 +91,14 @@ export default function MyCVsPage() {
     // Modo IA todavía no está implementado: al intentar usarlo solo se muestra un mensaje
     const [aiMode, setAiMode] = useState(false);
     const [viewingCv, setViewingCv] = useState<CV | null>(null);
-    const [downloadCv, setDownloadCv] = useState<CV | null>(null);
+    // null = cerrado; { cv: null } = crear uno nuevo
+    const [editing, setEditing] = useState<{ cv: CV | null } | null>(null);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
+
+    // Alimenta el selector de plantilla, la vista previa y las miniaturas
+    const templates = useTemplates();
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -160,7 +166,7 @@ export default function MyCVsPage() {
                         Modo IA
                     </Button>
                     <button
-                        onClick={() => navigate('/templates')}
+                        onClick={() => setEditing({ cv: null })}
                         className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 transition-colors"
                     >
                         Offline / Plantilla
@@ -186,8 +192,17 @@ export default function MyCVsPage() {
                             <CVListCard
                                 key={cv.id}
                                 cv={cv}
+                                layout={layoutFor(templates, cv)}
                                 onView={() => setViewingCv(cv)}
-                                onDownload={() => setDownloadCv(cv)}
+                                onEdit={() => setEditing({ cv })}
+                                onDownload={() => {
+                                    const problema = downloadCvPdf(
+                                        cv as unknown as Record<string, unknown>,
+                                        layoutFor(templates, cv),
+                                        cv.title,
+                                    );
+                                    if (problema) setError(problema);
+                                }}
                             />
                         ))}
                     </div>
@@ -196,18 +211,24 @@ export default function MyCVsPage() {
                 </div>
             )}
 
-            <TemplateViewerDialog
+            {/* Dibuja el CV con el layout de su plantilla; si no hay, muestra la miniatura */}
+            <CvViewerDialog
                 key={`cv-view-${viewingCv?.id ?? ''}`}
-                template={viewingCv && { id: viewingCv.id, name: viewingCv.title, imageUrl: viewingCv.thumbnailUrl }}
+                cv={viewingCv}
                 onClose={() => setViewingCv(null)}
             />
-            <DownloadTemplateDialog
-                key={`cv-dl-${downloadCv?.id ?? ''}`}
-                template={downloadCv && { id: downloadCv.id, name: downloadCv.title }}
-                onClose={() => setDownloadCv(null)}
-                title="¿Descargar este currículum?"
-                notice="La descarga de currículums todavía no está implementada."
-            />
+            {/* Se monta sólo al abrirse: cada apertura parte del CV actual */}
+            {editing && (
+                <CvEditorDialog
+                    open
+                    cv={editing.cv}
+                    templates={templates}
+                    defaultFullName={profile?.name}
+                    defaultEmail={profile?.email}
+                    onClose={() => setEditing(null)}
+                    onSaved={() => { setEditing(null); setReloadKey(k => k + 1); }}
+                />
+            )}
         </div>
     );
 }

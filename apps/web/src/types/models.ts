@@ -1,3 +1,5 @@
+import type { CvLayout } from './cvLayout';
+
 // PERFIL DE USUARIO
 
 export interface UserProfile {
@@ -16,28 +18,43 @@ export interface UserProfile {
 
 //CV / CURRÍCULUM
 
+// Las fechas del contrato de cvexpert-ms-cvs son epoch en milisegundos
+// (entero), no cadenas ISO. Se admiten las dos formas mientras conviven
+// respuestas viejas; para formatearlas usar los ayudantes de components/cv/cvLabels.
+export type EpochMillis = number | string;
+
 export interface CV {
     id: string;
     userId: string;
     title: string;
     templateId: string;
     thumbnailUrl?: string;
-    createdAt: string;
-    updatedAt: string;
+    createdAt: EpochMillis;
+    updatedAt: EpochMillis;
 
     personalInfo: UserProfile;
     workExperiences: WorkExperience[];
     education: Education[];
     skills: Skill[];
     languages: Language[];
+    certifications?: Certification[];
+}
+
+export interface Certification {
+    id: string;
+    name: string;
+    issuer: string;
+    issuedAt: EpochMillis | null;
+    expiresAt: EpochMillis | null;
+    credentialUrl?: string;
 }
 
 export interface WorkExperience {
     id: string;
     company: string;
     position: string;
-    startDate: string;
-    endDate: string | null;
+    startDate: EpochMillis;
+    endDate: EpochMillis | null;
     current: boolean;
     description: string;
     type: 'formal' | 'freelance' | 'volunteer' | 'school-project' | 'informal';
@@ -48,8 +65,8 @@ export interface Education {
     institution: string;
     degree: string;
     field: string;
-    startDate: string;
-    endDate: string | null;
+    startDate: EpochMillis;
+    endDate: EpochMillis | null;
     current: boolean;
 }
 
@@ -76,6 +93,12 @@ export interface CVTemplate {
     category: string;
     isPremium: boolean;
     availableOffline: boolean;
+    /**
+     * Definición estructurada con la que el cliente dibuja el CV. Es null en las
+     * plantillas viejas que todavía no se migraron: en ese caso se sigue
+     * mostrando sólo previewUrl, como antes.
+     */
+    layout?: CvLayout | null;
 }
 
 // OFERTAS LABORALES

@@ -14,10 +14,12 @@ export interface PreviewItem {
 
 // ── Vista previa de la plantilla ──────────────────────────────────────────────
 export function TemplateViewerDialog({
-    template, onClose,
+    template, onClose, onUse,
 }: {
     template: PreviewItem | null;
     onClose: () => void;
+    /** Abre el editor con esta plantilla ya elegida */
+    onUse?: () => void;
 }) {
     const [imgFailed, setImgFailed] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
@@ -37,10 +39,19 @@ export function TemplateViewerDialog({
                         <Eye size={13} />
                         Modo vista
                     </span>
-                    <Button size="sm" onClick={() => setToast('Modo edición aún no implementado.')}>
-                        <Pencil size={14} />
-                        Cambiar a modo edición
-                    </Button>
+                    {/* El editor ya existe: desde acá se crea un currículum con
+                        esta plantilla, en vez del aviso de "no implementado". */}
+                    {onUse ? (
+                        <Button size="sm" onClick={onUse}>
+                            <Pencil size={14} />
+                            Usar esta plantilla
+                        </Button>
+                    ) : (
+                        <Button size="sm" onClick={() => setToast('Todavía no se puede editar desde acá.')}>
+                            <Pencil size={14} />
+                            Editar
+                        </Button>
+                    )}
                 </div>
 
                 <div className="rounded-xl bg-canvas dark:bg-gray-800 p-3 flex items-center justify-center min-h-[20rem]">

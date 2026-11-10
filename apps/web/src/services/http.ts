@@ -81,9 +81,10 @@ export function describeError(err: unknown, context: string): string {
         if (err.status === 401) {
             return `${prefix}: tu sesión expiró. Iniciá sesión de nuevo.`;
         }
-        // El APIM devuelve el detalle en español; se muestra con su código para
-        // que sirva también al reportar el problema.
-        return `${prefix}: ${err.message} (código ${err.status})`;
+        // Se dice el motivo, no el código: un número no le explica nada a quien
+        // tiene que resolverlo, y es lo que la heurística de Nielsen sobre
+        // errores pide evitar. El código queda en ApiError.status para la consola.
+        return `${prefix}: ${err.message}`;
     }
 
     if (err instanceof Error && err.message) {
