@@ -4,7 +4,8 @@ import Button from '../components/ui/Button';
 import CVCard from '../components/ui/CVCard';
 import { CompanyLogo } from '../components/ui/Avatar';
 import JobDetailDialog from '../components/ui/JobDetailDialog';
-import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
+import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
+import CvViewerDialog from '../components/cv/CvViewerDialog';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { MapPin, Loader2, FilePlus2, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -308,9 +309,10 @@ export default function DashboardPage() {
 
 
             <JobDetailDialog job={detailJob} onClose={() => setDetailJob(null)} />
-            <TemplateViewerDialog
+            {/* Mismo visor que Mis Currículums: dibuja el CV y permite descargarlo */}
+            <CvViewerDialog
                 key={`cv-view-${viewingCv?.id ?? ''}`}
-                template={viewingCv && { id: viewingCv.id, name: viewingCv.title, imageUrl: viewingCv.thumbnailUrl }}
+                cv={viewingCv}
                 onClose={() => setViewingCv(null)}
             />
             <DownloadTemplateDialog

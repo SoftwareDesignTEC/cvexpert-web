@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal, flushSync } from 'react-dom';
 import { Download, FileText } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -7,6 +6,7 @@ import CvDocument from './CvDocument';
 import { UI_TEXT } from './cvLabels';
 import type { Locale } from './cvLabels';
 import { parseLayout } from '../../types/cvLayout';
+import { buildCvPdf, pdfFileName } from './cvPdf';
 
 type Raw = Record<string, unknown>;
 
@@ -23,23 +23,27 @@ export default function CvDocumentDialog({
     locale?: Locale;
     onClose: () => void;
 }) {
-    const [printing, setPrinting] = useState(false);
     const [imgFailed, setImgFailed] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const parsed = parseLayout(layout);
     const canRender = parsed !== null && cv !== null;
 
-    /**
-     * Exportar es imprimir: el navegador ofrece "Guardar como PDF" y el texto
-     * queda seleccionable, cosa que una captura rasterizada no da.
-     * El documento se monta en un portal sobre document.body para que ningún
-     * contenedor del diálogo —que es `fixed` y recorta— lo corte al imprimir.
-     * flushSync obliga a pintarlo antes de abrir el cuadro de impresión.
-     */
+    // Se arma el PDF y se descarga directo, sin pasar por el cuadro de imprimir:
+    // el usuario quiere un archivo, no elegir una impresora. El documento se
+    // dibuja desde los datos, así que el texto queda seleccionable.
     const exportPdf = () => {
-        flushSync(() => setPrinting(true));
-        window.print();
-        setPrinting(false);
+        setError(null);
+        try {
+            const doc = buildCvPdf(cv as Raw, layout, locale);
+            if (!doc) {
+                setError('Esta plantilla no tiene diseño estructurado, así que no se puede generar el PDF.');
+                return;
+            }
+            doc.save(pdfFileName(title));
+        } catch {
+            setError('No pudimos generar el PDF. Intentá de nuevo.');
+        }
     };
 
     return (
@@ -72,6 +76,8 @@ export default function CvDocumentDialog({
                         )}
                     </div>
 
+                    {error && <p className="text-sm text-rose-500">{error}</p>}
+
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
                         {canRender && (
@@ -83,12 +89,6 @@ export default function CvDocumentDialog({
                 </div>
             </Modal>
 
-            {printing && canRender && createPortal(
-                <div className="cv-print-area">
-                    <CvDocument cv={cv} layout={layout} locale={locale} />
-                </div>,
-                document.body,
-            )}
         </>
     );
 }

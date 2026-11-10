@@ -1,0 +1,245 @@
+import { jsPDF } from 'jspdf';
+import { COLOR_SCHEMES, HEADER_FIELDS, ITEM_FIELDS, parseLayout } from '../../types/cvLayout';
+import type { ColorRoles, ListSource } from '../../types/cvLayout';
+import {
+    LANGUAGE_LEVEL, SECTION_TITLE, SKILL_LEVEL, WORK_TYPE, formatLongDate, formatRange,
+} from './cvLabels';
+import type { Locale } from './cvLabels';
+
+// Se genera el PDF dibujando el documento, no capturando la pantalla: así el
+// texto queda seleccionable y buscable —lo que necesita cualquier filtro
+// automático de currículums— y el archivo pesa unos pocos kilobytes.
+// Es el mismo enfoque que usa Android con PdfDocument.
+
+type Raw = Record<string, unknown>;
+
+const PAGE_W = 210;
+const PAGE_H = 297;
+const MARGIN = 15;
+const BOTTOM = PAGE_H - MARGIN;
+
+function hexToRgb(hex: string): [number, number, number] {
+    const h = hex.replace('#', '');
+    return [
+        parseInt(h.slice(0, 2), 16),
+        parseInt(h.slice(2, 4), 16),
+        parseInt(h.slice(4, 6), 16),
+    ];
+}
+
+function text(v: unknown): string | null {
+    if (v == null) return null;
+    if (typeof v === 'string') return v.trim() || null;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    return null;
+}
+
+/** Lleva la posición vertical y abre página nueva cuando ya no cabe. */
+class Flow {
+    y = MARGIN;
+    page = 1;
+    // Campos explícitos: la configuración del proyecto no admite propiedades
+    // declaradas en los parámetros del constructor
+    readonly doc: jsPDF;
+    readonly x: number;
+    readonly width: number;
+
+    constructor(doc: jsPDF, x: number, width: number) {
+        this.doc = doc;
+        this.x = x;
+        this.width = width;
+    }
+
+    need(alto: number) {
+        if (this.y + alto <= BOTTOM) return;
+        this.page += 1;
+        if (this.doc.getNumberOfPages() < this.page) this.doc.addPage();
+        this.doc.setPage(this.page);
+        this.y = MARGIN;
+    }
+
+    /** Escribe respetando el ancho de la columna y devuelve lo que ocupó. */
+    write(contenido: string, size: number, style: 'normal' | 'bold', color: string, gap = 1.2) {
+        this.doc.setFont('helvetica', style);
+        this.doc.setFontSize(size);
+        this.doc.setTextColor(...hexToRgb(color));
+
+        const lineas = this.doc.splitTextToSize(contenido, this.width) as string[];
+        const alto = lineas.length * size * 0.42;
+        this.need(alto);
+        this.doc.text(lineas, this.x, this.y);
+        this.y += alto + gap;
+    }
+
+    line(color: string) {
+        this.need(2);
+        this.doc.setDrawColor(...hexToRgb(color));
+        this.doc.setLineWidth(0.3);
+        this.doc.line(this.x, this.y, this.x + this.width, this.y);
+        this.y += 2;
+    }
+
+    /** Fecha alineada a la derecha, en la misma línea que el título anterior. */
+    rightAt(contenido: string, yBase: number, size: number, color: string) {
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setFontSize(size);
+        this.doc.setTextColor(...hexToRgb(color));
+        this.doc.text(contenido, this.x + this.width, yBase, { align: 'right' });
+    }
+}
+
+function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: Locale) {
+    const personal = (cv.personalInfo ?? {}) as Raw;
+    const leaves = fields
+        .map(p => { const [root, leaf] = p.split('.'); return root === 'personalInfo' ? leaf : null; })
+        .filter((l): l is string => !!l && (HEADER_FIELDS as readonly string[]).includes(l));
+
+    const nombre = leaves.includes('fullName') ? text(personal.fullName) : null;
+    if (nombre) f.write(nombre, 20, 'bold', c.accent, 2);
+
+    const contacto = leaves
+        .filter(l => !['photoUrl', 'fullName', 'bio'].includes(l))
+        .map(l => (l === 'birthDate' ? formatLongDate(personal[l], locale) : text(personal[l])))
+        .filter((v): v is string => !!v);
+    if (contacto.length > 0) f.write(contacto.join('  ·  '), 9, 'normal', c.secondary, 1.5);
+
+    const bio = leaves.includes('bio') ? text(personal.bio) : null;
+    if (bio) f.write(bio, 9.5, 'normal', c.text, 2);
+
+    f.line(c.accent);
+    f.y += 1.5;
+}
+
+function drawItem(f: Flow, item: Raw, source: ListSource, fields: string[], c: ColorRoles, locale: Locale) {
+    const has = (x: string) => fields.includes(x);
+
+    const titulos: Partial<Record<ListSource, string>> = {
+        workExperiences: 'position', education: 'degree',
+        skills: 'name', languages: 'name', certifications: 'name',
+    };
+    const subtitulos: Partial<Record<ListSource, string>> = {
+        workExperiences: 'company', education: 'institution', certifications: 'issuer',
+    };
+
+    const titulo = has(titulos[source] ?? '') ? text(item[titulos[source]!]) : null;
+    const nivel = has('level')
+        ? (source === 'languages'
+            ? LANGUAGE_LEVEL[locale][String(item.level)]
+            : SKILL_LEVEL[locale][String(item.level)]) ?? text(item.level)
+        : null;
+
+    const rango = (has('startDate') || has('endDate'))
+        ? formatRange(item.startDate, item.endDate, item.current, locale)
+        : null;
+    const emitida = has('issuedAt') ? formatLongDate(item.issuedAt, locale) : null;
+    const derecha = [rango, emitida].filter(Boolean).join(' · ');
+
+    if (titulo) {
+        const linea = nivel ? `${titulo}  —  ${nivel}` : titulo;
+        const yTitulo = f.y;
+        f.write(linea, 10, 'bold', c.text, 0.6);
+        if (derecha) f.rightAt(derecha, yTitulo, 8.5, c.secondary);
+    }
+
+    const extras: string[] = [];
+    const sub = has(subtitulos[source] ?? '') ? text(item[subtitulos[source]!]) : null;
+    if (sub) extras.push(sub);
+    if (has('field')) { const v = text(item.field); if (v) extras.push(v); }
+    if (has('type')) { const v = WORK_TYPE[locale][String(item.type)]; if (v) extras.push(v); }
+    if (has('expiresAt')) {
+        const v = formatLongDate(item.expiresAt, locale);
+        if (v) extras.push(`${locale === 'es' ? 'Vence' : 'Expires'} ${v}`);
+    }
+    if (extras.length > 0) f.write(extras.join('  ·  '), 8.5, 'normal', c.secondary, 0.8);
+
+    const desc = has('description') ? text(item.description) : null;
+    if (desc) f.write(desc, 8.5, 'normal', c.text, 1);
+
+    const enlace = has('credentialUrl') ? text(item.credentialUrl) : null;
+    if (enlace) f.write(enlace, 8, 'normal', c.accent, 1);
+
+    f.y += 1.5;
+}
+
+function drawList(f: Flow, source: ListSource, itemFields: string[], cv: Raw, c: ColorRoles, locale: Locale) {
+    const bruto = cv[source];
+    const items = Array.isArray(bruto) ? (bruto as Raw[]) : [];
+    if (items.length === 0) return;
+
+    const fields = itemFields.filter(x => (ITEM_FIELDS[source] as readonly string[]).includes(x));
+    if (fields.length === 0) return;
+
+    f.need(12);
+    f.write(SECTION_TITLE[locale][source].toUpperCase(), 9.5, 'bold', c.accent, 0.8);
+    f.line(c.divider);
+    f.y += 1;
+
+    // Las habilidades van agrupadas por categoría, igual que en pantalla
+    if (source === 'skills' && fields.includes('category')) {
+        const grupos = new Map<string, Raw[]>();
+        const sueltas: Raw[] = [];
+        for (const it of items) {
+            const k = text(it.category);
+            if (k) grupos.set(k, [...(grupos.get(k) ?? []), it]);
+            else sueltas.push(it);
+        }
+        for (const [categoria, lista] of grupos) {
+            f.write(categoria, 8.5, 'bold', c.secondary, 0.8);
+            lista.forEach(it => drawItem(f, it, source, fields, c, locale));
+        }
+        sueltas.forEach(it => drawItem(f, it, source, fields, c, locale));
+    } else {
+        items.forEach(it => drawItem(f, it, source, fields, c, locale));
+    }
+
+    f.y += 2;
+}
+
+/**
+ * Arma el PDF del currículum. Devuelve null si la plantilla no tiene un layout
+ * utilizable: sin él no hay nada que dibujar.
+ */
+export function buildCvPdf(cv: Raw, layout: unknown, locale: Locale = 'es'): jsPDF | null {
+    const parsed = parseLayout(layout);
+    if (!parsed) return null;
+
+    const c = COLOR_SCHEMES[parsed.colorScheme];
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const dibujar = (f: Flow, secciones: typeof parsed.sections) => {
+        for (const s of secciones) {
+            if (s.type === 'header') drawHeader(f, s.fields, cv, c, locale);
+            else drawList(f, s.source, s.itemFields, cv, c, locale);
+        }
+    };
+
+    if (parsed.columns === 2) {
+        const hueco = 8;
+        const anchoTotal = PAGE_W - MARGIN * 2;
+        const izq = (anchoTotal - hueco) * 0.62;
+        const der = anchoTotal - hueco - izq;
+
+        // Sin `column` se asume la primera, como en el renderizador de pantalla
+        const col1 = new Flow(doc, MARGIN, izq);
+        dibujar(col1, parsed.sections.filter(s => (s.column ?? 1) === 1));
+
+        // La segunda columna vuelve a empezar arriba de la primera página
+        doc.setPage(1);
+        const col2 = new Flow(doc, MARGIN + izq + hueco, der);
+        dibujar(col2, parsed.sections.filter(s => s.column === 2));
+    } else {
+        dibujar(new Flow(doc, MARGIN, PAGE_W - MARGIN * 2), parsed.sections);
+    }
+
+    return doc;
+}
+
+/** Nombre de archivo a partir del título, sin caracteres que molesten. */
+export function pdfFileName(title: string): string {
+    const limpio = title
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase();
+    return `${limpio || 'curriculum'}.pdf`;
+}
