@@ -1,24 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Clock, Download, Eye, FileText, Pencil, Search } from 'lucide-react';
+import { Clock, Download, Eye, Pencil, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
 import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
 import CvViewerDialog from '../components/cv/CvViewerDialog';
+import CvThumbnail from '../components/cv/CvThumbnail';
+import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
-import { templateService } from '../services/otherServices';
 import { useAuth } from '../context/AuthContext';
 import { describeError } from '../services/http';
-import type { CV, CVTemplate } from '../types/models';
+import type { CV } from '../types/models';
 
 // Cada página pide su tramo al APIM, no se acumulan hacia abajo
 const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
-function CVListCard({ cv, onView, onEdit, onDownload }: { cv: CV; onView: () => void; onEdit: () => void; onDownload: () => void }) {
+function CVListCard({ cv, layout, onView, onEdit, onDownload }: { cv: CV; layout: unknown; onView: () => void; onEdit: () => void; onDownload: () => void }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
@@ -36,10 +37,8 @@ function CVListCard({ cv, onView, onEdit, onDownload }: { cv: CV; onView: () => 
                         className="w-full h-full object-cover"
                     />
                 ) : (
-                    <>
-                        <FileText size={32} className="text-gray-300 dark:text-gray-600" />
-                        <span className="text-[10px] sm:text-xs text-gray-400">Vista Previa</span>
-                    </>
+                    // El servicio no genera miniatura: se dibuja el documento en chico
+                    <CvThumbnail cv={cv as unknown as Record<string, unknown>} layout={layout} title={cv.title} />
                 )}
             </div>
 
@@ -101,19 +100,12 @@ export default function MyCVsPage() {
     const [downloadCv, setDownloadCv] = useState<CV | null>(null);
     // null = cerrado; { cv: null } = crear uno nuevo
     const [editing, setEditing] = useState<{ cv: CV | null } | null>(null);
-    const [templates, setTemplates] = useState<CVTemplate[]>([]);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
 
-    // El catálogo alimenta el selector de plantilla y la vista previa del editor
-    useEffect(() => {
-        let cancelled = false;
-        templateService.getAll({ page: 1, pageSize: 50 })
-            .then(res => { if (!cancelled) setTemplates(res.items ?? []); })
-            .catch(() => { if (!cancelled) setTemplates([]); });
-        return () => { cancelled = true; };
-    }, []);
+    // Alimenta el selector de plantilla, la vista previa y las miniaturas
+    const templates = useTemplates();
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -207,6 +199,7 @@ export default function MyCVsPage() {
                             <CVListCard
                                 key={cv.id}
                                 cv={cv}
+                                layout={layoutFor(templates, cv)}
                                 onView={() => setViewingCv(cv)}
                                 onEdit={() => setEditing({ cv })}
                                 onDownload={() => setDownloadCv(cv)}

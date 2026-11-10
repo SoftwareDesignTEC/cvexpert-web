@@ -6,6 +6,7 @@ import { CompanyLogo } from '../components/ui/Avatar';
 import JobDetailDialog from '../components/ui/JobDetailDialog';
 import { DownloadTemplateDialog } from '../components/ui/TemplateDialogs';
 import CvViewerDialog from '../components/cv/CvViewerDialog';
+import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import SkillsRadar from '../components/ui/SkillsRadar';
 import { MapPin, Loader2, FilePlus2, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -43,6 +44,7 @@ export default function DashboardPage() {
     const [loadingSkills, setLoadingSkills] = useState(true);
     const [errorSkills, setErrorSkills]     = useState<string | null>(null);
     const [needsSkills, setNeedsSkills]     = useState(false);
+    const templates = useTemplates();
 
     useEffect(() => {
         cvService.getAll({ page: 1, pageSize: 3 })
@@ -114,6 +116,7 @@ export default function DashboardPage() {
                                         <CVCard
                                             key={cv.id}
                                             cv={cv}
+                                            layout={layoutFor(templates, cv)}
                                             onClick={() => setViewingCv(cv)}
                                             onDownload={() => setDownloadCv(cv)}
                                         />

@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Clock, Download, FileText, Pencil } from 'lucide-react';
+import { Clock, Download, Pencil } from 'lucide-react';
 import type { CV } from '../../types/models';
+import CvThumbnail from '../cv/CvThumbnail';
 import { formatLongDate } from '../cv/cvLabels';
 
 interface CVCardProps {
     cv: CV;
+    /** Diseño de su plantilla, para dibujar la miniatura */
+    layout?: unknown;
     onClick?: () => void;
     onDownload?: () => void;
 }
 
-export default function CVCard({ cv, onClick, onDownload }: CVCardProps) {
+export default function CVCard({ cv, layout, onClick, onDownload }: CVCardProps) {
     const [imgFailed, setImgFailed] = useState(false);
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
@@ -31,7 +34,8 @@ export default function CVCard({ cv, onClick, onDownload }: CVCardProps) {
                         className="w-full h-full object-cover object-top"
                     />
                 ) : (
-                    <FileText size={32} className="text-gray-300 dark:text-gray-600" />
+                    // El servicio no genera miniatura: se dibuja el documento en chico
+                    <CvThumbnail cv={cv as unknown as Record<string, unknown>} layout={layout} title={cv.title} />
                 )}
             </button>
 

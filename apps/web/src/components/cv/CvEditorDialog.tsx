@@ -3,6 +3,7 @@ import { Eye, Pencil } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import ListEditor, { Field } from './ListEditor';
+import PhotoField from './PhotoField';
 import type { FieldSpec, Row } from './ListEditor';
 import CvDocument from './CvDocument';
 import { ApiError, describeError } from '../../services/http';
@@ -97,7 +98,6 @@ const PERSONAL_FIELDS: FieldSpec[] = [
     { key: 'phone', label: 'Teléfono', kind: 'text' },
     { key: 'address', label: 'Dirección', kind: 'text' },
     { key: 'birthDate', label: 'Fecha de nacimiento', kind: 'date' },
-    { key: 'photoUrl', label: 'Foto (URL)', kind: 'text', wide: true },
     { key: 'bio', label: 'Perfil profesional', kind: 'textarea', wide: true },
 ];
 
@@ -292,6 +292,12 @@ export default function CvEditorDialog({
                                         onBlur={() => touch('email')}
                                         error={errorFor('email', input.personalInfo.email)}
                                     />
+                                    <div className="sm:col-span-2">
+                                        <PhotoField
+                                            value={input.personalInfo.photoUrl}
+                                            onChange={v => patchPersonal('photoUrl', v)}
+                                        />
+                                    </div>
                                     {PERSONAL_FIELDS.map(f => (
                                         <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
                                             <Field
