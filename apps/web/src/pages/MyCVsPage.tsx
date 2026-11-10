@@ -20,7 +20,6 @@ const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
 function CVListCard({ cv, layout, onView, onEdit, onDownload }: { cv: CV; layout: unknown; onView: () => void; onEdit: () => void; onDownload: () => void }) {
-    const [imgFailed, setImgFailed] = useState(false);
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -29,17 +28,12 @@ function CVListCard({ cv, layout, onView, onEdit, onDownload }: { cv: CV; layout
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-2 sm:p-4 flex flex-col gap-2 sm:gap-3 min-w-0">
             {/* Vista previa */}
             <div className="w-full h-36 sm:h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex flex-col items-center justify-center gap-1">
-                {cv.thumbnailUrl && !imgFailed ? (
-                    <img
-                        src={cv.thumbnailUrl}
-                        alt={cv.title}
-                        onError={() => setImgFailed(true)}
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    // El servicio no genera miniatura: se dibuja el documento en chico
-                    <CvThumbnail cv={cv as unknown as Record<string, unknown>} layout={layout} title={cv.title} />
-                )}
+                <CvThumbnail
+                    cv={cv as unknown as Record<string, unknown>}
+                    layout={layout}
+                    title={cv.title}
+                    fallbackImageUrl={cv.thumbnailUrl}
+                />
             </div>
 
             {/* Título y fecha de última modificación */}

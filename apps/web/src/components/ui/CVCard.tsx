@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Clock, Download, Pencil } from 'lucide-react';
 import type { CV } from '../../types/models';
 import CvThumbnail from '../cv/CvThumbnail';
@@ -13,7 +12,6 @@ interface CVCardProps {
 }
 
 export default function CVCard({ cv, layout, onClick, onDownload }: CVCardProps) {
-    const [imgFailed, setImgFailed] = useState(false);
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -26,17 +24,12 @@ export default function CVCard({ cv, layout, onClick, onDownload }: CVCardProps)
                 className="w-full flex-1 min-h-0 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer"
                 title={cv.title}
             >
-                {cv.thumbnailUrl && !imgFailed ? (
-                    <img
-                        src={cv.thumbnailUrl}
-                        alt={cv.title}
-                        onError={() => setImgFailed(true)}
-                        className="w-full h-full object-cover object-top"
-                    />
-                ) : (
-                    // El servicio no genera miniatura: se dibuja el documento en chico
-                    <CvThumbnail cv={cv as unknown as Record<string, unknown>} layout={layout} title={cv.title} />
-                )}
+                <CvThumbnail
+                    cv={cv as unknown as Record<string, unknown>}
+                    layout={layout}
+                    title={cv.title}
+                    fallbackImageUrl={cv.thumbnailUrl}
+                />
             </button>
 
             {/* Título y última modificación */}
