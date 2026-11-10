@@ -59,13 +59,16 @@ class Flow {
     }
 
     /** Escribe respetando el ancho de la columna y devuelve lo que ocupó. */
-    write(contenido: string, size: number, style: 'normal' | 'bold', color: string, gap = 1.2) {
+    write(contenido: string, size: number, style: 'normal' | 'bold', color: string, gap = 1.8) {
         this.doc.setFont('helvetica', style);
         this.doc.setFontSize(size);
         this.doc.setTextColor(...hexToRgb(color));
 
         const lineas = this.doc.splitTextToSize(contenido, this.width) as string[];
-        const alto = lineas.length * size * 0.42;
+        // El tamaño va en puntos y la página en milímetros: 0.3528 es la
+        // conversión, y 1.35 la altura de línea de un documento que se lee
+        // cómodo. Con 1.2 todo quedaba pegado.
+        const alto = lineas.length * size * 0.3528 * 1.35;
         this.need(alto);
         this.doc.text(lineas, this.x, this.y);
         this.y += alto + gap;
@@ -125,10 +128,10 @@ function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: L
         .filter(l => !['photoUrl', 'fullName', 'bio'].includes(l))
         .map(l => (l === 'birthDate' ? formatLongDate(personal[l], locale) : text(personal[l])))
         .filter((v): v is string => !!v);
-    if (contacto.length > 0) texto.write(contacto.join('  ·  '), 9, 'normal', c.secondary, 1.5);
+    if (contacto.length > 0) texto.write(contacto.join('  ·  '), 9.5, 'normal', c.secondary, 2.5);
 
     const bio = leaves.includes('bio') ? text(personal.bio) : null;
-    if (bio) texto.write(bio, 9.5, 'normal', c.text, 2);
+    if (bio) texto.write(bio, 9.5, 'normal', c.text, 3);
 
     // La línea va debajo de lo más alto de los dos: foto o texto
     f.y = texto === f
@@ -136,7 +139,7 @@ function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: L
         : Math.max(texto.y, yInicio + PHOTO_MM + 2);
 
     f.line(c.accent);
-    f.y += 1.5;
+    f.y += 4;
 }
 
 function drawItem(f: Flow, item: Raw, source: ListSource, fields: string[], c: ColorRoles, locale: Locale) {
@@ -166,7 +169,7 @@ function drawItem(f: Flow, item: Raw, source: ListSource, fields: string[], c: C
     if (titulo) {
         const linea = nivel ? `${titulo}  —  ${nivel}` : titulo;
         const yTitulo = f.y;
-        f.write(linea, 10, 'bold', c.text, 0.6);
+        f.write(linea, 10.5, 'bold', c.text, 1);
         if (derecha) f.rightAt(derecha, yTitulo, 8.5, c.secondary);
     }
 
@@ -179,15 +182,15 @@ function drawItem(f: Flow, item: Raw, source: ListSource, fields: string[], c: C
         const v = formatLongDate(item.expiresAt, locale);
         if (v) extras.push(`${locale === 'es' ? 'Vence' : 'Expires'} ${v}`);
     }
-    if (extras.length > 0) f.write(extras.join('  ·  '), 8.5, 'normal', c.secondary, 0.8);
+    if (extras.length > 0) f.write(extras.join('  ·  '), 9, 'normal', c.secondary, 1.2);
 
     const desc = has('description') ? text(item.description) : null;
-    if (desc) f.write(desc, 8.5, 'normal', c.text, 1);
+    if (desc) f.write(desc, 9, 'normal', c.text, 1.5);
 
     const enlace = has('credentialUrl') ? text(item.credentialUrl) : null;
     if (enlace) f.write(enlace, 8, 'normal', c.accent, 1);
 
-    f.y += 1.5;
+    f.y += 3;
 }
 
 function drawList(f: Flow, source: ListSource, itemFields: string[], cv: Raw, c: ColorRoles, locale: Locale) {
@@ -198,10 +201,10 @@ function drawList(f: Flow, source: ListSource, itemFields: string[], cv: Raw, c:
     const fields = itemFields.filter(x => (ITEM_FIELDS[source] as readonly string[]).includes(x));
     if (fields.length === 0) return;
 
-    f.need(12);
-    f.write(SECTION_TITLE[locale][source].toUpperCase(), 9.5, 'bold', c.accent, 0.8);
+    f.need(14);
+    f.write(SECTION_TITLE[locale][source].toUpperCase(), 9.5, 'bold', c.accent, 1.2);
     f.line(c.divider);
-    f.y += 1;
+    f.y += 2.5;
 
     // Las habilidades van agrupadas por categoría, igual que en pantalla
     if (source === 'skills' && fields.includes('category')) {
@@ -213,7 +216,7 @@ function drawList(f: Flow, source: ListSource, itemFields: string[], cv: Raw, c:
             else sueltas.push(it);
         }
         for (const [categoria, lista] of grupos) {
-            f.write(categoria, 8.5, 'bold', c.secondary, 0.8);
+            f.write(categoria, 9, 'bold', c.secondary, 1.2);
             lista.forEach(it => drawItem(f, it, source, fields, c, locale));
         }
         sueltas.forEach(it => drawItem(f, it, source, fields, c, locale));
@@ -221,7 +224,7 @@ function drawList(f: Flow, source: ListSource, itemFields: string[], cv: Raw, c:
         items.forEach(it => drawItem(f, it, source, fields, c, locale));
     }
 
-    f.y += 2;
+    f.y += 4;
 }
 
 /**

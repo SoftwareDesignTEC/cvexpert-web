@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
+import CvEditorDialog from '../components/cv/CvEditorDialog';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import GalleryDialog from '../components/ui/GalleryDialog';
 import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/TemplateDialogs';
@@ -144,6 +147,8 @@ function TemplateSection({
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function TemplatesPage() {
     const isOnline = useOnlineStatus();
+    const navigate = useNavigate();
+    const { profile } = useAuth();
     const [templates, setTemplates] = useState<CVTemplate[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -153,6 +158,7 @@ export default function TemplatesPage() {
     const [downloading, setDownloading] = useState<CVTemplate | null>(null);
 
     const [galleryFor, setGalleryFor] = useState<'offline' | 'store' | null>(null);
+    const [creatingWith, setCreatingWith] = useState<CVTemplate | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -240,7 +246,22 @@ export default function TemplatesPage() {
                 key={`view-${viewing?.id ?? ''}`}
                 template={viewing && { id: viewing.id, name: viewing.name, description: viewing.description, imageUrl: viewing.previewUrl }}
                 onClose={() => setViewing(null)}
+                onUse={() => { setCreatingWith(viewing); setViewing(null); }}
             />
+
+            {/* Crear un currículum con la plantilla elegida */}
+            {creatingWith && (
+                <CvEditorDialog
+                    open
+                    cv={null}
+                    templates={templates}
+                    defaultTemplateId={creatingWith.id}
+                    defaultFullName={profile?.name}
+                    defaultEmail={profile?.email}
+                    onClose={() => setCreatingWith(null)}
+                    onSaved={() => { setCreatingWith(null); navigate('/cvs'); }}
+                />
+            )}
             <DownloadTemplateDialog
                 key={`dl-${downloading?.id ?? ''}`}
                 template={downloading && { id: downloading.id, name: downloading.name }}
