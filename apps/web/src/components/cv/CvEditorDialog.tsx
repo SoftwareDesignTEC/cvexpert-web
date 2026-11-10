@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import ListEditor, { Field } from './ListEditor';
 import PhotoField from './PhotoField';
 import { useCvSuggestions } from '../../hooks/useCvSuggestions';
+import type { CvSuggestions } from '../../hooks/useCvSuggestions';
 import type { FieldSpec, Row } from './ListEditor';
 import CvDocument from './CvDocument';
 import { ApiError, describeError } from '../../services/http';
@@ -101,9 +102,9 @@ const CERT_FIELDS: FieldSpec[] = marcar('certifications', [
 ]);
 
 // email no está acá: el servicio lo exige, así que se dibuja junto a fullName
-const PERSONAL_FIELDS: FieldSpec[] = [
-    { key: 'phone', label: 'Teléfono', kind: 'text' },
-    { key: 'address', label: 'Dirección', kind: 'text' },
+const personalFields = (s: CvSuggestions): FieldSpec[] => [
+    { key: 'phone', label: 'Teléfono', kind: 'text', suggestions: s.phone },
+    { key: 'address', label: 'Dirección', kind: 'text', suggestions: s.address },
     { key: 'birthDate', label: 'Fecha de nacimiento', kind: 'date' },
     { key: 'bio', label: 'Perfil profesional', kind: 'textarea', wide: true },
 ];
@@ -132,8 +133,8 @@ export default function CvEditorDialog({
             ));
     const [tab, setTab] = useState<'form' | 'preview'>('form');
     // Sólo al crear: al editar los datos ya vienen en el currículum
+    // Valores ya escritos en otros currículums, para ofrecerlos al tipear
     const suggestions = useCvSuggestions(cv === null);
-    const [suggestionsUsed, setSuggestionsUsed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     // Ya traducidos a frases; nunca se muestran las rutas del contrato
@@ -141,20 +142,6 @@ export default function CvEditorDialog({
 
     const patch = (p: Partial<CvInput>) => setInput(prev => ({ ...prev, ...p }));
 
-    const useSuggestions = () => {
-        setInput(prev => ({
-            ...prev,
-            personalInfo: { ...prev.personalInfo, ...suggestions.personalInfo },
-            // No se pisan los idiomas que ya haya escrito en este formulario
-            languages: prev.languages.length > 0 ? prev.languages : suggestions.languages,
-        }));
-        setSuggestionsUsed(true);
-    };
-
-    // Se ofrece mientras haya algo que aportar y no se haya usado todavía
-    const canSuggest = cv === null
-        && !suggestionsUsed
-        && suggestions.personalInfo !== undefined;
     const patchPersonal = (key: string, v: unknown) =>
         setInput(prev => ({ ...prev, personalInfo: { ...prev.personalInfo, [key]: v } }));
 
@@ -279,23 +266,6 @@ export default function CvEditorDialog({
                         )
                     ) : (
                         <div className="flex flex-col gap-5">
-                            {canSuggest && (
-                                <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary-tint px-3 py-2.5 dark:border-primary/30 dark:bg-primary/10 sm:flex-row sm:items-center sm:justify-between">
-                                    <p className="text-xs text-body dark:text-gray-300">
-                                        Ya tenés estos datos en{' '}
-                                        <strong>{suggestions.fromTitle}</strong>. ¿Los reutilizamos?
-                                    </p>
-                                    <div className="flex shrink-0 gap-2">
-                                        <Button type="button" variant="secondary" size="sm" onClick={() => setSuggestionsUsed(true)}>
-                                            No, gracias
-                                        </Button>
-                                        <Button type="button" size="sm" onClick={useSuggestions}>
-                                            Usar mis datos
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-
                             <section className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <Field
                                     spec={{ key: 'title', label: 'Título del currículum', kind: 'text', required: true }}
@@ -321,14 +291,20 @@ export default function CvEditorDialog({
                                 <h3 className="text-sm font-bold text-ink dark:text-white">Datos personales</h3>
                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     <Field
-                                        spec={{ key: 'fullName', label: 'Nombre completo', kind: 'text', required: true }}
+                                        spec={{
+                                            key: 'fullName', label: 'Nombre completo', kind: 'text',
+                                            required: true, suggestions: suggestions.fullName,
+                                        }}
                                         value={input.personalInfo.fullName}
                                         onChange={v => patchPersonal('fullName', String(v))}
                                         onBlur={() => touch('fullName')}
                                         error={errorFor('fullName', input.personalInfo.fullName)}
                                     />
                                     <Field
-                                        spec={{ key: 'email', label: 'Correo', kind: 'text', required: true }}
+                                        spec={{
+                                            key: 'email', label: 'Correo', kind: 'text',
+                                            required: true, suggestions: suggestions.email,
+                                        }}
                                         value={input.personalInfo.email}
                                         onChange={v => patchPersonal('email', String(v))}
                                         onBlur={() => touch('email')}
@@ -340,7 +316,7 @@ export default function CvEditorDialog({
                                             onChange={v => patchPersonal('photoUrl', v)}
                                         />
                                     </div>
-                                    {PERSONAL_FIELDS.map(f => (
+                                    {personalFields(suggestions).map(f => (
                                         <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
                                             <Field
                                                 spec={f}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 
@@ -61,6 +61,9 @@ export function Field({ spec, value, onChange, error, onBlur }: {
     error?: string;
     onBlur?: () => void;
 }) {
+    // El id del datalist tiene que ser único en toda la página: la misma clave
+    // se repite en cada fila de una lista y entre secciones distintas.
+    const listId = useId();
     if (spec.kind === 'checkbox') {
         return (
             <label className="flex items-center gap-2 text-xs text-body dark:text-gray-300">
@@ -110,14 +113,14 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                 <>
                     <input
                         type="text"
-                        list={spec.suggestions ? `sug-${spec.key}` : undefined}
+                        list={spec.suggestions ? listId : undefined}
                         value={typeof value === 'string' ? value : ''}
                         onChange={e => onChange(e.target.value)}
                         onBlur={onBlur}
                         className={error ? inputClassError : inputClass}
                     />
                     {spec.suggestions && (
-                        <datalist id={`sug-${spec.key}`}>
+                        <datalist id={listId}>
                             {spec.suggestions.map(o => <option key={o} value={o} />)}
                         </datalist>
                     )}
