@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 
@@ -13,6 +14,8 @@ export interface FieldSpec {
      * no obligan: en un currículum siempre puede aparecer algo fuera de la lista.
      */
     suggestions?: readonly string[];
+    /** El servicio lo exige: se marca a la vista y bloquea el guardado */
+    required?: boolean;
     /** Ocupa toda la fila en vez de media */
     wide?: boolean;
 }
@@ -41,6 +44,15 @@ const inputBase =
 const inputClass = `${inputBase} border border-line focus:border-primary dark:border-gray-700`;
 const inputClassError = `${inputBase} border border-rose-400 focus:border-rose-500`;
 
+/** Punto rojo fijo; el texto sigue el tema, para que no grite en cada campo. */
+export function RequiredMark() {
+    return (
+        <span className="ml-1.5 whitespace-nowrap text-[10px] text-muted">
+            <span className="text-rose-500">●</span> Obligatorio
+        </span>
+    );
+}
+
 export function Field({ spec, value, onChange, error, onBlur }: {
     spec: FieldSpec;
     value: unknown;
@@ -65,7 +77,10 @@ export function Field({ spec, value, onChange, error, onBlur }: {
 
     return (
         <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-body dark:text-gray-300">{spec.label}</span>
+            <span className="text-[11px] font-medium text-body dark:text-gray-300">
+                {spec.label}
+                {spec.required && <RequiredMark />}
+            </span>
             {spec.kind === 'textarea' ? (
                 <textarea
                     rows={3}
@@ -130,6 +145,10 @@ export default function ListEditor({
     const update = (i: number, key: string, v: unknown) =>
         onChange(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
 
+    // Se marca en rojo recién cuando el usuario pasó por el campo
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const touch = (key: string) => setTouched(t => ({ ...t, [key]: true }));
+
     return (
         <section className="flex flex-col gap-2">
             <h3 className="text-sm font-bold text-ink dark:text-white">{title}</h3>
@@ -150,6 +169,14 @@ export default function ListEditor({
                                     spec={f}
                                     value={row[f.key]}
                                     onChange={v => update(i, f.key, v)}
+                                    onBlur={() => touch(`${i}.${f.key}`)}
+                                    error={
+                                        f.required
+                                        && touched[`${i}.${f.key}`]
+                                        && String(row[f.key] ?? '').trim() === ''
+                                            ? 'Este campo es obligatorio'
+                                            : undefined
+                                    }
                                 />
                             </div>
                         ))}

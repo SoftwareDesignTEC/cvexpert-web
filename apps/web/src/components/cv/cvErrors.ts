@@ -106,3 +106,39 @@ export function dropEmptyRows<T extends Record<string, unknown>>(rows: T[]): T[]
             return value !== undefined && value !== null && value !== '';
         }));
 }
+
+// ── Validación previa ─────────────────────────────────────────────────────────
+// Campos que el servicio exige en cada fila. Salen de la forma del contrato:
+// son los que no admiten nulo. `current` no está porque es una casilla: el
+// servicio la pide presente, no marcada, y se normaliza a false al enviar.
+export const REQUIRED_BY_SOURCE: Record<string, readonly string[]> = {
+    workExperiences: ['position', 'company', 'startDate', 'description', 'type'],
+    education: ['degree', 'institution', 'field', 'startDate'],
+    skills: ['name', 'category', 'level'],
+    languages: ['name', 'level'],
+    certifications: ['name', 'issuer'],
+};
+
+function vacio(v: unknown): boolean {
+    return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+}
+
+export function isRequired(source: string, field: string): boolean {
+    return (REQUIRED_BY_SOURCE[source] ?? []).includes(field);
+}
+
+/** Qué le falta a cada fila a medias, nombrado como lo ve el usuario. */
+export function missingInRows(
+    source: string,
+    rows: Record<string, unknown>[],
+): string[] {
+    const seccion = SECTION_LABEL[source] ?? source;
+    const requeridos = REQUIRED_BY_SOURCE[source] ?? [];
+
+    return rows.flatMap((row, i) => {
+        const faltan = requeridos.filter(f => vacio(row[f]));
+        if (faltan.length === 0) return [];
+        const nombres = faltan.map(f => FIELD_LABEL[f] ?? f).join(', ');
+        return [`${seccion}, fila ${i + 1}: ${nombres}`];
+    });
+}

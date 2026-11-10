@@ -6,7 +6,7 @@ import ListEditor, { Field } from './ListEditor';
 import type { FieldSpec, Row } from './ListEditor';
 import CvDocument from './CvDocument';
 import { ApiError, describeError } from '../../services/http';
-import { dropEmptyRows, humanizeFieldErrors } from './cvErrors';
+import { dropEmptyRows, humanizeFieldErrors, isRequired, missingInRows } from './cvErrors';
 import { cvService, emptyCvInput, toCvInput } from '../../services/cvService';
 import type { CvInput } from '../../services/cvService';
 import type { CV, CVTemplate } from '../../types/models';
@@ -34,7 +34,12 @@ const WORK_TYPES = [
     { value: 'informal', label: 'Informal' },
 ];
 
-const WORK_FIELDS: FieldSpec[] = [
+// `required` sale de REQUIRED_BY_SOURCE para que la marca visible y el bloqueo
+// del botón no se puedan desincronizar de lo que valida el servicio.
+const marcar = (source: string, fields: FieldSpec[]): FieldSpec[] =>
+    fields.map(f => ({ ...f, required: isRequired(source, f.key) }));
+
+const WORK_FIELDS: FieldSpec[] = marcar('workExperiences', [
     { key: 'position', label: 'Puesto', kind: 'text' },
     { key: 'company', label: 'Empresa', kind: 'text' },
     { key: 'startDate', label: 'Inicio', kind: 'date' },
@@ -42,16 +47,16 @@ const WORK_FIELDS: FieldSpec[] = [
     { key: 'type', label: 'Tipo', kind: 'select', options: WORK_TYPES },
     { key: 'current', label: 'Sigo trabajando acá', kind: 'checkbox' },
     { key: 'description', label: 'Descripción', kind: 'textarea', wide: true },
-];
+]);
 
-const EDUCATION_FIELDS: FieldSpec[] = [
+const EDUCATION_FIELDS: FieldSpec[] = marcar('education', [
     { key: 'degree', label: 'Título', kind: 'text' },
     { key: 'institution', label: 'Institución', kind: 'text' },
     { key: 'field', label: 'Área', kind: 'text' },
     { key: 'startDate', label: 'Inicio', kind: 'date' },
     { key: 'endDate', label: 'Fin', kind: 'date' },
     { key: 'current', label: 'En curso', kind: 'checkbox' },
-];
+]);
 
 // Separar técnicas de blandas es práctica estándar en un currículum: quien
 // recluta busca unas u otras según el puesto. El contrato deja `category` como
@@ -68,24 +73,24 @@ const COMMON_LANGUAGES = [
     'Mandarín', 'Japonés', 'Coreano', 'Árabe', 'Ruso', 'Lengua de señas costarricense',
 ] as const;
 
-const SKILL_FIELDS: FieldSpec[] = [
+const SKILL_FIELDS: FieldSpec[] = marcar('skills', [
     { key: 'name', label: 'Habilidad', kind: 'text' },
     { key: 'category', label: 'Tipo', kind: 'select', options: SKILL_CATEGORIES },
     { key: 'level', label: 'Nivel', kind: 'select', options: SKILL_LEVELS },
-];
+]);
 
-const LANGUAGE_FIELDS: FieldSpec[] = [
+const LANGUAGE_FIELDS: FieldSpec[] = marcar('languages', [
     { key: 'name', label: 'Idioma', kind: 'text', suggestions: COMMON_LANGUAGES },
     { key: 'level', label: 'Nivel', kind: 'select', options: LANGUAGE_LEVELS },
-];
+]);
 
-const CERT_FIELDS: FieldSpec[] = [
+const CERT_FIELDS: FieldSpec[] = marcar('certifications', [
     { key: 'name', label: 'Certificación', kind: 'text' },
     { key: 'issuer', label: 'Emisor', kind: 'text' },
     { key: 'issuedAt', label: 'Emitida', kind: 'date' },
     { key: 'expiresAt', label: 'Vence', kind: 'date' },
     { key: 'credentialUrl', label: 'Enlace', kind: 'text', wide: true },
-];
+]);
 
 // email no está acá: el servicio lo exige, así que se dibuja junto a fullName
 const PERSONAL_FIELDS: FieldSpec[] = [
@@ -149,8 +154,12 @@ export default function CvEditorDialog({
                     fullName: input.personalInfo.fullName.trim(),
                     email: input.personalInfo.email.trim(),
                 },
-                workExperiences: dropEmptyRows(input.workExperiences ?? []),
-                education: dropEmptyRows(input.education ?? []),
+                // `current` es obligatorio para el servicio aunque esté sin marcar:
+                // pide el campo presente, no que sea true.
+                workExperiences: dropEmptyRows(input.workExperiences ?? [])
+                    .map(r => ({ ...r, current: r.current === true })),
+                education: dropEmptyRows(input.education ?? [])
+                    .map(r => ({ ...r, current: r.current === true })),
                 skills: dropEmptyRows(input.skills ?? []),
                 languages: dropEmptyRows(input.languages ?? []),
                 ...(input.certifications
@@ -185,7 +194,17 @@ export default function CvEditorDialog({
         input.personalInfo.email.trim() === '' && 'el correo',
     ].filter((m): m is string => typeof m === 'string');
 
-    const canSave = missing.length === 0 && !saving;
+    // Una fila a medias también bloquea: antes pasaba el filtro de filas vacías
+    // y la rechazaba el servicio. Es mejor no dejar intentarlo.
+    const incompleteRows = [
+        ...missingInRows('workExperiences', dropEmptyRows(input.workExperiences ?? [])),
+        ...missingInRows('education', dropEmptyRows(input.education ?? [])),
+        ...missingInRows('skills', dropEmptyRows(input.skills ?? [])),
+        ...missingInRows('languages', dropEmptyRows(input.languages ?? [])),
+        ...missingInRows('certifications', dropEmptyRows(input.certifications ?? [])),
+    ];
+
+    const canSave = missing.length === 0 && incompleteRows.length === 0 && !saving;
 
     // Un campo se marca en rojo sólo después de que el usuario pasó por él:
     // señalar errores en un formulario recién abierto es ruido, no ayuda.
@@ -237,7 +256,7 @@ export default function CvEditorDialog({
                         <div className="flex flex-col gap-5">
                             <section className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <Field
-                                    spec={{ key: 'title', label: 'Título del currículum *', kind: 'text' }}
+                                    spec={{ key: 'title', label: 'Título del currículum', kind: 'text', required: true }}
                                     value={input.title}
                                     onChange={v => patch({ title: String(v) })}
                                     onBlur={() => touch('title')}
@@ -248,6 +267,7 @@ export default function CvEditorDialog({
                                         key: 'templateId',
                                         label: 'Plantilla',
                                         kind: 'select',
+                                        required: true,
                                         options: templates.map(t => ({ value: t.id, label: t.name })),
                                     }}
                                     value={input.templateId}
@@ -259,14 +279,14 @@ export default function CvEditorDialog({
                                 <h3 className="text-sm font-bold text-ink dark:text-white">Datos personales</h3>
                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     <Field
-                                        spec={{ key: 'fullName', label: 'Nombre completo *', kind: 'text' }}
+                                        spec={{ key: 'fullName', label: 'Nombre completo', kind: 'text', required: true }}
                                         value={input.personalInfo.fullName}
                                         onChange={v => patchPersonal('fullName', String(v))}
                                         onBlur={() => touch('fullName')}
                                         error={errorFor('fullName', input.personalInfo.fullName)}
                                     />
                                     <Field
-                                        spec={{ key: 'email', label: 'Correo *', kind: 'text' }}
+                                        spec={{ key: 'email', label: 'Correo', kind: 'text', required: true }}
                                         value={input.personalInfo.email}
                                         onChange={v => patchPersonal('email', String(v))}
                                         onBlur={() => touch('email')}
@@ -330,10 +350,13 @@ export default function CvEditorDialog({
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                    {missing.length > 0 && (
-                        <p className="text-xs text-muted sm:mr-auto">
-                            Falta completar: <strong>{missing.join(', ')}</strong>
-                        </p>
+                    {(missing.length > 0 || incompleteRows.length > 0) && (
+                        <div className="flex flex-col gap-0.5 text-xs text-muted sm:mr-auto">
+                            {missing.length > 0 && (
+                                <p>Falta completar: <strong>{missing.join(', ')}</strong></p>
+                            )}
+                            {incompleteRows.map(r => <p key={r}>Falta completar en {r}.</p>)}
+                        </div>
                     )}
                     <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
                     <Button type="button" size="sm" disabled={!canSave} onClick={save}>
