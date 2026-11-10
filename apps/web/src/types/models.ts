@@ -84,13 +84,17 @@ export interface JobOffer {
     id: string;
     title: string;
     company: string;
+    // Logo real de la empresa; hay ofertas que vienen sin él
     companyLogoUrl?: string;
+    /** Página donde se postula de verdad, en el sitio de origen */
+    applyUrl?: string;
     location: string;
     modality: 'remote' | 'on-site' | 'hybrid';
     type: 'full-time' | 'part-time' | 'freelance' | 'internship';
     sector: string;
     description: string;
     requirements: string[];
+    /** Habilidades que el servicio extrae del texto de la oferta */
     skills?: string[];
     salary?: {
         min: number;

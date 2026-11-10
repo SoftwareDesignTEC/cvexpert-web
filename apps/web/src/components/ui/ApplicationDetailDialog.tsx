@@ -1,7 +1,9 @@
-import { ArrowLeftRight, Briefcase, CalendarDays, Clock, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeftRight, Briefcase, CalendarDays, Clock, MapPin, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
 import { CompanyLogo } from './Avatar';
+import { describeError } from '../../services/http';
 import type { ApplicationStatus, JobApplication } from '../../types/models';
 
 const modalityLabel: Record<JobApplication['modality'], string> = {
@@ -28,7 +30,7 @@ function Fact({ icon: Icon, children }: { icon: typeof MapPin; children: React.R
 }
 
 export default function ApplicationDetailDialog({
-    application, statusLabel, statusTone, onClose, onChangeStatus,
+    application, statusLabel, statusTone, onClose, onChangeStatus, onWithdraw,
 }: {
     application: JobApplication | null;
     /** Etiqueta en español del estado, p. ej. "Entrevista" */
@@ -36,10 +38,17 @@ export default function ApplicationDetailDialog({
     /** Clases de color del estado, para pintar la insignia */
     statusTone: (status: ApplicationStatus) => string;
     onClose: () => void;
+    /** Retira la postulación; recibe el id para borrarla en el servicio */
+    onWithdraw?: (id: string) => Promise<void>;
     onChangeStatus: () => void;
 }) {
     const applied = formatDate(application?.appliedAt);
     const updated = formatDate(application?.updatedAt);
+
+    // Retirar es irreversible, así que el botón pide confirmación antes de borrar
+    const [confirming, setConfirming] = useState(false);
+    const [withdrawing, setWithdrawing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     return (
         <Modal
@@ -85,7 +94,34 @@ export default function ApplicationDetailDialog({
                     )}
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                        {error && <p className="w-full text-sm text-rose-500">{error}</p>}
                         <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                        {onWithdraw && (
+                            confirming ? (
+                                <Button
+                                    variant="danger"
+                                    size="sm"
+                                    disabled={withdrawing}
+                                    onClick={async () => {
+                                        setWithdrawing(true);
+                                        setError(null);
+                                        try {
+                                            await onWithdraw(application.id);
+                                        } catch (err) {
+                                            setError(describeError(err, 'retirar la postulación'));
+                                            setWithdrawing(false);
+                                            setConfirming(false);
+                                        }
+                                    }}
+                                >
+                                    {withdrawing ? 'Retirando…' : '¿Seguro? Retirar'}
+                                </Button>
+                            ) : (
+                                <Button variant="danger" size="sm" onClick={() => setConfirming(true)}>
+                                    <Trash2 size={14} /> Retirar
+                                </Button>
+                            )
+                        )}
                         <Button size="sm" onClick={onChangeStatus}>
                             <ArrowLeftRight size={14} />
                             Cambiar de estado

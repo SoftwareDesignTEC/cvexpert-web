@@ -33,6 +33,8 @@ interface JobApiResponse {
     description?: string;
     requirements?: string[];
     skills?: string[];
+    applyUrl?: string;
+    salary?: JobOffer['salary'];
     compatibility?: number;
     matchScore?: number;
     createdAt?: string;
@@ -52,6 +54,9 @@ function toJobOffer(res: JobApiResponse): JobOffer {
         description: res.description ?? '',
         requirements: res.requirements ?? [],
         skills: res.skills ?? [],
+        applyUrl: res.applyUrl,
+        // Faltaba mapearlo: el diálogo de detalle lo pinta si viene
+        salary: res.salary,
         matchScore: res.matchScore ?? res.compatibility,
         postedAt: res.postedAt ?? res.createdAt ?? '',
     };
@@ -115,4 +120,7 @@ export const applicationService = {
 
     updateStatus: (id: string, status: ApplicationStatus) =>
         http.put<JobApplication>(`/applications/${id}`, { status }),
+
+    /** Retirar una postulación. Responde 204 sin cuerpo. */
+    remove: (id: string) => http.delete<void>(`/applications/${id}`),
 };
