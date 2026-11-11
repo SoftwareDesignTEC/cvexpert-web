@@ -374,7 +374,7 @@ export default function CvEditorDialog({
                                         </p>
                                     )}
                                     {personalFields(suggestions, generarBio).map(f => (
-                                        <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
+                                        <div key={f.key} className={`min-w-0 ${f.wide ? 'sm:col-span-2' : ''}`}>
                                             <Field
                                                 spec={f}
                                                 value={(input.personalInfo as unknown as Row)[f.key]}

@@ -160,8 +160,10 @@ export default function ListEditor({
                     className="rounded-xl border border-line p-3 dark:border-gray-800"
                 >
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {/* min-w-0 en cada celda: sin eso, una con varios controles
+                            dentro ensancha la rejilla y el diálogo scrollea */}
                         {fields.map(f => (
-                            <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
+                            <div key={f.key} className={`min-w-0 ${f.wide ? 'sm:col-span-2' : ''}`}>
                                 <Field
                                     spec={{
                                         ...f,
