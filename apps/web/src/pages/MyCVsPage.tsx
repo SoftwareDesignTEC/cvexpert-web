@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock, Download, Eye, Pencil, Search } from 'lucide-react';
+import { Clock, Download, Eye, Pencil, Search, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
@@ -9,6 +9,7 @@ import { downloadCvPdf } from '../components/cv/cvPdf';
 import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
 import AiCvDialog from '../components/cv/AiCvDialog';
+import DeleteCvDialog from '../components/cv/DeleteCvDialog';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
@@ -20,7 +21,10 @@ import type { CV } from '../types/models';
 const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
-function CVListCard({ cv, layout, onView, onEdit, onDownload }: { cv: CV; layout: unknown; onView: () => void; onEdit: () => void; onDownload: () => void }) {
+function CVListCard({ cv, layout, onView, onEdit, onDownload, onDelete }: {
+    cv: CV; layout: unknown;
+    onView: () => void; onEdit: () => void; onDownload: () => void; onDelete: () => void;
+}) {
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -70,6 +74,15 @@ function CVListCard({ cv, layout, onView, onEdit, onDownload }: { cv: CV; layout
                     <Download size={13} />
                     Descargar
                 </button>
+                {/* Borrar va sin texto y aparte: es la única irreversible */}
+                <button
+                    onClick={onDelete}
+                    title="Borrar currículum"
+                    aria-label={`Borrar ${cv.title}`}
+                    className="shrink-0 rounded-lg border border-line px-2.5 py-2 text-muted transition-colors hover:border-rose-400 hover:text-rose-500 dark:border-gray-700"
+                >
+                    <Trash2 size={13} />
+                </button>
             </div>
         </div>
     );
@@ -93,6 +106,7 @@ export default function MyCVsPage() {
     const [viewingCv, setViewingCv] = useState<CV | null>(null);
     // null = cerrado; { cv: null } = crear uno nuevo
     const [editing, setEditing] = useState<{ cv: CV | null } | null>(null);
+    const [deleting, setDeleting] = useState<CV | null>(null);
 
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
@@ -191,6 +205,7 @@ export default function MyCVsPage() {
                                 layout={layoutFor(templates, cv)}
                                 onView={() => setViewingCv(cv)}
                                 onEdit={() => setEditing({ cv })}
+                                onDelete={() => setDeleting(cv)}
                                 onDownload={() => {
                                     const problema = downloadCvPdf(
                                         cv as unknown as Record<string, unknown>,
@@ -223,6 +238,19 @@ export default function MyCVsPage() {
                     onCreated={cv => { setAiOpen(false); setEditing({ cv }); setReloadKey(k => k + 1); }}
                 />
             )}
+
+            <DeleteCvDialog
+                key={`cv-del-${deleting?.id ?? ''}`}
+                cv={deleting}
+                onClose={() => setDeleting(null)}
+                onDeleted={id => {
+                    setDeleting(null);
+                    // Se saca de la lista y se recarga: la paginación y el
+                    // total cambian al quedar un currículum menos.
+                    setItems(prev => prev.filter(c => c.id !== id));
+                    setReloadKey(k => k + 1);
+                }}
+            />
 
             {editing && (
                 <CvEditorDialog
