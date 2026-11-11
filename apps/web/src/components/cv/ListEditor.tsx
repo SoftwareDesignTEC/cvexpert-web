@@ -1,8 +1,8 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { Mic, Plus, Square, Trash2 } from 'lucide-react';
+import { useId, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import DateFieldInput from './DateField';
-import { useDictation } from '../../hooks/useDictation';
+import DictatableTextArea from './DictatableTextArea';
 
 export type FieldKind = 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
 
@@ -18,6 +18,10 @@ export interface FieldSpec {
     suggestions?: readonly string[];
     /** El servicio lo exige: se marca a la vista y bloquea el guardado */
     required?: boolean;
+    /** Obligatorio sólo en ciertas filas, p. ej. la empresa en un empleo formal */
+    requiredWhen?: (row: Row) => boolean;
+    /** Redacta el contenido con IA; recibe la fila para armar el contexto */
+    generate?: (actual: string, row: Row) => Promise<string>;
     /** Ocupa toda la fila en vez de media */
     wide?: boolean;
 }
@@ -39,63 +43,15 @@ export function RequiredMark() {
     );
 }
 
-/**
- * Área de texto con dictado. El botón sólo aparece si el navegador lo soporta;
- * lo dictado se agrega al final en vez de reemplazar, para poder encadenar
- * varias frases y seguir corrigiendo a mano.
- */
-function DictatableTextArea({ value, onChange }: {
-    value: string;
-    onChange: (v: string) => void;
-}) {
-    // Lo dictado llega desde un reconocimiento que vive entre renders, así que
-    // necesita leer el texto actual y no el que había al empezar a escuchar.
-    const valorRef = useRef(value);
-    useEffect(() => { valorRef.current = value; }, [value]);
-
-    const { supported, listening, error, start, stop } = useDictation(texto => {
-        const previo = valorRef.current.trimEnd();
-        onChange(previo ? `${previo} ${texto}` : texto);
-    });
-
-    return (
-        <div className="flex flex-col gap-1">
-            <div className="relative">
-                <textarea
-                    rows={3}
-                    value={value}
-                    onChange={e => onChange(e.target.value)}
-                    className={`${inputClass} resize-y ${supported ? 'pr-10' : ''}`}
-                />
-                {supported && (
-                    <button
-                        type="button"
-                        onClick={listening ? stop : start}
-                        title={listening ? 'Detener el dictado' : 'Dictar'}
-                        aria-label={listening ? 'Detener el dictado' : 'Dictar'}
-                        className={`absolute right-2 top-2 rounded-lg p-1.5 transition-colors
-                            ${listening
-                            ? 'bg-rose-500 text-white'
-                            : 'text-muted hover:bg-canvas hover:text-primary dark:hover:bg-gray-700'
-                        }`}
-                    >
-                        {listening ? <Square size={14} /> : <Mic size={14} />}
-                    </button>
-                )}
-            </div>
-            {listening && <p className="text-[11px] text-primary">Escuchando… hablá y se va escribiendo.</p>}
-            {error && <p className="text-[11px] text-rose-500">{error}</p>}
-        </div>
-    );
-}
-
-export function Field({ spec, value, onChange, error, onBlur }: {
+export function Field({ spec, value, onChange, error, onBlur, row }: {
     spec: FieldSpec;
     value: unknown;
     onChange: (v: unknown) => void;
     /** Mensaje bajo el campo; también lo pinta de rojo */
     error?: string;
     onBlur?: () => void;
+    /** La fila a la que pertenece, para dar contexto a la redacción con IA */
+    row?: Row;
 }) {
     // El id del datalist tiene que ser único en toda la página: la misma clave
     // se repite en cada fila de una lista y entre secciones distintas.
@@ -124,6 +80,7 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                 <DictatableTextArea
                     value={typeof value === 'string' ? value : ''}
                     onChange={onChange}
+                    onGenerate={spec.generate ? actual => spec.generate!(actual, row ?? {}) : undefined}
                 />
             ) : spec.kind === 'select' ? (
                 <select
@@ -206,12 +163,16 @@ export default function ListEditor({
                         {fields.map(f => (
                             <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
                                 <Field
-                                    spec={f}
+                                    spec={{
+                                        ...f,
+                                        required: f.requiredWhen ? f.requiredWhen(row) : f.required,
+                                    }}
                                     value={row[f.key]}
                                     onChange={v => update(i, f.key, v)}
+                                    row={row}
                                     onBlur={() => touch(`${i}.${f.key}`)}
                                     error={
-                                        f.required
+                                        (f.requiredWhen ? f.requiredWhen(row) : f.required)
                                         && touched[`${i}.${f.key}`]
                                         && String(row[f.key] ?? '').trim() === ''
                                             ? 'Este campo es obligatorio'

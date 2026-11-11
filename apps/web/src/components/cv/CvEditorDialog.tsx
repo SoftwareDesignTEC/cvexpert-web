@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import ListEditor, { Field } from './ListEditor';
 import PhotoField from './PhotoField';
 import { useCvSuggestions } from '../../hooks/useCvSuggestions';
+import { aiService } from '../../services/aiService';
 import { declaredData } from '../../types/cvLayout';
 import type { ListSource } from '../../types/cvLayout';
 import type { CvSuggestions } from '../../hooks/useCvSuggestions';
@@ -46,12 +47,22 @@ const marcar = (source: string, fields: FieldSpec[]): FieldSpec[] =>
 
 const WORK_FIELDS: FieldSpec[] = marcar('workExperiences', [
     { key: 'position', label: 'Puesto', kind: 'text' },
-    { key: 'company', label: 'Empresa', kind: 'text' },
+    // Sólo obligatoria en un empleo formal
+    { key: 'company', label: 'Empresa', kind: 'text', requiredWhen: row => row.type === 'formal' },
     { key: 'startDate', label: 'Inicio', kind: 'date' },
     { key: 'endDate', label: 'Fin', kind: 'date' },
     { key: 'type', label: 'Tipo', kind: 'select', options: WORK_TYPES },
     { key: 'current', label: 'Sigo trabajando acá', kind: 'checkbox' },
-    { key: 'description', label: 'Descripción', kind: 'textarea', wide: true },
+    {
+        key: 'description', label: 'Descripción', kind: 'textarea', wide: true,
+        // Se le pasa el puesto y la empresa para que la redacción tenga de dónde agarrarse
+        generate: (actual, row) => aiService.generateText({
+            field: 'experienceDescription',
+            context: [row.position, row.company, row.type, actual]
+                .filter(Boolean).join(' · '),
+            language: 'es',
+        }),
+    },
 ]);
 
 const EDUCATION_FIELDS: FieldSpec[] = marcar('education', [
@@ -104,11 +115,14 @@ const CERT_FIELDS: FieldSpec[] = marcar('certifications', [
 ]);
 
 // email no está acá: el servicio lo exige, así que se dibuja junto a fullName
-const personalFields = (s: CvSuggestions): FieldSpec[] => [
+const personalFields = (
+    s: CvSuggestions,
+    generarBio: (actual: string) => Promise<string>,
+): FieldSpec[] => [
     { key: 'phone', label: 'Teléfono', kind: 'text', suggestions: s.phone },
     { key: 'address', label: 'Dirección', kind: 'text', suggestions: s.address },
     { key: 'birthDate', label: 'Fecha de nacimiento', kind: 'date' },
-    { key: 'bio', label: 'Perfil profesional', kind: 'textarea', wide: true },
+    { key: 'bio', label: 'Perfil profesional', kind: 'textarea', wide: true, generate: generarBio },
 ];
 
 export default function CvEditorDialog({
@@ -143,6 +157,19 @@ export default function CvEditorDialog({
     const [problems, setProblems] = useState<string[]>([]);
 
     const patch = (p: Partial<CvInput>) => setInput(prev => ({ ...prev, ...p }));
+
+    // El perfil profesional resume el currículum, así que se le manda lo que
+    // ya hay cargado: puestos, estudios y habilidades.
+    const generarBio = (actual: string) => aiService.generateText({
+        field: 'profileBio',
+        context: [
+            actual,
+            ...input.workExperiences.map(e => [e.position, e.company].filter(Boolean).join(' en ')),
+            ...input.education.map(e => [e.degree, e.institution].filter(Boolean).join(' en ')),
+            ...input.skills.map(h => h.name),
+        ].filter(Boolean).join(' · '),
+        language: 'es',
+    });
 
     const patchPersonal = (key: string, v: unknown) =>
         setInput(prev => ({ ...prev, personalInfo: { ...prev.personalInfo, [key]: v } }));
@@ -346,7 +373,7 @@ export default function CvEditorDialog({
                                             Se guardan igual.
                                         </p>
                                     )}
-                                    {personalFields(suggestions).map(f => (
+                                    {personalFields(suggestions, generarBio).map(f => (
                                         <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
                                             <Field
                                                 spec={f}

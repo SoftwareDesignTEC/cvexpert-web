@@ -112,7 +112,7 @@ export function dropEmptyRows<T extends Record<string, unknown>>(rows: T[]): T[]
 // son los que no admiten nulo. `current` no está porque es una casilla: el
 // servicio la pide presente, no marcada, y se normaliza a false al enviar.
 export const REQUIRED_BY_SOURCE: Record<string, readonly string[]> = {
-    workExperiences: ['position', 'company', 'startDate', 'description', 'type'],
+    workExperiences: ['position', 'startDate', 'description', 'type'],
     education: ['degree', 'institution', 'field', 'startDate'],
     skills: ['name', 'category', 'level'],
     languages: ['name', 'level'],
@@ -123,7 +123,15 @@ function vacio(v: unknown): boolean {
     return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
 }
 
-export function isRequired(source: string, field: string): boolean {
+/**
+ * La empresa sólo se exige en un empleo formal. En un voluntariado o un
+ * proyecto académico puede no haber ninguna, y en uno independiente tampoco.
+ * El servicio valida lo mismo; acá se copia para avisar antes de enviar.
+ */
+export function isRequired(source: string, field: string, row?: Record<string, unknown>): boolean {
+    if (source === 'workExperiences' && field === 'company') {
+        return row === undefined || row.type === 'formal';
+    }
     return (REQUIRED_BY_SOURCE[source] ?? []).includes(field);
 }
 
@@ -136,7 +144,10 @@ export function missingInRows(
     const requeridos = REQUIRED_BY_SOURCE[source] ?? [];
 
     return rows.flatMap((row, i) => {
-        const faltan = requeridos.filter(f => vacio(row[f]));
+        const campos = source === 'workExperiences' && row.type === 'formal'
+            ? [...requeridos, 'company']
+            : requeridos;
+        const faltan = campos.filter(f => vacio(row[f]));
         if (faltan.length === 0) return [];
         const nombres = faltan.map(f => FIELD_LABEL[f] ?? f).join(', ');
         return [`${seccion}, fila ${i + 1}: ${nombres}`];

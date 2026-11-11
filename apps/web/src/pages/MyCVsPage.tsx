@@ -8,6 +8,7 @@ import CvThumbnail from '../components/cv/CvThumbnail';
 import { downloadCvPdf } from '../components/cv/cvPdf';
 import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
+import AiCvDialog from '../components/cv/AiCvDialog';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
@@ -88,8 +89,7 @@ export default function MyCVsPage() {
 
     const [reloadKey, setReloadKey] = useState(0); // sube al presionar "Reintentar"
 
-    // Modo IA todavía no está implementado: al intentar usarlo solo se muestra un mensaje
-    const [aiMode, setAiMode] = useState(false);
+    const [aiOpen, setAiOpen] = useState(false);
     const [viewingCv, setViewingCv] = useState<CV | null>(null);
     // null = cerrado; { cv: null } = crear uno nuevo
     const [editing, setEditing] = useState<{ cv: CV | null } | null>(null);
@@ -162,7 +162,7 @@ export default function MyCVsPage() {
                     <p className="text-xs text-white/60 sm:text-sm">Elige cómo quieres comenzar tu próxima oportunidad.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-                    <Button size="sm" onClick={() => setAiMode(v => !v)}>
+                    <Button size="sm" onClick={() => setAiOpen(true)}>
                         Modo IA
                     </Button>
                     <button
@@ -175,11 +175,7 @@ export default function MyCVsPage() {
             </div>
 
             {/* ── Contenido ───────────────────────────────────────────────────── */}
-            {aiMode ? (
-                <div className="flex items-center justify-center min-h-[50vh]">
-                    <p className="text-sm text-gray-400 dark:text-gray-500">Nada que hacer por aquí</p>
-                </div>
-            ) : loading ? (
+            {loading ? (
                 <LoadingSpinner />
             ) : error ? (
                 <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />
@@ -218,6 +214,17 @@ export default function MyCVsPage() {
                 onClose={() => setViewingCv(null)}
             />
             {/* Se monta sólo al abrirse: cada apertura parte del CV actual */}
+            {/* Genera el CV y lo abre en el editor para revisarlo */}
+            {aiOpen && (
+                <AiCvDialog
+                    open
+                    templates={templates}
+                    defaultFullName={profile?.name}
+                    onClose={() => setAiOpen(false)}
+                    onCreated={cv => { setAiOpen(false); setEditing({ cv }); setReloadKey(k => k + 1); }}
+                />
+            )}
+
             {editing && (
                 <CvEditorDialog
                     open
