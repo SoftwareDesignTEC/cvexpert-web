@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Clock, Download, Eye, Pencil, Search, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
+import { ErrorMessage } from '../components/ui/Feedback';
 import Pagination from '../components/ui/Pagination';
 import CvViewerDialog from '../components/cv/CvViewerDialog';
 import CvThumbnail from '../components/cv/CvThumbnail';
@@ -10,6 +10,7 @@ import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
 import AiCvDialog from '../components/cv/AiCvDialog';
 import DeleteCvDialog from '../components/cv/DeleteCvDialog';
+import CvListSkeleton from '../components/cv/CvCardSkeleton';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
@@ -190,7 +191,9 @@ export default function MyCVsPage() {
 
             {/* ── Contenido ───────────────────────────────────────────────────── */}
             {loading ? (
-                <LoadingSpinner />
+                // Tantos esqueletos como entran en una página: así el alto no
+                // cambia cuando llegan los currículums de verdad
+                <CvListSkeleton count={PAGE_SIZE} />
             ) : error ? (
                 <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />
             ) : items.length === 0 ? (
