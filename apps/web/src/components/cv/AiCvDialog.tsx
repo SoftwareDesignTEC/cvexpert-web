@@ -6,26 +6,17 @@ import { Field } from './ListEditor';
 import DictatableTextArea from './DictatableTextArea';
 import { aiService } from '../../services/aiService';
 import { describeError } from '../../services/http';
-import type { CV, CVTemplate } from '../../types/models';
+import type { CV } from '../../types/models';
 
 const EJEMPLO =
     'Contá todo lo que hiciste: dónde trabajaste y de qué, qué estudiaste y ' +
     'dónde, qué sabés hacer, qué idiomas hablás. No importa el orden ni la ' +
     'redacción, de eso nos encargamos nosotros.';
 
-/** Un título distinto por currículum, para no tener varios iguales en la lista. */
-function tituloPorDefecto(): string {
-    const hoy = new Date().toLocaleDateString('es-CR', {
-        day: '2-digit', month: 'short', year: 'numeric',
-    });
-    return `Currículum ${hoy}`;
-}
-
 export default function AiCvDialog({
-    open, templates, defaultFullName, onClose, onCreated,
+    open, defaultFullName, onClose, onCreated,
 }: {
     open: boolean;
-    templates: CVTemplate[];
     defaultFullName?: string;
     onClose: () => void;
     /** Devuelve el CV ya creado, para abrirlo en el editor */
@@ -37,19 +28,15 @@ export default function AiCvDialog({
     const [working, setWorking] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Sólo se piden nombre y teléfono: el título y la plantilla se asignan
-    // solos y se cambian después en el editor, que es donde se ve el resultado.
-    const templateId = templates[0]?.id ?? '';
-    const canGenerate = fullName.trim() !== '' && freeText.trim().length > 30
-        && templateId !== '' && !working;
+    // Sólo se piden nombre y teléfono. El título y la plantilla los pone el
+    // servicio y se cambian después en el editor, que es donde se ve el efecto.
+    const canGenerate = fullName.trim() !== '' && freeText.trim().length > 30 && !working;
 
     const generate = async () => {
         setWorking(true);
         setError(null);
         try {
             const cv = await aiService.generateCv({
-                title: tituloPorDefecto(),
-                templateId,
                 fullName: fullName.trim(),
                 phone: phone.trim() || undefined,
                 freeText: freeText.trim(),

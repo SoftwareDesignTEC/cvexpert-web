@@ -218,7 +218,6 @@ export default function MyCVsPage() {
             {aiOpen && (
                 <AiCvDialog
                     open
-                    templates={templates}
                     defaultFullName={profile?.name}
                     onClose={() => setAiOpen(false)}
                     onCreated={cv => { setAiOpen(false); setEditing({ cv }); setReloadKey(k => k + 1); }}

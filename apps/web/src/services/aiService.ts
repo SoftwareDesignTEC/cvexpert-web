@@ -20,8 +20,9 @@ export interface GenerateTextRequest {
 }
 
 export interface GenerateCvRequest {
-    title: string;
-    templateId: string;
+    /** Opcionales: el servicio pone "CV generado el <fecha>" y la plantilla minimal */
+    title?: string;
+    templateId?: string;
     fullName: string;
     phone?: string;
     /** Todo lo que el usuario contó, dictado o escrito */
