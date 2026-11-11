@@ -5,6 +5,8 @@ import Button from '../ui/Button';
 import ListEditor, { Field } from './ListEditor';
 import PhotoField from './PhotoField';
 import { useCvSuggestions } from '../../hooks/useCvSuggestions';
+import { declaredData } from '../../types/cvLayout';
+import type { ListSource } from '../../types/cvLayout';
 import type { CvSuggestions } from '../../hooks/useCvSuggestions';
 import type { FieldSpec, Row } from './ListEditor';
 import CvDocument from './CvDocument';
@@ -149,6 +151,24 @@ export default function CvEditorDialog({
         () => templates.find(t => t.id === input.templateId)?.layout ?? null,
         [templates, input.templateId],
     );
+
+    // Qué pide realmente la plantilla elegida. Si no tiene diseño estructurado
+    // se muestra todo, que es el comportamiento de siempre.
+    const declared = useMemo(() => declaredData(layout), [layout]);
+    const usa = (campo: string) => !declared || declared.personal.has(campo);
+    const dibuja = (fuente: ListSource) => !declared || declared.sources.has(fuente);
+    const plantilla = templates.find(t => t.id === input.templateId)?.name ?? 'esta plantilla';
+    // El dato se guarda igual: al cambiar de plantilla vuelve a verse
+    const ETIQUETA_PERSONAL: Record<string, string> = {
+        phone: 'el teléfono', address: 'la dirección',
+        birthDate: 'la fecha de nacimiento', bio: 'el perfil profesional',
+    };
+    const personalesIgnorados = Object.keys(ETIQUETA_PERSONAL)
+        .filter(k => !usa(k))
+        .map(k => ETIQUETA_PERSONAL[k]);
+
+    const nota = (fuente: ListSource) =>
+        dibuja(fuente) ? undefined : `${plantilla} no muestra esta sección, pero el dato se guarda.`;
 
     const save = async () => {
         setSaving(true);
@@ -310,12 +330,22 @@ export default function CvEditorDialog({
                                         onBlur={() => touch('email')}
                                         error={errorFor('email', input.personalInfo.email)}
                                     />
-                                    <div className="sm:col-span-2">
-                                        <PhotoField
-                                            value={input.personalInfo.photoUrl}
-                                            onChange={v => patchPersonal('photoUrl', v)}
-                                        />
-                                    </div>
+                                    {/* Harvard y otras van sin foto: no se pide
+                                        lo que la plantilla no va a dibujar. */}
+                                    {usa('photoUrl') && (
+                                        <div className="sm:col-span-2">
+                                            <PhotoField
+                                                value={input.personalInfo.photoUrl}
+                                                onChange={v => patchPersonal('photoUrl', v)}
+                                            />
+                                        </div>
+                                    )}
+                                    {personalesIgnorados.length > 0 && (
+                                        <p className="text-[11px] text-muted sm:col-span-2">
+                                            {plantilla} no muestra: {personalesIgnorados.join(', ')}.
+                                            Se guardan igual.
+                                        </p>
+                                    )}
                                     {personalFields(suggestions).map(f => (
                                         <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
                                             <Field
@@ -329,31 +359,31 @@ export default function CvEditorDialog({
                             </section>
 
                             <ListEditor
-                                title="Experiencia" addLabel="Agregar experiencia"
+                                title="Experiencia" note={nota('workExperiences')} addLabel="Agregar experiencia"
                                 fields={WORK_FIELDS}
                                 rows={input.workExperiences as unknown as Row[]}
                                 onChange={r => patch({ workExperiences: r as CvInput['workExperiences'] })}
                             />
                             <ListEditor
-                                title="Educación" addLabel="Agregar estudio"
+                                title="Educación" note={nota('education')} addLabel="Agregar estudio"
                                 fields={EDUCATION_FIELDS}
                                 rows={input.education as unknown as Row[]}
                                 onChange={r => patch({ education: r as CvInput['education'] })}
                             />
                             <ListEditor
-                                title="Habilidades" addLabel="Agregar habilidad"
+                                title="Habilidades" note={nota('skills')} addLabel="Agregar habilidad"
                                 fields={SKILL_FIELDS}
                                 rows={input.skills as unknown as Row[]}
                                 onChange={r => patch({ skills: r as CvInput['skills'] })}
                             />
                             <ListEditor
-                                title="Idiomas" addLabel="Agregar idioma"
+                                title="Idiomas" note={nota('languages')} addLabel="Agregar idioma"
                                 fields={languageFields(suggestions.languageNames)}
                                 rows={input.languages as unknown as Row[]}
                                 onChange={r => patch({ languages: r as CvInput['languages'] })}
                             />
                             <ListEditor
-                                title="Certificaciones" addLabel="Agregar certificación"
+                                title="Certificaciones" note={nota('certifications')} addLabel="Agregar certificación"
                                 fields={CERT_FIELDS}
                                 rows={(input.certifications ?? []) as unknown as Row[]}
                                 onChange={r => patch({ certifications: r as CvInput['certifications'] })}

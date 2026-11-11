@@ -1,6 +1,8 @@
-import { useId, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Mic, Plus, Square, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
+import DateFieldInput from './DateField';
+import { useDictation } from '../../hooks/useDictation';
 
 export type FieldKind = 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
 
@@ -22,22 +24,6 @@ export interface FieldSpec {
 
 export type Row = Record<string, unknown>;
 
-// Las fechas del contrato son epoch ms; el <input type="date"> habla en
-// "YYYY-MM-DD". Se convierte en los dos sentidos acá y no en cada formulario.
-function toInputDate(v: unknown): string {
-    if (v == null || v === '') return '';
-    const ms = typeof v === 'number' ? v : Number(v);
-    if (!Number.isFinite(ms)) return '';
-    const d = new Date(ms);
-    return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
-}
-
-function fromInputDate(s: string): number | null {
-    if (!s) return null;
-    const ms = Date.parse(`${s}T00:00:00Z`);
-    return Number.isNaN(ms) ? null : ms;
-}
-
 const inputBase =
     'w-full rounded-lg bg-surface px-2.5 py-2 text-sm text-ink placeholder:text-muted focus:outline-none dark:bg-gray-800 dark:text-white';
 
@@ -50,6 +36,56 @@ export function RequiredMark() {
         <span className="ml-1.5 whitespace-nowrap text-[10px] text-muted">
             <span className="text-rose-500">●</span> Obligatorio
         </span>
+    );
+}
+
+/**
+ * Área de texto con dictado. El botón sólo aparece si el navegador lo soporta;
+ * lo dictado se agrega al final en vez de reemplazar, para poder encadenar
+ * varias frases y seguir corrigiendo a mano.
+ */
+function DictatableTextArea({ value, onChange }: {
+    value: string;
+    onChange: (v: string) => void;
+}) {
+    // Lo dictado llega desde un reconocimiento que vive entre renders, así que
+    // necesita leer el texto actual y no el que había al empezar a escuchar.
+    const valorRef = useRef(value);
+    useEffect(() => { valorRef.current = value; }, [value]);
+
+    const { supported, listening, error, start, stop } = useDictation(texto => {
+        const previo = valorRef.current.trimEnd();
+        onChange(previo ? `${previo} ${texto}` : texto);
+    });
+
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="relative">
+                <textarea
+                    rows={3}
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    className={`${inputClass} resize-y ${supported ? 'pr-10' : ''}`}
+                />
+                {supported && (
+                    <button
+                        type="button"
+                        onClick={listening ? stop : start}
+                        title={listening ? 'Detener el dictado' : 'Dictar'}
+                        aria-label={listening ? 'Detener el dictado' : 'Dictar'}
+                        className={`absolute right-2 top-2 rounded-lg p-1.5 transition-colors
+                            ${listening
+                            ? 'bg-rose-500 text-white'
+                            : 'text-muted hover:bg-canvas hover:text-primary dark:hover:bg-gray-700'
+                        }`}
+                    >
+                        {listening ? <Square size={14} /> : <Mic size={14} />}
+                    </button>
+                )}
+            </div>
+            {listening && <p className="text-[11px] text-primary">Escuchando… hablá y se va escribiendo.</p>}
+            {error && <p className="text-[11px] text-rose-500">{error}</p>}
+        </div>
     );
 }
 
@@ -85,11 +121,9 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                 {spec.required && <RequiredMark />}
             </span>
             {spec.kind === 'textarea' ? (
-                <textarea
-                    rows={3}
+                <DictatableTextArea
                     value={typeof value === 'string' ? value : ''}
-                    onChange={e => onChange(e.target.value)}
-                    className={`${inputClass} resize-y`}
+                    onChange={onChange}
                 />
             ) : spec.kind === 'select' ? (
                 <select
@@ -103,11 +137,11 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                     ))}
                 </select>
             ) : spec.kind === 'date' ? (
-                <input
-                    type="date"
-                    value={toInputDate(value)}
-                    onChange={e => onChange(fromInputDate(e.target.value))}
-                    className={inputClass}
+                <DateFieldInput
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    error={!!error}
                 />
             ) : (
                 <>
@@ -137,13 +171,15 @@ export function Field({ spec, value, onChange, error, onBlur }: {
  * ya lo tienen lo conservan intacto.
  */
 export default function ListEditor({
-    title, fields, rows, onChange, addLabel,
+    title, fields, rows, onChange, addLabel, note,
 }: {
     title: string;
     fields: FieldSpec[];
     rows: Row[];
     onChange: (rows: Row[]) => void;
     addLabel: string;
+    /** Aclaración bajo el título, p. ej. que la plantilla no dibuja esta sección */
+    note?: string;
 }) {
     const update = (i: number, key: string, v: unknown) =>
         onChange(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
@@ -155,6 +191,7 @@ export default function ListEditor({
     return (
         <section className="flex flex-col gap-2">
             <h3 className="text-sm font-bold text-ink dark:text-white">{title}</h3>
+            {note && <p className="-mt-1 text-[11px] text-muted">{note}</p>}
 
             {rows.length === 0 && (
                 <p className="text-xs text-muted">Todavía no agregaste nada.</p>
