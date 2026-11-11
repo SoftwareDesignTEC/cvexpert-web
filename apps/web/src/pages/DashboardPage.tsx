@@ -10,7 +10,10 @@ import { downloadCvPdf } from '../components/cv/cvPdf';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
 import { useAuth } from '../context/AuthContext';
 import SkillsRadar from '../components/ui/SkillsRadar';
-import { MapPin, Loader2, FilePlus2, Sparkles } from 'lucide-react';
+import { MapPin, FilePlus2, Sparkles } from 'lucide-react';
+import {
+    RecentCvsSkeleton, RecommendedJobsSkeleton, SkillsGapSkeleton,
+} from '../components/ui/DashboardSkeletons';
 import { Link, useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
@@ -106,9 +109,7 @@ export default function DashboardPage() {
                         />
                         <CardBody className="flex-1 min-h-0">
                             {loadingCvs ? (
-                                <div className="flex items-center justify-center py-6 text-gray-400">
-                                    <Loader2 size={20} className="animate-spin" />
-                                </div>
+                                <RecentCvsSkeleton />
                             ) : errorCvs ? (
                                 <p className="text-xs text-red-500 text-center py-4">{errorCvs}</p>
                             ) : cvs.length === 0 ? (
@@ -151,9 +152,7 @@ export default function DashboardPage() {
                         />
                         <CardBody className="flex-1 min-h-0 flex flex-col justify-center">
                             {loadingSkills ? (
-                                <div className="flex items-center justify-center py-6 text-gray-400">
-                                    <Loader2 size={20} className="animate-spin" />
-                                </div>
+                                <SkillsGapSkeleton />
                             ) : errorSkills ? (
                                 <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
                             ) : needsSkills ? (
@@ -239,9 +238,7 @@ export default function DashboardPage() {
                 />
                 <CardBody>
                     {loadingJobs ? (
-                        <div className="flex items-center justify-center py-6 text-gray-400">
-                            <Loader2 size={20} className="animate-spin" />
-                        </div>
+                        <RecommendedJobsSkeleton />
                     ) : errorJobs ? (
                         <p className="text-xs text-red-500 text-center py-4">{errorJobs}</p>
                     ) : (

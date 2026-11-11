@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
+import DateFieldInput from './DateField';
+import DictatableTextArea from './DictatableTextArea';
 
 export type FieldKind = 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
 
@@ -16,27 +18,15 @@ export interface FieldSpec {
     suggestions?: readonly string[];
     /** El servicio lo exige: se marca a la vista y bloquea el guardado */
     required?: boolean;
+    /** Obligatorio sólo en ciertas filas, p. ej. la empresa en un empleo formal */
+    requiredWhen?: (row: Row) => boolean;
+    /** Redacta el contenido con IA; recibe la fila para armar el contexto */
+    generate?: (actual: string, row: Row) => Promise<string>;
     /** Ocupa toda la fila en vez de media */
     wide?: boolean;
 }
 
 export type Row = Record<string, unknown>;
-
-// Las fechas del contrato son epoch ms; el <input type="date"> habla en
-// "YYYY-MM-DD". Se convierte en los dos sentidos acá y no en cada formulario.
-function toInputDate(v: unknown): string {
-    if (v == null || v === '') return '';
-    const ms = typeof v === 'number' ? v : Number(v);
-    if (!Number.isFinite(ms)) return '';
-    const d = new Date(ms);
-    return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
-}
-
-function fromInputDate(s: string): number | null {
-    if (!s) return null;
-    const ms = Date.parse(`${s}T00:00:00Z`);
-    return Number.isNaN(ms) ? null : ms;
-}
 
 const inputBase =
     'w-full rounded-lg bg-surface px-2.5 py-2 text-sm text-ink placeholder:text-muted focus:outline-none dark:bg-gray-800 dark:text-white';
@@ -53,13 +43,15 @@ export function RequiredMark() {
     );
 }
 
-export function Field({ spec, value, onChange, error, onBlur }: {
+export function Field({ spec, value, onChange, error, onBlur, row }: {
     spec: FieldSpec;
     value: unknown;
     onChange: (v: unknown) => void;
     /** Mensaje bajo el campo; también lo pinta de rojo */
     error?: string;
     onBlur?: () => void;
+    /** La fila a la que pertenece, para dar contexto a la redacción con IA */
+    row?: Row;
 }) {
     // El id del datalist tiene que ser único en toda la página: la misma clave
     // se repite en cada fila de una lista y entre secciones distintas.
@@ -85,11 +77,10 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                 {spec.required && <RequiredMark />}
             </span>
             {spec.kind === 'textarea' ? (
-                <textarea
-                    rows={3}
+                <DictatableTextArea
                     value={typeof value === 'string' ? value : ''}
-                    onChange={e => onChange(e.target.value)}
-                    className={`${inputClass} resize-y`}
+                    onChange={onChange}
+                    onGenerate={spec.generate ? actual => spec.generate!(actual, row ?? {}) : undefined}
                 />
             ) : spec.kind === 'select' ? (
                 <select
@@ -103,11 +94,11 @@ export function Field({ spec, value, onChange, error, onBlur }: {
                     ))}
                 </select>
             ) : spec.kind === 'date' ? (
-                <input
-                    type="date"
-                    value={toInputDate(value)}
-                    onChange={e => onChange(fromInputDate(e.target.value))}
-                    className={inputClass}
+                <DateFieldInput
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    error={!!error}
                 />
             ) : (
                 <>
@@ -137,13 +128,15 @@ export function Field({ spec, value, onChange, error, onBlur }: {
  * ya lo tienen lo conservan intacto.
  */
 export default function ListEditor({
-    title, fields, rows, onChange, addLabel,
+    title, fields, rows, onChange, addLabel, note,
 }: {
     title: string;
     fields: FieldSpec[];
     rows: Row[];
     onChange: (rows: Row[]) => void;
     addLabel: string;
+    /** Aclaración bajo el título, p. ej. que la plantilla no dibuja esta sección */
+    note?: string;
 }) {
     const update = (i: number, key: string, v: unknown) =>
         onChange(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
@@ -155,6 +148,7 @@ export default function ListEditor({
     return (
         <section className="flex flex-col gap-2">
             <h3 className="text-sm font-bold text-ink dark:text-white">{title}</h3>
+            {note && <p className="-mt-1 text-[11px] text-muted">{note}</p>}
 
             {rows.length === 0 && (
                 <p className="text-xs text-muted">Todavía no agregaste nada.</p>
@@ -166,15 +160,21 @@ export default function ListEditor({
                     className="rounded-xl border border-line p-3 dark:border-gray-800"
                 >
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {/* min-w-0 en cada celda: sin eso, una con varios controles
+                            dentro ensancha la rejilla y el diálogo scrollea */}
                         {fields.map(f => (
-                            <div key={f.key} className={f.wide ? 'sm:col-span-2' : undefined}>
+                            <div key={f.key} className={`min-w-0 ${f.wide ? 'sm:col-span-2' : ''}`}>
                                 <Field
-                                    spec={f}
+                                    spec={{
+                                        ...f,
+                                        required: f.requiredWhen ? f.requiredWhen(row) : f.required,
+                                    }}
                                     value={row[f.key]}
                                     onChange={v => update(i, f.key, v)}
+                                    row={row}
                                     onBlur={() => touch(`${i}.${f.key}`)}
                                     error={
-                                        f.required
+                                        (f.requiredWhen ? f.requiredWhen(row) : f.required)
                                         && touched[`${i}.${f.key}`]
                                         && String(row[f.key] ?? '').trim() === ''
                                             ? 'Este campo es obligatorio'

@@ -114,3 +114,39 @@ export function parseLayout(raw: unknown): CvLayout | null {
         sections,
     };
 }
+
+/**
+ * Qué datos usa realmente una plantilla.
+ *
+ * El editor lo consulta para no pedir cosas que esa plantilla no va a dibujar:
+ * Harvard, por ejemplo, no lleva foto, así que ofrecerla sería prometer algo
+ * que no se cumple. Sale del propio layout, así que las plantillas que se
+ * agreguen después funcionan sin tocar el formulario.
+ */
+export interface DeclaredData {
+    /** Campos de personalInfo que pide el encabezado */
+    personal: Set<string>;
+    /** Listas que la plantilla dibuja */
+    sources: Set<ListSource>;
+}
+
+export function declaredData(raw: unknown): DeclaredData | null {
+    const layout = parseLayout(raw);
+    if (!layout) return null;
+
+    const personal = new Set<string>();
+    const sources = new Set<ListSource>();
+
+    for (const s of layout.sections) {
+        if (s.type === 'header') {
+            for (const path of s.fields) {
+                const [root, leaf] = path.split('.');
+                if (root === 'personalInfo' && leaf) personal.add(leaf);
+            }
+        } else {
+            sources.add(s.source);
+        }
+    }
+
+    return { personal, sources };
+}
