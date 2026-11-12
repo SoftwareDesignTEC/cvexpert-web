@@ -14,11 +14,13 @@ const A4_WIDTH_PX = 794;
  * y no cuesta una petición extra: el layout ya está cargado en la página.
  */
 export default function CvThumbnail({
-    cv, layout, title, fallbackImageUrl,
+    cv, layout, title, fallbackImageUrl, loading,
 }: {
     cv: Record<string, unknown>;
     layout: unknown;
     title: string;
+    /** El catálogo de plantillas todavía no llegó: sin él no hay qué dibujar */
+    loading?: boolean;
     /**
      * `thumbnailUrl` del servicio. Es el último recurso, no el primero: hoy
      * devuelve un marcador de posición gris, y dibujar el documento real
@@ -43,6 +45,26 @@ export default function CvThumbnail({
         obs.observe(el);
         return () => obs.disconnect();
     }, []);
+
+    // Mientras no llegue el catálogo no se sabe si esta plantilla tiene diseño,
+    // así que se avisa que falta esperar en vez de mostrar el ícono de "no hay"
+    // y cambiarlo un segundo después.
+    if (loading) {
+        return (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+                <div className="flex gap-1" aria-hidden>
+                    {[0, 1, 2].map(i => (
+                        <span
+                            key={i}
+                            className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-600"
+                            style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                    ))}
+                </div>
+                <p className="text-[10px] text-muted">Cargando…</p>
+            </div>
+        );
+    }
 
     // Sin layout no hay documento que dibujar: ahí sí vale la imagen del servicio
     if (!parseLayout(layout)) {

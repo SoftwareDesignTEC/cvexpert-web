@@ -9,6 +9,9 @@ import type { CV, CVTemplate } from '../types/models';
  */
 export function useTemplates() {
     const [templates, setTemplates] = useState<CVTemplate[]>([]);
+    // Las miniaturas necesitan distinguir "todavía no llegó el catálogo" de
+    // "esta plantilla no tiene diseño": en el primer caso hay que esperar.
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
@@ -16,12 +19,13 @@ export function useTemplates() {
         templateService.getAll({ page: 1, pageSize: 50 })
             .then(res => { if (!cancelled) setTemplates(res.items ?? []); })
             // Sin catálogo las tarjetas caen al ícono; no vale cortar la pantalla
-            .catch(() => { if (!cancelled) setTemplates([]); });
+            .catch(() => { if (!cancelled) setTemplates([]); })
+            .finally(() => { if (!cancelled) setLoading(false); });
 
         return () => { cancelled = true; };
     }, []);
 
-    return templates;
+    return { templates, loading };
 }
 
 /** El layout con el que se dibuja un currículum, o null si no se conoce. */

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Eye, Pencil } from 'lucide-react';
+import { AlertTriangle, Eye, Pencil } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import ListEditor, { Field } from './ListEditor';
@@ -148,6 +148,13 @@ export default function CvEditorDialog({
                 defaultEmail ?? '',
             ));
     const [tab, setTab] = useState<'form' | 'preview'>('form');
+
+    // Lo que había al abrir, para saber si hay cambios sin guardar. Se congela
+    // en el primer render: comparar contra el valor vivo daría siempre igual.
+    const [original] = useState(() => JSON.stringify(
+        cv ? toCvInput(cv) : emptyCvInput('', defaultFullName ?? '', defaultEmail ?? ''),
+    ));
+    const [confirmingClose, setConfirmingClose] = useState(false);
     // Sólo al crear: al editar los datos ya vienen en el currículum
     // Valores ya escritos en otros currículums, para ofrecerlos al tipear
     const suggestions = useCvSuggestions(cv === null);
@@ -196,6 +203,15 @@ export default function CvEditorDialog({
 
     const nota = (fuente: ListSource) =>
         dibuja(fuente) ? undefined : `${plantilla} no muestra esta sección, pero el dato se guarda.`;
+
+    const hayCambios = JSON.stringify(input) !== original;
+
+    // Cerrar con cambios sin guardar pierde todo lo escrito, así que se avisa.
+    // Sin cambios se cierra directo: preguntar por nada molesta.
+    const intentarCerrar = () => {
+        if (hayCambios && !saving) setConfirmingClose(true);
+        else onClose();
+    };
 
     const save = async () => {
         setSaving(true);
@@ -273,12 +289,13 @@ export default function CvEditorDialog({
         touched[key] && value.trim() === '' ? 'Este campo es obligatorio' : undefined;
 
     return (
+        <>
         <Modal
             open={open}
             size="lg"
             title={cv ? 'Editar currículum' : 'Nuevo currículum'}
             description={cv ? undefined : 'Los datos los completás vos; no se copian del perfil automáticamente.'}
-            onClose={onClose}
+            onClose={intentarCerrar}
         >
             <div className="flex flex-col gap-4">
                 <div className="flex gap-2">
@@ -439,12 +456,37 @@ export default function CvEditorDialog({
                             {incompleteRows.map(r => <p key={r}>Falta completar en {r}.</p>)}
                         </div>
                     )}
-                    <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>Cancelar</Button>
                     <Button type="button" size="sm" disabled={!canSave} onClick={save}>
                         {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}
                     </Button>
                 </div>
             </div>
         </Modal>
+
+        {/* Va encima del editor: se dibuja después, así que queda por delante */}
+        <Modal
+            open={confirmingClose}
+            title="¿Salir sin guardar?"
+            onClose={() => setConfirmingClose(false)}
+        >
+            <div className="flex flex-col gap-4">
+                <div className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-500/40 dark:bg-amber-500/10">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="text-xs text-amber-900 dark:text-amber-200">
+                        Tenés cambios sin guardar. Si salís ahora se pierden.
+                    </p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setConfirmingClose(false)}>
+                        Seguir editando
+                    </Button>
+                    <Button type="button" variant="danger" size="sm" onClick={() => { setConfirmingClose(false); onClose(); }}>
+                        Salir y perder los cambios
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+        </>
     );
 }

@@ -50,7 +50,7 @@ export default function DashboardPage() {
     const [loadingSkills, setLoadingSkills] = useState(true);
     const [errorSkills, setErrorSkills]     = useState<string | null>(null);
     const [needsSkills, setNeedsSkills]     = useState(false);
-    const templates = useTemplates();
+    const { templates, loading: loadingTemplates } = useTemplates();
 
     useEffect(() => {
         cvService.getAll({ page: 1, pageSize: 3 })
@@ -121,6 +121,7 @@ export default function DashboardPage() {
                                             key={cv.id}
                                             cv={cv}
                                             layout={layoutFor(templates, cv)}
+                                            loadingLayout={loadingTemplates}
                                             onClick={() => setViewingCv(cv)}
                                             onEdit={() => setEditingCv(cv)}
                                             onDownload={() => {
@@ -221,7 +222,7 @@ export default function DashboardPage() {
                         IA
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => navigate('/templates')} className="px-8 sm:px-10">
-                        Offline
+                        Manual
                     </Button>
                 </div>
             </div>
