@@ -55,21 +55,9 @@ export default function DictatableTextArea({
                     placeholder={placeholder}
                     value={value}
                     onChange={e => onChange(e.target.value)}
-                    className={`${inputClass} resize-y ${supported || onGenerate ? 'pr-20' : ''}`}
+                    className={`${inputClass} resize-y ${supported ? 'pr-10' : ''}`}
                 />
                 <div className="absolute right-2 top-2 flex gap-1">
-                {onGenerate && (
-                    <button
-                        type="button"
-                        onClick={generar}
-                        disabled={generating}
-                        title="Redactar con IA"
-                        aria-label="Redactar con IA"
-                        className="rounded-lg p-1.5 text-muted transition-colors hover:bg-canvas hover:text-primary disabled:opacity-50 dark:hover:bg-gray-700"
-                    >
-                        <Sparkles size={14} className={generating ? 'animate-pulse text-primary' : ''} />
-                    </button>
-                )}
                 {supported && (
                     <button
                         type="button"
@@ -87,8 +75,21 @@ export default function DictatableTextArea({
                 )}
                 </div>
             </div>
+            {/* La redacción con IA es la función principal del campo, así que
+                sale del rincón del área de texto y se muestra con su nombre. */}
+            {onGenerate && (
+                <button
+                    type="button"
+                    onClick={generar}
+                    disabled={generating}
+                    className="inline-flex items-center gap-1.5 self-start rounded-lg border border-primary bg-primary-tint px-2.5 py-1.5 text-[11px] font-semibold text-primary-dark transition-colors hover:bg-primary hover:text-white disabled:opacity-60 dark:bg-primary/10 dark:text-primary dark:hover:bg-primary dark:hover:text-white"
+                >
+                    <Sparkles size={13} className={generating ? 'animate-pulse' : ''} />
+                    {generating ? 'Redactando…' : 'Redactar con IA'}
+                </button>
+            )}
+
             {listening && <p className="text-[11px] text-primary">Escuchando… hablá y se va escribiendo.</p>}
-            {generating && <p className="text-[11px] text-primary">Redactando…</p>}
             {error && <p className="text-[11px] text-rose-500">{error}</p>}
             {genError && <p className="text-[11px] text-rose-500">{genError}</p>}
         </div>
