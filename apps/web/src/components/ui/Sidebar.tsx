@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import {
-    X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, Bell, MessageSquareText, Settings,
+    X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
 } from 'lucide-react';
 import { useNotificationAdmin } from '../../context/NotificationAdminContext';
 
@@ -14,7 +14,6 @@ const navItems = [
     { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline' },
     { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'    },
     { to: '/applications', icon: Kanban,           label: 'Postulaciones'        },
-    { to: '/notifications', icon: Bell,            label: 'Notificaciones'       },
     { to: '/admin/notification-templates', icon: MessageSquareText, label: 'Plantillas de notificaciones', adminOnly: true },
     { to: '/settings',     icon: Settings,         label: 'Configuración'        },
 ];

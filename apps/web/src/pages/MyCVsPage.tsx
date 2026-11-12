@@ -22,8 +22,8 @@ import type { CV } from '../types/models';
 const PAGE_SIZE = 6;
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
-function CVListCard({ cv, layout, onView, onEdit, onDownload, onDelete }: {
-    cv: CV; layout: unknown;
+function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onDelete }: {
+    cv: CV; layout: unknown; loadingLayout: boolean;
     onView: () => void; onEdit: () => void; onDownload: () => void; onDelete: () => void;
 }) {
 
@@ -39,6 +39,7 @@ function CVListCard({ cv, layout, onView, onEdit, onDownload, onDelete }: {
                     layout={layout}
                     title={cv.title}
                     fallbackImageUrl={cv.thumbnailUrl}
+                    loading={loadingLayout}
                 />
             </div>
 
@@ -113,7 +114,7 @@ export default function MyCVsPage() {
     const [search, setSearch] = useState('');
 
     // Alimenta el selector de plantilla, la vista previa y las miniaturas
-    const templates = useTemplates();
+    const { templates, loading: loadingTemplates } = useTemplates();
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -206,6 +207,7 @@ export default function MyCVsPage() {
                                 key={cv.id}
                                 cv={cv}
                                 layout={layoutFor(templates, cv)}
+                                loadingLayout={loadingTemplates}
                                 onView={() => setViewingCv(cv)}
                                 onEdit={() => setEditing({ cv })}
                                 onDelete={() => setDeleting(cv)}
@@ -229,6 +231,7 @@ export default function MyCVsPage() {
             <CvViewerDialog
                 key={`cv-view-${viewingCv?.id ?? ''}`}
                 cv={viewingCv}
+                layout={viewingCv ? layoutFor(templates, viewingCv) : null}
                 onClose={() => setViewingCv(null)}
             />
             {/* Se monta sólo al abrirse: cada apertura parte del CV actual */}

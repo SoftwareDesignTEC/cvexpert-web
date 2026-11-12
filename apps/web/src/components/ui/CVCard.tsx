@@ -7,6 +7,8 @@ interface CVCardProps {
     cv: CV;
     /** Diseño de su plantilla, para dibujar la miniatura */
     layout?: unknown;
+    /** El catálogo todavía no llegó */
+    loadingLayout?: boolean;
     /** Abre el visor */
     onClick?: () => void;
     /** Abre el editor */
@@ -14,7 +16,7 @@ interface CVCardProps {
     onDownload?: () => void;
 }
 
-export default function CVCard({ cv, layout, onClick, onEdit, onDownload }: CVCardProps) {
+export default function CVCard({ cv, layout, loadingLayout, onClick, onEdit, onDownload }: CVCardProps) {
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -32,6 +34,7 @@ export default function CVCard({ cv, layout, onClick, onEdit, onDownload }: CVCa
                     layout={layout}
                     title={cv.title}
                     fallbackImageUrl={cv.thumbnailUrl}
+                    loading={loadingLayout}
                 />
             </button>
 

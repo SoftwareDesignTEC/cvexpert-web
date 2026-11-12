@@ -15,7 +15,9 @@ import type { JobOffer } from '../types/models';
 
 // El APIM todavía no filtra, así que se descarga el catálogo completo una vez y
 // los filtros trabajan sobre todas las ofertas, no sólo sobre las que están a la vista.
-const FETCH_PAGE_SIZE = 50;
+// 100 es el tope que acepta el servicio. El catálogo ronda las 80 ofertas y
+// crece con cada importación, así que pedir el máximo evita un segundo viaje.
+const FETCH_PAGE_SIZE = 100;
 const MAX_PAGES = 20;   // salvavidas contra bucles si el endpoint ignora la paginación
 const PER_PAGE = 6;
 const MAX_REQUIREMENTS = 3;

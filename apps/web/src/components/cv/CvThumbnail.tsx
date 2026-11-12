@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import CvDocument from './CvDocument';
 import { parseLayout } from '../../types/cvLayout';
@@ -14,11 +14,13 @@ const A4_WIDTH_PX = 794;
  * y no cuesta una petición extra: el layout ya está cargado en la página.
  */
 export default function CvThumbnail({
-    cv, layout, title, fallbackImageUrl,
+    cv, layout, title, fallbackImageUrl, loading,
 }: {
     cv: Record<string, unknown>;
     layout: unknown;
     title: string;
+    /** El catálogo de plantillas todavía no llegó: sin él no hay qué dibujar */
+    loading?: boolean;
     /**
      * `thumbnailUrl` del servicio. Es el último recurso, no el primero: hoy
      * devuelve un marcador de posición gris, y dibujar el documento real
@@ -26,23 +28,51 @@ export default function CvThumbnail({
      */
     fallbackImageUrl?: string;
 }) {
-    const box = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(0);
     const [imgFailed, setImgFailed] = useState(false);
+    const observer = useRef<ResizeObserver | null>(null);
 
-    // El factor depende del ancho real de la tarjeta, que cambia con el
-    // responsive, así que se mide en vez de fijarlo.
-    useEffect(() => {
-        const el = box.current;
+    /**
+     * El factor depende del ancho real de la tarjeta, que cambia con el
+     * responsive, así que se mide en vez de fijarlo.
+     *
+     * Se mide con una referencia de función y no con un efecto al montar: este
+     * contenedor aparece después, cuando termina la carga, y un efecto con
+     * dependencias vacías ya habría corrido con el elemento todavía ausente.
+     */
+    const medir = useCallback((el: HTMLDivElement | null) => {
+        observer.current?.disconnect();
         if (!el) return;
 
-        const medir = () => setScale(el.clientWidth / A4_WIDTH_PX);
-        medir();
+        const actualizar = () => setScale(el.clientWidth / A4_WIDTH_PX);
+        actualizar();
 
-        const obs = new ResizeObserver(medir);
-        obs.observe(el);
-        return () => obs.disconnect();
+        observer.current = new ResizeObserver(actualizar);
+        observer.current.observe(el);
     }, []);
+
+    // Soltar el observador al desmontar
+    useEffect(() => () => observer.current?.disconnect(), []);
+
+    // Mientras no llegue el catálogo no se sabe si esta plantilla tiene diseño,
+    // así que se avisa que falta esperar en vez de mostrar el ícono de "no hay"
+    // y cambiarlo un segundo después.
+    if (loading) {
+        return (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+                <div className="flex gap-1" aria-hidden>
+                    {[0, 1, 2].map(i => (
+                        <span
+                            key={i}
+                            className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-600"
+                            style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                    ))}
+                </div>
+                <p className="text-[10px] text-muted">Cargando…</p>
+            </div>
+        );
+    }
 
     // Sin layout no hay documento que dibujar: ahí sí vale la imagen del servicio
     if (!parseLayout(layout)) {
@@ -64,7 +94,7 @@ export default function CvThumbnail({
     }
 
     return (
-        <div ref={box} className="h-full w-full overflow-hidden bg-white" aria-label={title}>
+        <div ref={medir} className="h-full w-full overflow-hidden bg-white" aria-label={title}>
             {scale > 0 && (
                 <div
                     // La hoja se dibuja a tamaño real y se encoge: así el texto
