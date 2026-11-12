@@ -11,12 +11,14 @@ import { buildCvPdf, pdfFileName } from './cvPdf';
 type Raw = Record<string, unknown>;
 
 export default function CvDocumentDialog({
-    open, cv, layout, title, fallbackImageUrl, locale = 'es', onClose,
+    open, cv, layout, loading, title, fallbackImageUrl, locale = 'es', onClose,
 }: {
     open: boolean;
     cv: Raw | null;
     /** Template.layout; null en plantillas viejas sin migrar */
     layout: unknown;
+    /** Todavía se está buscando el diseño: no se sabe si lo tiene */
+    loading?: boolean;
     title: string;
     /** previewUrl o thumbnailUrl: el comportamiento de siempre */
     fallbackImageUrl?: string | null;
@@ -52,12 +54,26 @@ export default function CvDocumentDialog({
                 open={open}
                 size="lg"
                 title={title}
-                description={canRender ? undefined : UI_TEXT[locale].noLayout}
+                // Mientras se busca no se puede afirmar que no tiene diseño
+                description={loading || canRender ? undefined : UI_TEXT[locale].noLayout}
                 onClose={onClose}
             >
                 <div className="flex flex-col gap-4">
                     <div className="max-h-[65vh] overflow-auto rounded-xl bg-canvas p-2 dark:bg-gray-800">
-                        {canRender ? (
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center gap-2 py-16">
+                                <div className="flex gap-1" aria-hidden>
+                                    {[0, 1, 2].map(i => (
+                                        <span
+                                            key={i}
+                                            className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-600"
+                                            style={{ animationDelay: `${i * 0.15}s` }}
+                                        />
+                                    ))}
+                                </div>
+                                <p className="text-sm text-muted">Cargando…</p>
+                            </div>
+                        ) : canRender ? (
                             <div className="shadow-sm">
                                 <CvDocument cv={cv} layout={layout} locale={locale} />
                             </div>

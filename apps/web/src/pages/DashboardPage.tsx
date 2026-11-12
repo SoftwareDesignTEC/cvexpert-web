@@ -325,6 +325,7 @@ export default function DashboardPage() {
             <CvViewerDialog
                 key={`cv-view-${viewingCv?.id ?? ''}`}
                 cv={viewingCv}
+                layout={viewingCv ? layoutFor(templates, viewingCv) : null}
                 onClose={() => setViewingCv(null)}
             />
             {/* Mismo editor que Mis Currículums; al guardar se recarga la lista */}

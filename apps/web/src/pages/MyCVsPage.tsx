@@ -231,6 +231,7 @@ export default function MyCVsPage() {
             <CvViewerDialog
                 key={`cv-view-${viewingCv?.id ?? ''}`}
                 cv={viewingCv}
+                layout={viewingCv ? layoutFor(templates, viewingCv) : null}
                 onClose={() => setViewingCv(null)}
             />
             {/* Se monta sólo al abrirse: cada apertura parte del CV actual */}
