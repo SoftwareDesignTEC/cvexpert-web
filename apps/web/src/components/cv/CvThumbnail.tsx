@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import CvDocument from './CvDocument';
 import { parseLayout } from '../../types/cvLayout';
@@ -28,23 +28,31 @@ export default function CvThumbnail({
      */
     fallbackImageUrl?: string;
 }) {
-    const box = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(0);
     const [imgFailed, setImgFailed] = useState(false);
+    const observer = useRef<ResizeObserver | null>(null);
 
-    // El factor depende del ancho real de la tarjeta, que cambia con el
-    // responsive, así que se mide en vez de fijarlo.
-    useEffect(() => {
-        const el = box.current;
+    /**
+     * El factor depende del ancho real de la tarjeta, que cambia con el
+     * responsive, así que se mide en vez de fijarlo.
+     *
+     * Se mide con una referencia de función y no con un efecto al montar: este
+     * contenedor aparece después, cuando termina la carga, y un efecto con
+     * dependencias vacías ya habría corrido con el elemento todavía ausente.
+     */
+    const medir = useCallback((el: HTMLDivElement | null) => {
+        observer.current?.disconnect();
         if (!el) return;
 
-        const medir = () => setScale(el.clientWidth / A4_WIDTH_PX);
-        medir();
+        const actualizar = () => setScale(el.clientWidth / A4_WIDTH_PX);
+        actualizar();
 
-        const obs = new ResizeObserver(medir);
-        obs.observe(el);
-        return () => obs.disconnect();
+        observer.current = new ResizeObserver(actualizar);
+        observer.current.observe(el);
     }, []);
+
+    // Soltar el observador al desmontar
+    useEffect(() => () => observer.current?.disconnect(), []);
 
     // Mientras no llegue el catálogo no se sabe si esta plantilla tiene diseño,
     // así que se avisa que falta esperar en vez de mostrar el ícono de "no hay"
@@ -86,7 +94,7 @@ export default function CvThumbnail({
     }
 
     return (
-        <div ref={box} className="h-full w-full overflow-hidden bg-white" aria-label={title}>
+        <div ref={medir} className="h-full w-full overflow-hidden bg-white" aria-label={title}>
             {scale > 0 && (
                 <div
                     // La hoja se dibuja a tamaño real y se encoge: así el texto
