@@ -18,7 +18,6 @@ function CvCardSkeleton() {
             <div className="flex flex-col gap-1.5 sm:flex-row">
                 <Skeleton className="h-8 flex-1 rounded-lg" />
                 <Skeleton className="h-8 flex-1 rounded-lg" />
-                <Skeleton className="h-8 flex-1 rounded-lg" />
                 <Skeleton className="h-8 w-9 shrink-0 rounded-lg" />
             </div>
         </div>
