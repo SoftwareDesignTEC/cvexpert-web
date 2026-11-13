@@ -1,4 +1,5 @@
-import { Clock, Download, Eye, Pencil } from 'lucide-react';
+import { Clock, Download, Eye, FolderOpen, Pencil } from 'lucide-react';
+import MoreMenu from './MoreMenu';
 import type { CV } from '../../types/models';
 import CvThumbnail from '../cv/CvThumbnail';
 import { formatLongDate } from '../cv/cvLabels';
@@ -14,9 +15,11 @@ interface CVCardProps {
     /** Abre el editor */
     onEdit?: () => void;
     onDownload?: () => void;
+    /** Lleva a la pantalla completa, donde está el resto de las acciones */
+    onGoToList?: () => void;
 }
 
-export default function CVCard({ cv, layout, loadingLayout, onClick, onEdit, onDownload }: CVCardProps) {
+export default function CVCard({ cv, layout, loadingLayout, onClick, onEdit, onDownload, onGoToList }: CVCardProps) {
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -49,8 +52,10 @@ export default function CVCard({ cv, layout, loadingLayout, onClick, onEdit, onD
                 </div>
             </div>
 
-            {/* La tarjeta es angosta —van tres por fila—, así que descargar queda
-                como icono y el texto se reserva para las dos acciones principales. */}
+            {/* La tarjeta es angosta —van tres por fila—, así que sólo ver y
+                editar llevan texto; el resto va detrás de los tres puntos.
+                Borrar no está acá a propósito: el panel es un resumen, y una
+                acción irreversible pertenece a la pantalla de gestión. */}
             <div className="flex gap-1.5 shrink-0">
                 <button
                     onClick={onClick}
@@ -66,14 +71,13 @@ export default function CVCard({ cv, layout, loadingLayout, onClick, onEdit, onD
                     <Pencil size={12} />
                     Editar
                 </button>
-                <button
-                    onClick={onDownload}
-                    title="Descargar PDF"
-                    aria-label={`Descargar ${cv.title} en PDF`}
-                    className="shrink-0 rounded-lg bg-deep px-2.5 py-1.5 text-white transition-opacity hover:opacity-90"
-                >
-                    <Download size={12} />
-                </button>
+                <MoreMenu
+                    label={`Más acciones para ${cv.title}`}
+                    items={[
+                        { label: 'Descargar PDF', icon: Download, onSelect: () => onDownload?.() },
+                        { label: 'Ir a Mis Currículums', icon: FolderOpen, onSelect: () => onGoToList?.() },
+                    ]}
+                />
             </div>
         </div>
     );
