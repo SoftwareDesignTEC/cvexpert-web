@@ -11,6 +11,7 @@ import CvEditorDialog from '../components/cv/CvEditorDialog';
 import AiCvDialog from '../components/cv/AiCvDialog';
 import DeleteCvDialog from '../components/cv/DeleteCvDialog';
 import CvListSkeleton from '../components/cv/CvCardSkeleton';
+import MoreMenu from '../components/ui/MoreMenu';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService } from '../services/cvService';
@@ -69,22 +70,15 @@ function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onD
                     <Pencil size={13} />
                     Editar
                 </button>
-                <button
-                    onClick={onDownload}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-deep px-2 py-2 text-xs font-medium text-white hover:opacity-90 transition-opacity"
-                >
-                    <Download size={13} />
-                    Descargar
-                </button>
-                {/* Borrar va sin texto y aparte: es la única irreversible */}
-                <button
-                    onClick={onDelete}
-                    title="Borrar currículum"
-                    aria-label={`Borrar ${cv.title}`}
-                    className="shrink-0 rounded-lg border border-line px-2.5 py-2 text-muted transition-colors hover:border-rose-400 hover:text-rose-500 dark:border-gray-700"
-                >
-                    <Trash2 size={13} />
-                </button>
+                {/* Descargar y borrar pasan al menú: se usan menos que ver y
+                    editar, y borrar no debería pesar igual que el resto. */}
+                <MoreMenu
+                    label={`Más acciones para ${cv.title}`}
+                    items={[
+                        { label: 'Descargar PDF', icon: Download, onSelect: onDownload },
+                        { label: 'Borrar currículum', icon: Trash2, onSelect: onDelete, danger: true },
+                    ]}
+                />
             </div>
         </div>
     );

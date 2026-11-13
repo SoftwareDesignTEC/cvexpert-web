@@ -50,3 +50,15 @@ body {
     background: linear-gradient(180deg, var(--color-canvas-dark) 0%, #0B1222 100%);
     color: #E2E8F0;
 }
+
+/* Tailwind 4 dejo de poner cursor:pointer en los botones, asi que el puntero
+   no cambiaba al pasar por encima y nada parecia pulsable. */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+summary {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Eye, Pencil } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Eye, Pencil } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import ListEditor, { Field } from './ListEditor';
@@ -7,6 +7,8 @@ import PhotoField from './PhotoField';
 import { useCvSuggestions } from '../../hooks/useCvSuggestions';
 import { aiService } from '../../services/aiService';
 import { declaredData } from '../../types/cvLayout';
+import PhaseTimeline from './PhaseTimeline';
+import type { Phase, PhaseState } from './PhaseTimeline';
 import type { ListSource } from '../../types/cvLayout';
 import type { CvSuggestions } from '../../hooks/useCvSuggestions';
 import type { FieldSpec, Row } from './ListEditor';
@@ -148,6 +150,14 @@ export default function CvEditorDialog({
                 defaultEmail ?? '',
             ));
     const [tab, setTab] = useState<'form' | 'preview'>('form');
+    const [fase, setFase] = useState(0);
+    // Una fase sin abrir no puede estar mal: hasta que no se ve, no se juzga
+    const [visitadas, setVisitadas] = useState<Set<number>>(() => new Set([0]));
+
+    const irA = (i: number) => {
+        setFase(i);
+        setVisitadas(prev => new Set(prev).add(i));
+    };
 
     // Lo que había al abrir, para saber si hay cambios sin guardar. Se congela
     // en el primer render: comparar contra el valor vivo daría siempre igual.
@@ -281,6 +291,55 @@ export default function CvEditorDialog({
 
     const canSave = missing.length === 0 && incompleteRows.length === 0 && !saving;
 
+    /**
+     * Color de cada paso. Gris mientras no se abrió; rojo si falta algo
+     * obligatorio, que es lo que impide guardar; amarillo si está abierta pero
+     * vacía, que es válido aunque convenga mirarlo; verde si está completa.
+     */
+    const estadoDeFase = (i: number, faltan: string[], filas: Row[]): PhaseState => {
+        if (!visitadas.has(i)) return 'pendiente';
+        if (faltan.length > 0) return 'incompleta';
+        if (filas.length === 0) return 'parcial';
+        return 'lista';
+    };
+
+    const fases: Phase[] = [
+        {
+            id: 'personal',
+            label: 'Datos personales',
+            state: !visitadas.has(0) ? 'pendiente' : missing.length > 0 ? 'incompleta' : 'lista',
+        },
+        {
+            id: 'experiencia',
+            label: 'Experiencia',
+            state: estadoDeFase(1, missingInRows('workExperiences', dropEmptyRows(input.workExperiences ?? [])), input.workExperiences as unknown as Row[]),
+        },
+        {
+            id: 'educacion',
+            label: 'Educación',
+            state: estadoDeFase(2, missingInRows('education', dropEmptyRows(input.education ?? [])), input.education as unknown as Row[]),
+        },
+        {
+            id: 'habilidades',
+            label: 'Habilidades e idiomas',
+            state: estadoDeFase(
+                3,
+                [
+                    ...missingInRows('skills', dropEmptyRows(input.skills ?? [])),
+                    ...missingInRows('languages', dropEmptyRows(input.languages ?? [])),
+                ],
+                [...(input.skills ?? []), ...(input.languages ?? [])] as unknown as Row[],
+            ),
+        },
+        {
+            id: 'certificaciones',
+            label: 'Certificaciones',
+            state: estadoDeFase(4, missingInRows('certifications', dropEmptyRows(input.certifications ?? [])), (input.certifications ?? []) as unknown as Row[]),
+        },
+    ];
+
+    const esUltima = fase === fases.length - 1;
+
     // Un campo se marca en rojo sólo después de que el usuario pasó por él:
     // señalar errores en un formulario recién abierto es ruido, no ayuda.
     const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -317,6 +376,10 @@ export default function CvEditorDialog({
                     </Button>
                 </div>
 
+                {tab === 'form' && (
+                    <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
+                )}
+
                 <div className="max-h-[60vh] overflow-auto pr-1">
                     {tab === 'preview' ? (
                         layout ? (
@@ -330,6 +393,7 @@ export default function CvEditorDialog({
                         )
                     ) : (
                         <div className="flex flex-col gap-5">
+                            {fase === 0 && (<>
                             <section className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <Field
                                     spec={{ key: 'title', label: 'Título del currículum', kind: 'text', required: true }}
@@ -401,19 +465,27 @@ export default function CvEditorDialog({
                                     ))}
                                 </div>
                             </section>
+                            </>)}
 
+                            {fase === 1 && (
                             <ListEditor
                                 title="Experiencia" note={nota('workExperiences')} addLabel="Agregar experiencia"
                                 fields={WORK_FIELDS}
                                 rows={input.workExperiences as unknown as Row[]}
                                 onChange={r => patch({ workExperiences: r as CvInput['workExperiences'] })}
                             />
+                            )}
+
+                            {fase === 2 && (
                             <ListEditor
                                 title="Educación" note={nota('education')} addLabel="Agregar estudio"
                                 fields={EDUCATION_FIELDS}
                                 rows={input.education as unknown as Row[]}
                                 onChange={r => patch({ education: r as CvInput['education'] })}
                             />
+                            )}
+
+                            {fase === 3 && (<>
                             <ListEditor
                                 title="Habilidades" note={nota('skills')} addLabel="Agregar habilidad"
                                 fields={SKILL_FIELDS}
@@ -426,12 +498,16 @@ export default function CvEditorDialog({
                                 rows={input.languages as unknown as Row[]}
                                 onChange={r => patch({ languages: r as CvInput['languages'] })}
                             />
+                            </>)}
+
+                            {fase === 4 && (
                             <ListEditor
                                 title="Certificaciones" note={nota('certifications')} addLabel="Agregar certificación"
                                 fields={CERT_FIELDS}
                                 rows={(input.certifications ?? []) as unknown as Row[]}
                                 onChange={r => patch({ certifications: r as CvInput['certifications'] })}
                             />
+                            )}
                         </div>
                     )}
                 </div>
@@ -447,19 +523,37 @@ export default function CvEditorDialog({
                     </div>
                 )}
 
+                {/* Lo que falta se nombra siempre, no sólo al llegar al final:
+                    así se sabe qué corregir sin recorrer las fases buscándolo. */}
+                {(missing.length > 0 || incompleteRows.length > 0) && (
+                    <div className="flex flex-col gap-0.5 text-xs text-muted">
+                        {missing.length > 0 && (
+                            <p>Falta completar: <strong>{missing.join(', ')}</strong></p>
+                        )}
+                        {incompleteRows.map(r => <p key={r}>Falta completar en {r}.</p>)}
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                    {(missing.length > 0 || incompleteRows.length > 0) && (
-                        <div className="flex flex-col gap-0.5 text-xs text-muted sm:mr-auto">
-                            {missing.length > 0 && (
-                                <p>Falta completar: <strong>{missing.join(', ')}</strong></p>
-                            )}
-                            {incompleteRows.map(r => <p key={r}>Falta completar en {r}.</p>)}
-                        </div>
-                    )}
-                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>Cancelar</Button>
-                    <Button type="button" size="sm" disabled={!canSave} onClick={save}>
-                        {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}
+                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>
+                        Cancelar
                     </Button>
+
+                    {tab === 'form' && fase > 0 && (
+                        <Button type="button" variant="secondary" size="sm" onClick={() => irA(fase - 1)}>
+                            <ChevronLeft size={14} /> Atrás
+                        </Button>
+                    )}
+
+                    {tab === 'form' && !esUltima ? (
+                        <Button type="button" size="sm" onClick={() => irA(fase + 1)}>
+                            Siguiente <ChevronRight size={14} />
+                        </Button>
+                    ) : (
+                        <Button type="button" size="sm" disabled={!canSave} onClick={save}>
+                            {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}
+                        </Button>
+                    )}
                 </div>
             </div>
         </Modal>

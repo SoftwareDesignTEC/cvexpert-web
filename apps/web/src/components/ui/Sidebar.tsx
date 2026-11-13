@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import {
-    X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
+    Menu, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
 } from 'lucide-react';
 import { useNotificationAdmin } from '../../context/NotificationAdminContext';
 
@@ -20,9 +20,11 @@ const navItems = [
 
 interface SidebarProps {
     onClose: () => void;
+    /** Se llama al entrar a una sección; cierra sólo si la barra tapa el contenido */
+    onNavigate?: () => void;
 }
 
-export default function Sidebar({ onClose }: SidebarProps) {
+export default function Sidebar({ onClose, onNavigate }: SidebarProps) {
     const { canEditTemplates } = useNotificationAdmin();
     const visibleItems = navItems.filter(item => !item.adminOnly || canEditTemplates === true);
 
@@ -37,8 +39,15 @@ export default function Sidebar({ onClose }: SidebarProps) {
                         <span className="text-muted text-[11px] leading-tight truncate">Tu carrera, más clara</span>
                     </div>
                 </div>
-                <button onClick={onClose} className="text-muted hover:text-ink dark:hover:text-white transition-colors">
-                    <X size={20} />
+                <button
+                    onClick={onClose}
+                    title="Cerrar el menú"
+                    aria-label="Cerrar el menú"
+                    className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-canvas hover:text-ink dark:hover:bg-gray-800 dark:hover:text-white"
+                >
+                    {/* El mismo icono que lo abre: es un interruptor, no dos
+                        acciones distintas. */}
+                    <Menu size={20} />
                 </button>
             </div>
 
@@ -49,7 +58,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                         key={to}
                         to={to}
                         end={to === '/'}
-                        onClick={onClose}
+                        onClick={onNavigate}
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
               ${isActive

@@ -33,6 +33,21 @@ const modalityLabel: Record<JobOffer['modality'], string> = {
     'hybrid':  'Híbrido',
 };
 
+/** Los últimos que se editaron, de más reciente a más viejo. */
+function masRecientes(cvs: CV[], cuantos: number): CV[] {
+    const aMilis = (v: unknown): number => {
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string') {
+            const n = /^\d+$/.test(v) ? Number(v) : Date.parse(v);
+            return Number.isFinite(n) ? n : 0;
+        }
+        return 0;
+    };
+    return [...cvs]
+        .sort((a, b) => aMilis(b.updatedAt) - aMilis(a.updatedAt))
+        .slice(0, cuantos);
+}
+
 export default function DashboardPage() {
     const { profile } = useAuth();
     const navigate = useNavigate();
@@ -53,8 +68,11 @@ export default function DashboardPage() {
     const { templates, loading: loadingTemplates } = useTemplates();
 
     useEffect(() => {
-        cvService.getAll({ page: 1, pageSize: 3 })
-            .then(res => setCvs(res.items ?? []))
+        // Se piden más de los tres que se muestran y se ordenan acá: el servicio
+        // no los devuelve por fecha de edición, así que pedir sólo tres traería
+        // tres cualesquiera en vez de los tres últimos que se tocaron.
+        cvService.getAll({ page: 1, pageSize: 20 })
+            .then(res => setCvs(masRecientes(res.items ?? [], 3)))
             .catch(() => setErrorCvs('No se pudieron cargar los currículums.'))
             .finally(() => setLoadingCvs(false));
     }, []);
@@ -124,6 +142,7 @@ export default function DashboardPage() {
                                             loadingLayout={loadingTemplates}
                                             onClick={() => setViewingCv(cv)}
                                             onEdit={() => setEditingCv(cv)}
+                                            onGoToList={() => navigate('/cvs')}
                                             onDownload={() => {
                                                 const problema = downloadCvPdf(
                                                     cv as unknown as Record<string, unknown>,
