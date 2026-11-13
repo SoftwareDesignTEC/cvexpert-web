@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import {
-    X, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
+    Menu, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
 } from 'lucide-react';
 import { useNotificationAdmin } from '../../context/NotificationAdminContext';
 
@@ -43,9 +43,11 @@ export default function Sidebar({ onClose, onNavigate }: SidebarProps) {
                     onClick={onClose}
                     title="Cerrar el menú"
                     aria-label="Cerrar el menú"
-                    className="shrink-0 rounded-lg p-1 text-muted transition-colors hover:bg-canvas hover:text-ink dark:hover:bg-gray-800 dark:hover:text-white"
+                    className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-canvas hover:text-ink dark:hover:bg-gray-800 dark:hover:text-white"
                 >
-                    <X size={20} />
+                    {/* El mismo icono que lo abre: es un interruptor, no dos
+                        acciones distintas. */}
+                    <Menu size={20} />
                 </button>
             </div>
 

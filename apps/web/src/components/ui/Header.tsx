@@ -8,9 +8,11 @@ import NotificationsBell from './NotificationsBell';
 
 interface HeaderProps {
     onMenuClick: () => void;
+    /** Con la barra abierta, el botón para cerrarla vive dentro de ella */
+    showMenuButton?: boolean;
 }
 
-export default function Header({ onMenuClick }: HeaderProps) {
+export default function Header({ onMenuClick, showMenuButton = true }: HeaderProps) {
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
     const { isAuthenticated, profile, logout } = useAuth();
@@ -20,13 +22,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
             {/* Izquierda: hamburguesa + logo (vuelve al Dashboard) + estado online */}
             <div className="flex items-center gap-4">
-                <button
-                    onClick={onMenuClick}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    title="Menú"
-                >
-                    <Menu size={20} />
-                </button>
+                {/* Sólo cuando la barra está cerrada: con ella abierta, el
+                    botón de cerrarla está adentro y dos harían lo mismo. */}
+                {showMenuButton && (
+                    <button
+                        onClick={onMenuClick}
+                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        title="Abrir el menú"
+                        aria-label="Abrir el menú"
+                    >
+                        <Menu size={20} />
+                    </button>
+                )}
 
                 {/* Marca: el recuadro azul queda listo para recibir el logo real;
                     mientras tanto muestra la inicial. */}
