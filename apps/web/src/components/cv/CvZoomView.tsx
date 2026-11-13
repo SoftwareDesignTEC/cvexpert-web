@@ -6,6 +6,9 @@ import type { Locale } from './cvLabels';
 // Ancho de una hoja A4 a 96 ppp, que es el que usa CvDocument. A zoom 1 el
 // documento se ve del tamaño que va a tener impreso.
 const A4_WIDTH_PX = 794;
+// Y su alto: una A4 son 210 × 297 mm. Se dibuja la hoja entera, con el espacio
+// en blanco que quede al pie, porque es lo que va a salir al descargarla.
+const A4_HEIGHT_PX = 1123;
 
 const MIN = 0.4;
 const MAX = 2;
@@ -116,10 +119,11 @@ export default function CvZoomView({ cv, layout, locale = 'es' }: {
                         ref={medir}
                         style={{
                             width: A4_WIDTH_PX,
+                            minHeight: A4_HEIGHT_PX,
                             transform: `scale(${zoom})`,
                             transformOrigin: 'top left',
                         }}
-                        className="shadow-sm"
+                        className="bg-white shadow-sm"
                     >
                         <CvDocument cv={cv} layout={layout} locale={locale} />
                     </div>

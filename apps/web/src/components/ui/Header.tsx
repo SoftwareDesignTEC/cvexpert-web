@@ -1,6 +1,6 @@
-import { Menu, Moon, Sun, LogOut } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, LogOut, Menu, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from './Avatar';
 import logo from '../../assets/logo.png';
@@ -12,10 +12,33 @@ interface HeaderProps {
     showMenuButton?: boolean;
 }
 
+// Las dos pantallas de cuenta. Están también en el menú lateral, que resalta
+// la activa por su cuenta, así que al entrar desde acá se ve dónde se quedó.
+const CUENTA = [
+    { to: '/profile',  icon: User,     label: 'Mi Perfil' },
+    { to: '/settings', icon: Settings, label: 'Configuración' },
+];
+
 export default function Header({ onMenuClick, showMenuButton = true }: HeaderProps) {
     const navigate = useNavigate();
-    const { theme, toggleTheme } = useTheme();
     const { isAuthenticated, profile, logout } = useAuth();
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Cerrar al pulsar fuera o con Escape, como cualquier menú
+    useEffect(() => {
+        if (!menuOpen) return;
+        const alPulsar = (e: MouseEvent) => {
+            if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+        };
+        const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+        document.addEventListener('mousedown', alPulsar);
+        document.addEventListener('keydown', alTeclear);
+        return () => {
+            document.removeEventListener('mousedown', alPulsar);
+            document.removeEventListener('keydown', alTeclear);
+        };
+    }, [menuOpen]);
 
     return (
         <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 shrink-0">
@@ -48,42 +71,61 @@ export default function Header({ onMenuClick, showMenuButton = true }: HeaderPro
 
             </div>
 
-            {/* Derecha: notificaciones + usuario + tema */}
+            {/* Derecha: notificaciones + cuenta.
+                El tema se cambia desde Configuración, y cerrar sesión pasó al
+                menú de la cuenta: tres botones sueltos competían entre sí. */}
             <div className="flex items-center gap-3">
                 <NotificationsBell />
 
                 {isAuthenticated && (
-                    <>
+                    <div ref={menuRef} className="relative">
                         {/* Nombre y foto vienen del APIM, no del token: sin conexión no se
                             muestran, y mientras tanto se usan las iniciales. */}
                         <button
-                            onClick={() => navigate('/profile')}
-                            title="Ir a Mi Perfil"
-                            className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-3 shadow-sm hover:border-primary transition-colors"
+                            onClick={() => setMenuOpen(v => !v)}
+                            title="Mi cuenta"
+                            aria-haspopup="menu"
+                            aria-expanded={menuOpen}
+                            className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-2 shadow-sm hover:border-primary transition-colors"
                         >
                             <Avatar src={profile?.photoUrl} name={profile?.name ?? 'Mi cuenta'} size={32} />
                             <span className="text-sm font-medium text-ink dark:text-gray-200 hidden sm:block max-w-[12rem] truncate">
                                 {profile?.name ?? 'Mi cuenta'}
                             </span>
+                            <ChevronDown size={14} className="text-muted shrink-0" />
                         </button>
 
-                        <button
-                            onClick={logout}
-                            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            title="Cerrar sesión"
-                        >
-                            <LogOut size={18} />
-                        </button>
-                    </>
+                        {menuOpen && (
+                            <div
+                                role="menu"
+                                className="absolute right-0 top-full z-40 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+                            >
+                                {CUENTA.map(({ to, icon: Icon, label }) => (
+                                    <button
+                                        key={to}
+                                        role="menuitem"
+                                        onClick={() => { setMenuOpen(false); navigate(to); }}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-body transition-colors hover:bg-canvas dark:text-gray-300 dark:hover:bg-gray-800"
+                                    >
+                                        <Icon size={15} />
+                                        {label}
+                                    </button>
+                                ))}
+
+                                <div className="my-1 border-t border-line dark:border-gray-700" />
+
+                                <button
+                                    role="menuitem"
+                                    onClick={() => { setMenuOpen(false); logout(); }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                                >
+                                    <LogOut size={15} />
+                                    Cerrar sesión
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 )}
-
-                <button
-                    onClick={toggleTheme}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
-                >
-                    {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-                </button>
             </div>
         </header>
     );
