@@ -44,6 +44,21 @@ interface ColumnTone {
 
 const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] = [
     {
+        status: 'interested', label: 'Me interesa',
+        tone: {
+            column: 'border-t-4 border-t-violet-500 border border-violet-200 dark:border-violet-900',
+            header: 'bg-violet-50 dark:bg-violet-950/30',
+            title:  'text-violet-700 dark:text-violet-300',
+            dot:    'bg-violet-500',
+            badge:  'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+            card:   'border-violet-400 shadow-[0_0_10px_-2px_rgba(139,92,246,0.55)] dark:border-violet-500 dark:shadow-[0_0_12px_-2px_rgba(139,92,246,0.8)]',
+            action: 'bg-violet-50 text-violet-700 hover:bg-violet-100 dark:bg-violet-950/40 dark:text-violet-300',
+            avatar: 'bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300',
+            over:   'bg-violet-100/60 dark:bg-violet-900/20',
+            tab:    'bg-violet-500 text-white border-violet-500',
+        },
+    },
+    {
         status: 'applied', label: 'Aplicado',
         tone: {
             column: 'border-t-4 border-t-blue-500 border border-blue-200 dark:border-blue-900',

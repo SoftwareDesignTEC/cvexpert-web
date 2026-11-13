@@ -132,6 +132,7 @@ export interface JobOffer {
 
 // 4 columnas según diseño de Samuel
 export type ApplicationStatus =
+    | 'interested'    // Me interesa: guardada sin postularse todavía
     | 'applied'       // Aplicado
     | 'in-progress'   // En proceso
     | 'interview'     // Entrevista

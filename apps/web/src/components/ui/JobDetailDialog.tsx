@@ -5,7 +5,16 @@ import Button from './Button';
 import { CompanyLogo } from './Avatar';
 import { applicationService } from '../../services/otherServices';
 import { describeError } from '../../services/http';
-import type { JobOffer } from '../../types/models';
+import type { ApplicationStatus, JobOffer } from '../../types/models';
+
+// Las columnas donde tiene sentido guardar una oferta recién vista. Las otras
+// dos del tablero —entrevista y rechazado— describen algo que ya pasó, así que
+// no se ofrecen al agregarla.
+const DESTINOS: { status: ApplicationStatus; label: string; hint: string }[] = [
+    { status: 'interested', label: 'Me interesa', hint: 'Para mirarla después' },
+    { status: 'applied',    label: 'Ya me postulé', hint: 'Abre el sitio de la empresa' },
+    { status: 'in-progress', label: 'En proceso',  hint: 'Ya hay conversaciones' },
+];
 
 const modalityLabel: Record<JobOffer['modality'], string> = {
     'remote':  'Remoto',
@@ -69,12 +78,21 @@ export default function JobDetailDialog({
     const [applied, setApplied] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [popupBlocked, setPopupBlocked] = useState(false);
+    const [eligiendo, setEligiendo] = useState(false);
 
-    // Primero se guarda la postulación y después se abre el sitio de origen: si
-    // se abriera antes, un fallo al guardar pasaría inadvertido con el usuario
-    // ya fuera de la aplicación. Si el navegador bloquea la pestaña, queda el
-    // enlace a la vista para que la abra a mano.
-    const apply = async () => {
+    /**
+     * Guarda la oferta en el tablero, en la columna elegida.
+     *
+     * Primero se guarda y después se abre el sitio de origen: si se abriera
+     * antes, un fallo al guardar pasaría inadvertido con el usuario ya fuera
+     * de la aplicación. Si el navegador bloquea la pestaña, queda el enlace a
+     * la vista para abrirla a mano.
+     *
+     * El sitio sólo se abre al postularse de verdad. Guardar algo como "me
+     * interesa" no es postularse, así que mandar al usuario al formulario de
+     * la empresa en ese caso sería contradecir lo que acaba de elegir.
+     */
+    const guardar = async (destino: ApplicationStatus) => {
         if (!job) return;
         setApplying(true);
         setError(null);
@@ -86,16 +104,18 @@ export default function JobDetailDialog({
                 companyLogoUrl: job.companyLogoUrl,
                 location: job.location,
                 modality: job.modality,
-                status: 'applied',
-            } as Parameters<typeof applicationService.create>[0]);
+                status: destino,
+            } as Parameters<typeof applicationService.create>[0], destino);
             setApplied(true);
+            setEligiendo(false);
 
-            if (job.applyUrl) {
+            if (destino === 'applied' && job.applyUrl) {
                 const win = window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
                 if (!win) setPopupBlocked(true);
             }
         } catch (err) {
-            setError(describeError(err, 'guardar tu postulación'));
+            setError(describeError(err, 'guardar la oferta'));
+            setEligiendo(false);
         } finally {
             setApplying(false);
         }
@@ -155,11 +175,35 @@ export default function JobDetailDialog({
 
                     {error && <p className="text-sm text-rose-500">{error}</p>}
 
+                    {/* Se pregunta la columna en vez de asumir: guardar algo
+                        para mirarlo después no es lo mismo que postularse. */}
+                    {eligiendo && !applied && (
+                        <div className="flex flex-col gap-2 rounded-xl border border-line bg-canvas/60 p-3 dark:border-gray-800 dark:bg-gray-800/60">
+                            <p className="text-sm font-medium text-ink dark:text-white">
+                                ¿Dónde la guardamos?
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {DESTINOS.map(({ status, label, hint }) => (
+                                    <button
+                                        key={status}
+                                        type="button"
+                                        disabled={applying}
+                                        onClick={() => guardar(status)}
+                                        className="flex flex-col items-start gap-0.5 rounded-lg border border-line px-3 py-2 text-left transition-colors hover:border-primary disabled:opacity-60 dark:border-gray-700"
+                                    >
+                                        <span className="text-xs font-semibold text-ink dark:text-white">{label}</span>
+                                        <span className="text-[11px] text-muted">{hint}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {applied && (
                         <div className="flex flex-col gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 dark:border-emerald-500/40 dark:bg-emerald-500/10">
                             <p className="flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
                                 <Check size={15} className="shrink-0" />
-                                Guardamos la postulación en tu tablero.
+                                La guardamos en tu tablero.
                             </p>
                             {popupBlocked && job.applyUrl && (
                                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
@@ -193,8 +237,12 @@ export default function JobDetailDialog({
                             </a>
                         )}
 
-                        <Button size="sm" onClick={apply} disabled={applying || applied}>
-                            {applied ? 'Ya te postulaste' : applying ? 'Guardando…' : 'Postularme'}
+                        <Button
+                            size="sm"
+                            onClick={() => setEligiendo(true)}
+                            disabled={applying || applied || eligiendo}
+                        >
+                            {applied ? 'Ya está en tu tablero' : applying ? 'Guardando…' : 'Agregar a postulaciones'}
                         </Button>
                     </div>
                 </div>
