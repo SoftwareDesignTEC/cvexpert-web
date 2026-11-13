@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import CvDocument from './CvDocument';
+import CvZoomView from './CvZoomView';
 import { UI_TEXT } from './cvLabels';
 import type { Locale } from './cvLabels';
 import { parseLayout } from '../../types/cvLayout';
@@ -52,14 +52,15 @@ export default function CvDocumentDialog({
         <>
             <Modal
                 open={open}
-                size="lg"
+                // El documento mide una hoja A4 de ancho: con lg queda apretado
+                size={canRender ? 'xl' : 'lg'}
                 title={title}
                 // Mientras se busca no se puede afirmar que no tiene diseño
                 description={loading || canRender ? undefined : UI_TEXT[locale].noLayout}
                 onClose={onClose}
             >
                 <div className="flex flex-col gap-4">
-                    <div className="max-h-[65vh] overflow-auto rounded-xl bg-canvas p-2 dark:bg-gray-800">
+                    <div className={canRender ? '' : 'max-h-[65vh] overflow-auto rounded-xl bg-canvas p-2 dark:bg-gray-800'}>
                         {loading ? (
                             <div className="flex flex-col items-center justify-center gap-2 py-16">
                                 <div className="flex gap-1" aria-hidden>
@@ -74,9 +75,7 @@ export default function CvDocumentDialog({
                                 <p className="text-sm text-muted">Cargando…</p>
                             </div>
                         ) : canRender ? (
-                            <div className="shadow-sm">
-                                <CvDocument cv={cv} layout={layout} locale={locale} />
-                            </div>
+                            <CvZoomView cv={cv} layout={layout} locale={locale} />
                         ) : fallbackImageUrl && !imgFailed ? (
                             <img
                                 src={fallbackImageUrl}

@@ -6,7 +6,8 @@ interface ModalProps {
     title: string;
     description?: string;
     /** 'lg' para contenido ancho, como la vista previa de una plantilla */
-    size?: 'md' | 'lg';
+    /** 'xl' para el documento a tamaño real, que mide una hoja A4 de ancho */
+    size?: 'md' | 'lg' | 'xl';
     onClose: () => void;
     children: React.ReactNode;
 }
@@ -45,7 +46,7 @@ export default function Modal({ open, title, description, size = 'md', onClose, 
                 // El clic dentro del panel no debe cerrar el diálogo
                 onClick={e => e.stopPropagation()}
                 className={`w-full max-h-full overflow-y-auto rounded-t-2xl bg-surface dark:bg-gray-900 shadow-xl sm:rounded-2xl
-                    ${size === 'lg' ? 'max-w-3xl' : 'max-w-md'}`}
+                    ${size === 'xl' ? 'max-w-5xl' : size === 'lg' ? 'max-w-3xl' : 'max-w-md'}`}
             >
                 <div className="flex items-start justify-between gap-3 border-b border-line dark:border-gray-800 px-5 py-4">
                     <div className="min-w-0">
