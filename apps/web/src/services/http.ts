@@ -104,7 +104,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
             headers: {
                 // Sin cuerpo no se declara JSON: hay backends que rechazan un POST
                 // vacío con Content-Type application/json.
-                ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+                //
+                // Con FormData tampoco se declara, y es importante: el navegador
+                // arma el encabezado con el separador que marca dónde empieza y
+                // termina cada parte. Si lo escribimos a mano, ese separador se
+                // pierde y el servidor no puede leer el archivo.
+                ...(options.body !== undefined && !(options.body instanceof FormData)
+                    ? { 'Content-Type': 'application/json' }
+                    : {}),
                 ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
                 ...options.headers,
             },
@@ -159,13 +166,17 @@ export function toPaginated<T>(res: unknown, pageSize: number, page = 1): Pagina
 
 // Serializa el cuerpo sólo si lo hay: `post('/x')` sale sin cuerpo ni Content-Type
 function withBody(method: string, body: unknown): RequestInit {
-    return body === undefined ? { method } : { method, body: JSON.stringify(body) };
+    if (body === undefined) return { method };
+    if (body instanceof FormData) return { method, body };
+    return { method, body: JSON.stringify(body) };
 }
 
 // Métodos HTTP exportados — los servicios los usan directamente
 export const http = {
     get:    <T>(path: string)                  => request<T>(path),
     post:   <T>(path: string, body?: unknown)  => request<T>(path, withBody('POST', body)),
+    /** Subida de archivos; el navegador pone el Content-Type con su separador */
+    upload: <T>(path: string, form: FormData)  => request<T>(path, { method: 'POST', body: form }),
     put:    <T>(path: string, body: unknown)   => request<T>(path, withBody('PUT', body)),
     patch:  <T>(path: string, body?: unknown)  => request<T>(path, withBody('PATCH', body)),
     delete: <T>(path: string)                  => request<T>(path, { method: 'DELETE' }),
