@@ -143,8 +143,8 @@ export default function DashboardPage() {
                                             onClick={() => setViewingCv(cv)}
                                             onEdit={() => setEditingCv(cv)}
                                             onGoToList={() => navigate('/cvs')}
-                                            onDownload={() => {
-                                                const problema = downloadCvPdf(
+                                            onDownload={async () => {
+                                                const problema = await downloadCvPdf(
                                                     cv as unknown as Record<string, unknown>,
                                                     layoutFor(templates, cv),
                                                     cv.title,

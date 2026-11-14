@@ -6,7 +6,7 @@ import CvZoomView from './CvZoomView';
 import { UI_TEXT } from './cvLabels';
 import type { Locale } from './cvLabels';
 import { parseLayout } from '../../types/cvLayout';
-import { buildCvPdf, pdfFileName } from './cvPdf';
+import { buildCvPdf, pdfFileName, resolveCvPhoto } from './cvPdf';
 
 type Raw = Record<string, unknown>;
 
@@ -34,10 +34,11 @@ export default function CvDocumentDialog({
     // Se arma el PDF y se descarga directo, sin pasar por el cuadro de imprimir:
     // el usuario quiere un archivo, no elegir una impresora. El documento se
     // dibuja desde los datos, así que el texto queda seleccionable.
-    const exportPdf = () => {
+    const exportPdf = async () => {
         setError(null);
         try {
-            const doc = buildCvPdf(cv as Raw, layout, locale);
+            // La foto se trae antes: dibujar no puede esperar a la red
+            const doc = buildCvPdf(cv as Raw, layout, locale, await resolveCvPhoto(cv as Raw));
             if (!doc) {
                 setError('Esta plantilla no tiene diseño estructurado, así que no se puede generar el PDF.');
                 return;

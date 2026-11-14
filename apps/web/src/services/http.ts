@@ -75,6 +75,7 @@ function defaultMessage(status: number) {
     if (status === 408) return 'el servidor tardó demasiado en responder';
     if (status === 409) return 'falta un paso previo para poder continuar';
     if (status === 413) return 'la información enviada es demasiado grande';
+    if (status === 415) return 'ese tipo de archivo no está permitido';
     if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
     if (status === 503) return 'el servicio no está disponible en este momento';
     if (status === 504) return 'el servidor tardó demasiado en responder';

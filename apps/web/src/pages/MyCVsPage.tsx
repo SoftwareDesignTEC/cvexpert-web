@@ -205,8 +205,8 @@ export default function MyCVsPage() {
                                 onView={() => setViewingCv(cv)}
                                 onEdit={() => setEditing({ cv })}
                                 onDelete={() => setDeleting(cv)}
-                                onDownload={() => {
-                                    const problema = downloadCvPdf(
+                                onDownload={async () => {
+                                    const problema = await downloadCvPdf(
                                         cv as unknown as Record<string, unknown>,
                                         layoutFor(templates, cv),
                                         cv.title,

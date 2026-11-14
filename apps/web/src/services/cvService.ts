@@ -105,4 +105,16 @@ export const cvService = {
 
     /** 204 sin cuerpo. */
     remove: (id: string) => http.delete<void>(`/cvs/${id}`),
+
+    /**
+     * Sube la foto y devuelve su enlace. La imagen no viaja dentro del
+     * currículum —el profesor pidió que se subiera aparte y que en el documento
+     * quedara sólo el enlace—, y la ruta no lleva el id del currículum porque
+     * la foto se elige mientras se está creando uno que todavía no existe.
+     */
+    uploadPhoto: (imagen: Blob) => {
+        const form = new FormData();
+        form.append('file', imagen, 'foto.jpg');
+        return http.upload<{ url: string }>('/cvs/photos', form).then(r => r.url);
+    },
 };
