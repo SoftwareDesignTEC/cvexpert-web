@@ -13,13 +13,15 @@ import { ArrowLeftRight, Check, MapPin } from 'lucide-react';
 import { CompanyLogo } from '../components/ui/Avatar';
 import Modal from '../components/ui/Modal';
 import ApplicationDetailDialog from '../components/ui/ApplicationDetailDialog';
+import AddApplicationDialog from '../components/ui/AddApplicationDialog';
+import JobDetailDialog from '../components/ui/JobDetailDialog';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import { applicationService } from '../services/otherServices';
 import { describeError } from '../services/http';
-import type { ApplicationStatus, JobApplication } from '../types/models';
+import type { ApplicationStatus, JobApplication, JobOffer } from '../types/models';
 
 // Cuántas postulaciones se muestran por columna antes de "Ver Todo"
 const INITIAL_VISIBLE = 3;
@@ -374,6 +376,8 @@ export default function ApplicationsPage() {
     const [draggingApp, setDraggingApp] = useState<JobApplication | null>(null);
     const [detailApp, setDetailApp] = useState<JobApplication | null>(null);
     const [verMas, setVerMas] = useState<ApplicationStatus | null>(null);
+    const [agregando, setAgregando] = useState(false);
+    const [ofertaElegida, setOfertaElegida] = useState<JobOffer | null>(null);
     const [moveError, setMoveError] = useState<string | null>(null);
 
     // Mobile: pestañas en vez de columnas lado a lado
@@ -463,8 +467,7 @@ export default function ApplicationsPage() {
                             Postulaciones
                             <span className="font-bold text-ink dark:text-white">{total}</span>
                         </span>
-                        {/* Sin funcionalidad por ahora: no navega a ningún lado */}
-                        <Button size="sm" disabled>
+                        <Button size="sm" onClick={() => setAgregando(true)}>
                             + Agregar
                         </Button>
                     </div>
@@ -572,6 +575,22 @@ export default function ApplicationsPage() {
                 application={statusFor}
                 onClose={() => setStatusFor(null)}
                 onSelect={status => { if (statusFor) void changeStatus(statusFor.id, status); }}
+            />
+
+            {/* Atajo para agregar sin salir del tablero. Al elegir una oferta se
+                cierra y se abre el detalle de siempre, que es donde se decide la
+                columna: así esa decisión vive en un solo lugar. */}
+            {agregando && (
+                <AddApplicationDialog
+                    onClose={() => setAgregando(false)}
+                    onPick={job => { setAgregando(false); setOfertaElegida(job); }}
+                />
+            )}
+
+            <JobDetailDialog
+                job={ofertaElegida}
+                onClose={() => setOfertaElegida(null)}
+                onAdded={app => setApplications(prev => [app, ...prev])}
             />
 
             {/* Todas las de un estado, sin estirar su sección del tablero. Acá

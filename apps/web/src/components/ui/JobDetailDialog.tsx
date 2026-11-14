@@ -5,7 +5,7 @@ import Button from './Button';
 import { CompanyLogo } from './Avatar';
 import { applicationService } from '../../services/otherServices';
 import { describeError } from '../../services/http';
-import type { ApplicationStatus, JobOffer } from '../../types/models';
+import type { ApplicationStatus, JobApplication, JobOffer } from '../../types/models';
 
 // Las columnas donde tiene sentido guardar una oferta recién vista. Las otras
 // dos del tablero —entrevista y rechazado— describen algo que ya pasó, así que
@@ -68,10 +68,13 @@ function TagList({ title, values }: { title: string; values?: string[] }) {
 }
 
 export default function JobDetailDialog({
-    job, onClose,
+    job, onClose, onAdded,
 }: {
     job: JobOffer | null;
     onClose: () => void;
+    /** Se avisa con la postulación ya creada para que quien lo abrió la agregue
+     *  a su lista sin volver a pedirle todo al servidor. */
+    onAdded?: (application: JobApplication) => void;
 }) {
     const posted = formatDate(job?.postedAt);
     const [applying, setApplying] = useState(false);
@@ -97,7 +100,7 @@ export default function JobDetailDialog({
         setApplying(true);
         setError(null);
         try {
-            await applicationService.create({
+            const creada = await applicationService.create({
                 jobOfferId: job.id,
                 jobTitle: job.title,
                 company: job.company,
@@ -108,6 +111,7 @@ export default function JobDetailDialog({
             } as Parameters<typeof applicationService.create>[0], destino);
             setApplied(true);
             setEligiendo(false);
+            onAdded?.(creada);
 
             if (destino === 'applied' && job.applyUrl) {
                 const win = window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
