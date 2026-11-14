@@ -67,15 +67,29 @@ function TagList({ title, values }: { title: string; values?: string[] }) {
     );
 }
 
-export default function JobDetailDialog({
-    job, onClose, onAdded,
-}: {
+interface JobDetailDialogProps {
     job: JobOffer | null;
     onClose: () => void;
     /** Se avisa con la postulación ya creada para que quien lo abrió la agregue
      *  a su lista sin volver a pedirle todo al servidor. */
     onAdded?: (application: JobApplication) => void;
-}) {
+}
+
+/**
+ * Todo lo que el diálogo recuerda —si ya se guardó, el error, el selector de
+ * columna— es de la oferta que se está mirando, no del diálogo. Sin esto, al
+ * abrir una segunda oferta seguía diciendo que ya estaba en el tablero, porque
+ * el estado sobrevivía al cambio de oferta.
+ *
+ * La `key` obliga a volver a montar el contenido cuando cambia la oferta, que
+ * es la forma de garantizar que empiece de cero sin tener que acordarse de
+ * reiniciar cada dato a mano cada vez que se agregue uno nuevo.
+ */
+export default function JobDetailDialog(props: JobDetailDialogProps) {
+    return <JobDetailDialogContent key={props.job?.id ?? 'sin-oferta'} {...props} />;
+}
+
+function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps) {
     const posted = formatDate(job?.postedAt);
     const [applying, setApplying] = useState(false);
     const [applied, setApplied] = useState(false);
