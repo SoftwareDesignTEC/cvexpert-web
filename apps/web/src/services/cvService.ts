@@ -84,6 +84,32 @@ export function toCvInput(cv: CV): CvInput {
 /** Errores por campo que devuelve un 400: {campo: mensaje} */
 export type FieldErrors = Record<string, string>;
 
+/**
+ * `updatedAt` llega como epoch en milisegundos o como texto ISO según el
+ * endpoint, así que se normaliza antes de comparar. Lo que no se entiende vale
+ * 0 y queda al final, que es mejor que romper el orden entero.
+ */
+function enMilis(v: unknown): number {
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') {
+        const n = /^\d+$/.test(v) ? Number(v) : Date.parse(v);
+        return Number.isFinite(n) ? n : 0;
+    }
+    return 0;
+}
+
+/**
+ * Del más recientemente editado al más viejo.
+ *
+ * Vive acá y no en cada pantalla porque el panel principal y Mis Currículums
+ * muestran la misma lista: si ordenaran por su cuenta, bastaría con que una
+ * tratara distinto una fecha rara para que mostraran dos órdenes diferentes de
+ * los mismos currículums.
+ */
+export function porUltimaEdicion<T extends { updatedAt?: unknown }>(cvs: T[]): T[] {
+    return [...cvs].sort((a, b) => enMilis(b.updatedAt) - enMilis(a.updatedAt));
+}
+
 export const cvService = {
     getAll: ({ page, pageSize, search }: PaginationParams) => {
         const params = new URLSearchParams({

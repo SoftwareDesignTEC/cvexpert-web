@@ -14,13 +14,30 @@ import CvListSkeleton from '../components/cv/CvCardSkeleton';
 import MoreMenu from '../components/ui/MoreMenu';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
-import { cvService } from '../services/cvService';
+import { cvService, porUltimaEdicion } from '../services/cvService';
 import { useAuth } from '../context/AuthContext';
 import { describeError } from '../services/http';
 import type { CV } from '../types/models';
 
 // Cada página pide su tramo al APIM, no se acumulan hacia abajo
 const PAGE_SIZE = 6;
+
+// Se traen todos y se pagina acá. Ordenar sólo la página que devolvió el
+// servidor daría un orden falso: la primera página mostraría los más recientes
+// de esos seis, no los más recientes de todos. Son pocos currículums por
+// persona, así que traerlos enteros no cuesta nada.
+const FETCH_PAGE_SIZE = 50;
+const MAX_PAGES = 20;   // salvavidas contra bucles si el endpoint ignora la paginación
+
+async function fetchAllCvs(search?: string): Promise<CV[]> {
+    const all: CV[] = [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+        const res = await cvService.getAll({ page, pageSize: FETCH_PAGE_SIZE, search });
+        all.push(...(res.items ?? []));
+        if (!res.items?.length || all.length >= (res.totalRecords ?? 0)) break;
+    }
+    return all;
+}
 
 // ── Card de CV (con acciones decorativas por ahora) ───────────────────────────
 function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onDelete }: {
@@ -125,10 +142,10 @@ export default function MyCVsPage() {
             setLoading(true);
             setError(null);
             try {
-                const res = await cvService.getAll({ page, pageSize: PAGE_SIZE, search: search || undefined });
+                const todos = porUltimaEdicion(await fetchAllCvs(search || undefined));
                 if (cancelled) return;
-                setItems(res.items ?? []);
-                setTotalRecords(res.totalRecords ?? 0);
+                setItems(todos);
+                setTotalRecords(todos.length);
             } catch (err) {
                 if (!cancelled) {
                     setError(describeError(err, 'cargar tus currículums'));
@@ -140,10 +157,15 @@ export default function MyCVsPage() {
         load();
 
         return () => { cancelled = true; };
-    }, [search, page, reloadKey]);
+        // `page` no está en las dependencias a propósito: cambiar de página
+        // ya no vuelve a pedir nada, sólo corta la lista que ya está en memoria.
+    }, [search, reloadKey]);
 
 
     const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+    // Si al borrar uno la última página queda vacía, hay que volver a una válida
+    const currentPage = Math.min(page, totalPages);
+    const visibles = items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
@@ -196,7 +218,7 @@ export default function MyCVsPage() {
             ) : (
                 <div className="flex flex-col gap-3 sm:gap-4">
                     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-                        {items.map(cv => (
+                        {visibles.map(cv => (
                             <CVListCard
                                 key={cv.id}
                                 cv={cv}
@@ -217,7 +239,7 @@ export default function MyCVsPage() {
                         ))}
                     </div>
 
-                    <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+                    <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
                 </div>
             )}
 

@@ -17,7 +17,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
-import { cvService } from '../services/cvService';
+import { cvService, porUltimaEdicion } from '../services/cvService';
 import { jobService } from '../services/otherServices';
 import {
     SKILL_SCALE_MAX,
@@ -35,17 +35,7 @@ const modalityLabel: Record<JobOffer['modality'], string> = {
 
 /** Los últimos que se editaron, de más reciente a más viejo. */
 function masRecientes(cvs: CV[], cuantos: number): CV[] {
-    const aMilis = (v: unknown): number => {
-        if (typeof v === 'number') return v;
-        if (typeof v === 'string') {
-            const n = /^\d+$/.test(v) ? Number(v) : Date.parse(v);
-            return Number.isFinite(n) ? n : 0;
-        }
-        return 0;
-    };
-    return [...cvs]
-        .sort((a, b) => aMilis(b.updatedAt) - aMilis(a.updatedAt))
-        .slice(0, cuantos);
+    return porUltimaEdicion(cvs).slice(0, cuantos);
 }
 
 export default function DashboardPage() {
@@ -358,7 +348,12 @@ export default function DashboardPage() {
                     onClose={() => setEditingCv(null)}
                     onSaved={saved => {
                         setEditingCv(null);
-                        setCvs(prev => prev.map(c => (c.id === saved.id ? saved : c)));
+                        // Se reordena: el que se acaba de editar pasa a ser el
+                        // más reciente, y sin esto se quedaba en su puesto
+                        // viejo hasta recargar la página.
+                        setCvs(prev => porUltimaEdicion(
+                            prev.map(c => (c.id === saved.id ? saved : c)),
+                        ));
                     }}
                 />
             )}
