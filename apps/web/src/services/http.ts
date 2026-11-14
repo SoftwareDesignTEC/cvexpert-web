@@ -75,6 +75,7 @@ function defaultMessage(status: number) {
     if (status === 408) return 'el servidor tardó demasiado en responder';
     if (status === 409) return 'falta un paso previo para poder continuar';
     if (status === 413) return 'la información enviada es demasiado grande';
+    if (status === 415) return 'ese tipo de archivo no está permitido';
     if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
     if (status === 503) return 'el servicio no está disponible en este momento';
     if (status === 504) return 'el servidor tardó demasiado en responder';
@@ -147,6 +148,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         // El APIM devuelve {statusCode, error, message} con el detalle en español;
         // si no hay cuerpo utilizable, se arma un mensaje según el código.
         const body = await res.json().catch(() => ({}));
+
+        // Rastro para quien esté depurando. Al usuario se le dice el motivo sin
+        // el código, que es lo que pide la heurística de Nielsen, pero entonces
+        // el código no queda en ninguna parte y hay que ir a buscarlo a la
+        // pestaña de red a mano. Acá queda a la vista.
+        //
+        // Va el método, la ruta y lo que el servidor dijo de sí mismo. NO va el
+        // cuerpo de la petición: lleva los datos del currículum, y la consola
+        // es lo primero que se abre al compartir pantalla.
+        // eslint-disable-next-line no-console -- es el único rastro del código
+        console.error(
+            `[API] ${options.method ?? 'GET'} ${path} → ${res.status}`,
+            { code: body.error, message: body.message },
+        );
+
         throw new ApiError(
             res.status,
             usableMessage(body.message) ?? defaultMessage(res.status),

@@ -93,17 +93,22 @@ class Flow {
 
 const PHOTO_MM = 22;
 
-function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: Locale) {
+function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: Locale, photoData?: string) {
     const personal = (cv.personalInfo ?? {}) as Raw;
     const leaves = fields
         .map(p => { const [root, leaf] = p.split('.'); return root === 'personalInfo' ? leaf : null; })
         .filter((l): l is string => !!l && (HEADER_FIELDS as readonly string[]).includes(l));
 
-    // Sólo se puede incrustar lo que ya está en el documento. Una URL remota
-    // habría que descargarla, y esto es síncrono; la foto que carga la web es
-    // siempre un data URL, así que ese es el caso que importa.
+    // Dibujar es síncrono, así que la foto tiene que llegar ya incrustable.
+    // Hay dos casos: los currículums viejos la traen dentro como data URL, y
+    // los nuevos traen un enlace que `resolveCvPhoto` descarga antes de llamar
+    // acá. Si no se pudo descargar, el encabezado sale sin foto.
     const foto = leaves.includes('photoUrl') ? text(personal.photoUrl) : null;
-    const fotoIncrustable = foto?.startsWith('data:image') ? foto : null;
+    const fotoIncrustable = !foto
+        ? null
+        : foto.startsWith('data:image')
+            ? foto
+            : photoData ?? null;
 
     const yInicio = f.y;
     let texto = f;
@@ -231,7 +236,12 @@ function drawList(f: Flow, source: ListSource, itemFields: string[], cv: Raw, c:
  * Arma el PDF del currículum. Devuelve null si la plantilla no tiene un layout
  * utilizable: sin él no hay nada que dibujar.
  */
-export function buildCvPdf(cv: Raw, layout: unknown, locale: Locale = 'es'): jsPDF | null {
+export function buildCvPdf(
+    cv: Raw,
+    layout: unknown,
+    locale: Locale = 'es',
+    photoData?: string,
+): jsPDF | null {
     const parsed = parseLayout(layout);
     if (!parsed) return null;
 
@@ -240,7 +250,7 @@ export function buildCvPdf(cv: Raw, layout: unknown, locale: Locale = 'es'): jsP
 
     const dibujar = (f: Flow, secciones: typeof parsed.sections) => {
         for (const s of secciones) {
-            if (s.type === 'header') drawHeader(f, s.fields, cv, c, locale);
+            if (s.type === 'header') drawHeader(f, s.fields, cv, c, locale, photoData);
             else drawList(f, s.source, s.itemFields, cv, c, locale);
         }
     };
@@ -266,6 +276,37 @@ export function buildCvPdf(cv: Raw, layout: unknown, locale: Locale = 'es'): jsP
     return doc;
 }
 
+/**
+ * Descarga la foto del currículum y la devuelve lista para incrustar.
+ *
+ * Hace falta porque el dibujado es síncrono: jsPDF no puede esperar una
+ * respuesta de red en medio de una página. Devuelve undefined cuando no hay
+ * foto, cuando ya viene incrustada, o cuando no se pudo traer; en ese último
+ * caso el PDF sale sin foto en vez de no salir, que es peor.
+ *
+ * Una causa posible de fallo es que el almacenamiento no permita leer la
+ * imagen desde el origen de la web: para pasarla al PDF hay que leer sus
+ * bytes, y eso un enlace público no lo habilita por sí solo.
+ */
+export async function resolveCvPhoto(cv: Raw): Promise<string | undefined> {
+    const url = text(((cv.personalInfo ?? {}) as Raw).photoUrl);
+    if (!url || url.startsWith('data:')) return undefined;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return undefined;
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error('ilegible'));
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        return undefined;
+    }
+}
+
 /** Nombre de archivo a partir del título, sin caracteres que molesten. */
 export function pdfFileName(title: string): string {
     const limpio = title
@@ -280,9 +321,14 @@ export function pdfFileName(title: string): string {
  * Arma y descarga el PDF. Devuelve null si salió bien, o el motivo si no, para
  * que cada pantalla lo muestre a su manera.
  */
-export function downloadCvPdf(cv: Raw, layout: unknown, title: string, locale: Locale = 'es'): string | null {
+export async function downloadCvPdf(
+    cv: Raw,
+    layout: unknown,
+    title: string,
+    locale: Locale = 'es',
+): Promise<string | null> {
     try {
-        const doc = buildCvPdf(cv, layout, locale);
+        const doc = buildCvPdf(cv, layout, locale, await resolveCvPhoto(cv));
         if (!doc) return 'Esta plantilla no tiene diseño estructurado, así que no se puede generar el PDF.';
         doc.save(pdfFileName(title));
         return null;
