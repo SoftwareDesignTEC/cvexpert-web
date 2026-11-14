@@ -77,6 +77,10 @@ function defaultMessage(status: number) {
     if (status === 413) return 'la información enviada es demasiado grande';
     if (status === 415) return 'ese tipo de archivo no está permitido';
     if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
+    // El servicio de currículums devuelve 502 cuando el almacenamiento de
+    // archivos le falla. No es culpa de lo que hizo el usuario y suele pasar,
+    // así que el mensaje invita a reintentar en vez de sonar definitivo.
+    if (status === 502) return 'un servicio del que dependemos no respondió; probá de nuevo en un momento';
     if (status === 503) return 'el servicio no está disponible en este momento';
     if (status === 504) return 'el servidor tardó demasiado en responder';
     if (status >= 500) return 'el servidor tuvo un problema interno';
