@@ -262,10 +262,13 @@ function KanbanColumn({
     const [expanded, setExpanded] = useState(false);
     const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
 
+    // `flex-1` reparte el ancho sobrante entre las columnas, y el ancho mínimo
+    // evita que se aplasten hasta no poder leer una tarjeta: llegado ese punto
+    // es mejor que la fila se desplace de lado.
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 min-h-[160px] transition-colors
+            className={`flex min-w-[190px] flex-1 flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 min-h-[160px] transition-colors
                 ${tone.column} ${isOver ? tone.over : ''}`}
         >
             {/* Cabecera con el color del estado, su punto y el contador */}
@@ -464,7 +467,13 @@ export default function ApplicationsPage() {
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => setDraggingApp(null)}
                 >
-                    <div className="grid grid-cols-4 gap-4">
+                    {/* Una sola fila, como cualquier tablero Kanban. Con una
+                        rejilla de ancho fijo la quinta columna caía sola a otra
+                        fila y el tablero se veía partido; además cada fila
+                        tomaba una altura distinta. Acá las columnas se reparten
+                        el ancho disponible y, si no caben, la fila se desplaza
+                        de lado en vez de romperse. */}
+                    <div className="flex items-stretch gap-4 overflow-x-auto pb-2">
                         {columns.map(col => (
                             <KanbanColumn
                                 key={col.status}
