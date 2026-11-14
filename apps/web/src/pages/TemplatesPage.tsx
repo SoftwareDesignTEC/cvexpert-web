@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText } from 'lucide-react';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
+import CvThumbnail from '../components/cv/CvThumbnail';
+import { CV_MUESTRA } from '../components/cv/cvMuestra';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
@@ -41,24 +42,21 @@ function TemplateCard({
     actionLabel: string;
     onAction: (t: CVTemplate) => void;
 }) {
-    const [imgFailed, setImgFailed] = useState(false);
-
     return (
         <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-xl overflow-hidden flex min-w-0">
-            {/* Vista previa: contain para que no se recorte el diseño de la plantilla */}
+            {/* El diseño de la plantilla, dibujado con un currículum de ejemplo.
+                Antes acá iba `previewUrl`, que hoy es un marcador gris con el
+                nombre encima: todas las plantillas se veían iguales y no había
+                forma de saber cuál elegir. */}
             <div className="relative w-24 sm:w-28 shrink-0 bg-primary-tint dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                {template.previewUrl && !imgFailed ? (
-                    <img
-                        src={template.previewUrl}
-                        alt={`Vista previa de ${template.name}`}
-                        className="w-full h-full object-contain"
-                        onError={() => setImgFailed(true)}
-                    />
-                ) : (
-                    <FileText size={20} className="text-gray-400" />
-                )}
+                <CvThumbnail
+                    cv={CV_MUESTRA}
+                    layout={template.layout}
+                    title={`Vista previa de ${template.name}`}
+                    fallbackImageUrl={template.previewUrl}
+                />
                 <span className="absolute bottom-1.5 left-1.5 rounded-md bg-surface/90 dark:bg-gray-900/90 px-1.5 py-0.5 text-[10px] font-medium text-body dark:text-gray-300 shadow-sm">
-                    Vista previa
+                    Ejemplo
                 </span>
             </div>
 
@@ -244,7 +242,13 @@ export default function TemplatesPage() {
 
             <TemplateViewerDialog
                 key={`view-${viewing?.id ?? ''}`}
-                template={viewing && { id: viewing.id, name: viewing.name, description: viewing.description, imageUrl: viewing.previewUrl }}
+                template={viewing && {
+                    id: viewing.id,
+                    name: viewing.name,
+                    description: viewing.description,
+                    imageUrl: viewing.previewUrl,
+                    layout: viewing.layout,
+                }}
                 onClose={() => setViewing(null)}
                 onUse={() => { setCreatingWith(viewing); setViewing(null); }}
             />
