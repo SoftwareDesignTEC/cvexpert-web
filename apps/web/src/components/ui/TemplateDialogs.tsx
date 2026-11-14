@@ -3,6 +3,9 @@ import { Eye, FileText, Pencil } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
 import Toast from './Toast';
+import CvZoomView from '../cv/CvZoomView';
+import { CV_MUESTRA } from '../cv/cvMuestra';
+import { parseLayout } from '../../types/cvLayout';
 
 // Lo mínimo que necesitan estos diálogos, sirva para una plantilla o un currículum
 export interface PreviewItem {
@@ -10,6 +13,8 @@ export interface PreviewItem {
     name: string;
     description?: string;
     imageUrl?: string;
+    /** Diseño de la plantilla: con él se dibuja la hoja en vez de una imagen */
+    layout?: unknown;
 }
 
 // ── Vista previa de la plantilla ──────────────────────────────────────────────
@@ -55,7 +60,15 @@ export function TemplateViewerDialog({
                 </div>
 
                 <div className="rounded-xl bg-canvas dark:bg-gray-800 p-3 flex items-center justify-center min-h-[20rem]">
-                    {template?.imageUrl && !imgFailed ? (
+                    {/* Con diseño se dibuja la hoja de verdad, con datos de
+                        ejemplo y con zoom, que es lo que deja comparar una
+                        plantilla con otra. La imagen del servicio queda para
+                        las plantillas viejas que todavía no tienen diseño. */}
+                    {template && parseLayout(template.layout) ? (
+                        <div className="w-full">
+                            <CvZoomView cv={CV_MUESTRA} layout={template.layout} />
+                        </div>
+                    ) : template?.imageUrl && !imgFailed ? (
                         <img
                             src={template.imageUrl}
                             alt={`Vista previa de ${template.name}`}
