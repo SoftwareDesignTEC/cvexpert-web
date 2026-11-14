@@ -54,6 +54,19 @@ function readFieldErrors(raw: unknown): Record<string, string> | undefined {
     return Object.keys(out).length > 0 ? out : undefined;
 }
 
+// Mensajes genéricos que el gateway pone cuando no tiene nada mejor que decir.
+// Vienen en inglés y no explican nada, así que se descartan para que gane el
+// texto nuestro: mostrarle "Internal server error" al usuario es justamente lo
+// que la heurística de Nielsen sobre errores pide evitar.
+const GENERICOS = ['internal server error', 'bad gateway', 'gateway timeout', 'service unavailable'];
+
+function usableMessage(raw: unknown): string | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const limpio = raw.trim();
+    if (!limpio || GENERICOS.includes(limpio.toLowerCase())) return undefined;
+    return limpio;
+}
+
 // Motivo legible cuando la respuesta no trae un mensaje propio
 function defaultMessage(status: number) {
     if (status === 400) return 'el servidor rechazó la petición por datos inválidos';
@@ -64,6 +77,7 @@ function defaultMessage(status: number) {
     if (status === 413) return 'la información enviada es demasiado grande';
     if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
     if (status === 503) return 'el servicio no está disponible en este momento';
+    if (status === 504) return 'el servidor tardó demasiado en responder';
     if (status >= 500) return 'el servidor tuvo un problema interno';
     return 'el servidor respondió de forma inesperada';
 }
@@ -104,7 +118,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
             headers: {
                 // Sin cuerpo no se declara JSON: hay backends que rechazan un POST
                 // vacío con Content-Type application/json.
-                ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+                //
+                // Con FormData tampoco se declara, y es importante: el navegador
+                // arma el encabezado con el separador que marca dónde empieza y
+                // termina cada parte. Si lo escribimos a mano, ese separador se
+                // pierde y el servidor no puede leer el archivo.
+                ...(options.body !== undefined && !(options.body instanceof FormData)
+                    ? { 'Content-Type': 'application/json' }
+                    : {}),
                 ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
                 ...options.headers,
             },
@@ -128,7 +149,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         const body = await res.json().catch(() => ({}));
         throw new ApiError(
             res.status,
-            body.message ?? defaultMessage(res.status),
+            usableMessage(body.message) ?? defaultMessage(res.status),
             readFieldErrors(body.errors),
             typeof body.error === 'string' ? body.error : undefined,
         );
@@ -159,13 +180,17 @@ export function toPaginated<T>(res: unknown, pageSize: number, page = 1): Pagina
 
 // Serializa el cuerpo sólo si lo hay: `post('/x')` sale sin cuerpo ni Content-Type
 function withBody(method: string, body: unknown): RequestInit {
-    return body === undefined ? { method } : { method, body: JSON.stringify(body) };
+    if (body === undefined) return { method };
+    if (body instanceof FormData) return { method, body };
+    return { method, body: JSON.stringify(body) };
 }
 
 // Métodos HTTP exportados — los servicios los usan directamente
 export const http = {
     get:    <T>(path: string)                  => request<T>(path),
     post:   <T>(path: string, body?: unknown)  => request<T>(path, withBody('POST', body)),
+    /** Subida de archivos; el navegador pone el Content-Type con su separador */
+    upload: <T>(path: string, form: FormData)  => request<T>(path, { method: 'POST', body: form }),
     put:    <T>(path: string, body: unknown)   => request<T>(path, withBody('PUT', body)),
     patch:  <T>(path: string, body?: unknown)  => request<T>(path, withBody('PATCH', body)),
     delete: <T>(path: string)                  => request<T>(path, { method: 'DELETE' }),

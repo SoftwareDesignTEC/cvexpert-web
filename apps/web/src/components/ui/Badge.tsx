@@ -36,6 +36,7 @@ export default function Badge({ label, variant = 'gray', dot = false }: BadgePro
 
 // Badge específico para el estado de una postulación (Kanban)
 const applicationStatusConfig: Record<ApplicationStatus, { label: string; variant: BadgeVariant }> = {
+    'interested':  { label: 'Me interesa', variant: 'gray'    },
     'applied':     { label: 'Aplicado',    variant: 'info'    },
     'in-progress': { label: 'En proceso',  variant: 'warning' },
     'interview':   { label: 'Entrevista',  variant: 'success' },

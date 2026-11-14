@@ -88,6 +88,7 @@ export const jobService = {
 // mientras el dominio usa guion medio. Sin normalizar, esas postulaciones no caen en
 // ninguna columna del tablero y desaparecen de la vista.
 const STATUS_ALIASES: Record<string, ApplicationStatus> = {
+    interested: 'interested',
     applied: 'applied',
     'in-progress': 'in-progress',
     in_progress: 'in-progress',
@@ -118,8 +119,15 @@ export const applicationService = {
         });
     },
 
-    create: (data: Omit<JobApplication, 'id' | 'appliedAt' | 'updatedAt'>) =>
-        http.post<JobApplication>('/applications', data),
+    /**
+     * `initialStatus` dice en qué columna del tablero queda. El `status` del
+     * cuerpo lo ignora el servicio, así que es este campo el que manda.
+     */
+    create: (
+        data: Omit<JobApplication, 'id' | 'appliedAt' | 'updatedAt'>,
+        initialStatus?: ApplicationStatus,
+    ) =>
+        http.post<JobApplication>('/applications', { ...data, initialStatus }),
 
     updateStatus: (id: string, status: ApplicationStatus) =>
         http.put<JobApplication>(`/applications/${id}`, { status }),
