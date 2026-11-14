@@ -54,6 +54,19 @@ function readFieldErrors(raw: unknown): Record<string, string> | undefined {
     return Object.keys(out).length > 0 ? out : undefined;
 }
 
+// Mensajes genéricos que el gateway pone cuando no tiene nada mejor que decir.
+// Vienen en inglés y no explican nada, así que se descartan para que gane el
+// texto nuestro: mostrarle "Internal server error" al usuario es justamente lo
+// que la heurística de Nielsen sobre errores pide evitar.
+const GENERICOS = ['internal server error', 'bad gateway', 'gateway timeout', 'service unavailable'];
+
+function usableMessage(raw: unknown): string | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const limpio = raw.trim();
+    if (!limpio || GENERICOS.includes(limpio.toLowerCase())) return undefined;
+    return limpio;
+}
+
 // Motivo legible cuando la respuesta no trae un mensaje propio
 function defaultMessage(status: number) {
     if (status === 400) return 'el servidor rechazó la petición por datos inválidos';
@@ -64,6 +77,7 @@ function defaultMessage(status: number) {
     if (status === 413) return 'la información enviada es demasiado grande';
     if (status === 429) return 'se hicieron demasiadas peticiones seguidas';
     if (status === 503) return 'el servicio no está disponible en este momento';
+    if (status === 504) return 'el servidor tardó demasiado en responder';
     if (status >= 500) return 'el servidor tuvo un problema interno';
     return 'el servidor respondió de forma inesperada';
 }
@@ -135,7 +149,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         const body = await res.json().catch(() => ({}));
         throw new ApiError(
             res.status,
-            body.message ?? defaultMessage(res.status),
+            usableMessage(body.message) ?? defaultMessage(res.status),
             readFieldErrors(body.errors),
             typeof body.error === 'string' ? body.error : undefined,
         );
