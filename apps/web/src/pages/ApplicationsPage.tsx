@@ -13,13 +13,15 @@ import { ArrowLeftRight, Check, MapPin } from 'lucide-react';
 import { CompanyLogo } from '../components/ui/Avatar';
 import Modal from '../components/ui/Modal';
 import ApplicationDetailDialog from '../components/ui/ApplicationDetailDialog';
+import AddApplicationDialog from '../components/ui/AddApplicationDialog';
+import JobDetailDialog from '../components/ui/JobDetailDialog';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import { applicationService } from '../services/otherServices';
 import { describeError } from '../services/http';
-import type { ApplicationStatus, JobApplication } from '../types/models';
+import type { ApplicationStatus, JobApplication, JobOffer } from '../types/models';
 
 // Cuántas postulaciones se muestran por columna antes de "Ver Todo"
 const INITIAL_VISIBLE = 3;
@@ -248,7 +250,7 @@ function DraggableApplicationCard({
 
 // ── Columna del Kanban (droppable, solo desktop) ──────────────────────────────
 function KanbanColumn({
-                          status, label, tone, items, pendingId, onChangeStatus, onOpenDetail,
+                          status, label, tone, items, pendingId, onChangeStatus, onOpenDetail, onVerMas,
                       }: {
     status: ApplicationStatus;
     label: string;
@@ -257,15 +259,16 @@ function KanbanColumn({
     pendingId: string | null;
     onChangeStatus: (app: JobApplication) => void;
     onOpenDetail: (app: JobApplication) => void;
+    onVerMas: () => void;
 }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
-    const [expanded, setExpanded] = useState(false);
-    const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
+    const visible = items.slice(0, INITIAL_VISIBLE);
+    const resto = items.length - visible.length;
 
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 min-h-[160px] transition-colors
+            className={`flex flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 transition-colors
                 ${tone.column} ${isOver ? tone.over : ''}`}
         >
             {/* Cabecera con el color del estado, su punto y el contador */}
@@ -280,8 +283,8 @@ function KanbanColumn({
             </div>
 
             <div className="flex flex-col gap-2 p-2">
-                {visible.length === 0 ? (
-                    <p className="text-xs text-muted px-1 py-2">Sin postulaciones.</p>
+                {items.length === 0 ? (
+                    <p className="px-1 py-2 text-xs text-muted">Sin postulaciones.</p>
                 ) : (
                     visible.map(app => (
                         <DraggableApplicationCard
@@ -294,12 +297,14 @@ function KanbanColumn({
                     ))
                 )}
 
-                {items.length > INITIAL_VISIBLE && (
+                {/* Las que no entran se ven en una ventana aparte, en vez de
+                    estirar la columna y desalinear el tablero. */}
+                {resto > 0 && (
                     <button
-                        onClick={() => setExpanded(v => !v)}
+                        onClick={onVerMas}
                         className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
                     >
-                        {expanded ? 'Ver menos' : 'Ver Todo'}
+                        Ver {resto} más
                     </button>
                 )}
             </div>
@@ -360,6 +365,9 @@ export default function ApplicationsPage() {
     const [statusFor, setStatusFor] = useState<JobApplication | null>(null);
     const [draggingApp, setDraggingApp] = useState<JobApplication | null>(null);
     const [detailApp, setDetailApp] = useState<JobApplication | null>(null);
+    const [verMas, setVerMas] = useState<ApplicationStatus | null>(null);
+    const [agregando, setAgregando] = useState(false);
+    const [ofertaElegida, setOfertaElegida] = useState<JobOffer | null>(null);
     const [moveError, setMoveError] = useState<string | null>(null);
 
     // Mobile: pestañas en vez de columnas lado a lado
@@ -432,6 +440,9 @@ export default function ApplicationsPage() {
     if (error) return <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />;
 
     const activeColumnItems = applications.filter(a => a.status === activeTab);
+    // Se recalcula en cada cambio a propósito: si una se mueve de estado
+    // mientras la ventana está abierta, la lista tiene que reflejarlo.
+    const verMasItems = verMas ? applications.filter(a => a.status === verMas) : [];
     const visibleMobile = mobileExpanded ? activeColumnItems : activeColumnItems.slice(0, INITIAL_VISIBLE);
 
     return (
@@ -446,8 +457,7 @@ export default function ApplicationsPage() {
                             Postulaciones
                             <span className="font-bold text-ink dark:text-white">{total}</span>
                         </span>
-                        {/* Sin funcionalidad por ahora: no navega a ningún lado */}
-                        <Button size="sm" disabled>
+                        <Button size="sm" onClick={() => setAgregando(true)}>
                             + Agregar
                         </Button>
                     </div>
@@ -464,7 +474,11 @@ export default function ApplicationsPage() {
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => setDraggingApp(null)}
                 >
-                    <div className="grid grid-cols-4 gap-4">
+                    {/* Las cinco columnas en una fila, sin desplazamiento: el
+                        ancho se reparte en cinco partes iguales y siempre
+                        entran. Esta pantalla lo permite porque la barra lateral
+                        no le quita espacio, se superpone al abrirse. */}
+                    <div className="grid grid-cols-5 gap-3">
                         {columns.map(col => (
                             <KanbanColumn
                                 key={col.status}
@@ -475,6 +489,7 @@ export default function ApplicationsPage() {
                                 pendingId={pendingId}
                                 onChangeStatus={setStatusFor}
                                 onOpenDetail={setDetailApp}
+                                onVerMas={() => setVerMas(col.status)}
                             />
                         ))}
                     </div>
@@ -550,6 +565,48 @@ export default function ApplicationsPage() {
                 onClose={() => setStatusFor(null)}
                 onSelect={status => { if (statusFor) void changeStatus(statusFor.id, status); }}
             />
+
+            {/* Atajo para agregar sin salir del tablero. Al elegir una oferta se
+                cierra y se abre el detalle de siempre, que es donde se decide la
+                columna: así esa decisión vive en un solo lugar. */}
+            {agregando && (
+                <AddApplicationDialog
+                    onClose={() => setAgregando(false)}
+                    onPick={job => { setAgregando(false); setOfertaElegida(job); }}
+                    yaEnTablero={new Set(applications.map(a => a.jobOfferId))}
+                />
+            )}
+
+            <JobDetailDialog
+                job={ofertaElegida}
+                onClose={() => setOfertaElegida(null)}
+                onAdded={app => setApplications(prev => [app, ...prev])}
+            />
+
+            {/* Todas las de un estado, sin estirar su sección del tablero. Acá
+                no se arrastra: fuera del tablero no hay dónde soltar, así que
+                para mover una se usa el botón de cambiar de estado. */}
+            <Modal
+                open={verMas !== null}
+                size="xl"
+                title={verMas ? labelFor(verMas) : ''}
+                description={verMasItems.length === 1
+                    ? '1 postulación en este estado'
+                    : `${verMasItems.length} postulaciones en este estado`}
+                onClose={() => setVerMas(null)}
+            >
+                <div className="grid max-h-[65vh] grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2 overflow-y-auto">
+                    {verMasItems.map(app => (
+                        <ApplicationCardContent
+                            key={app.id}
+                            application={app}
+                            dimmed={pendingId === app.id}
+                            onChangeStatus={() => { setVerMas(null); setStatusFor(app); }}
+                            onOpenDetail={() => { setVerMas(null); setDetailApp(app); }}
+                        />
+                    ))}
+                </div>
+            </Modal>
         </div>
     );
 }

@@ -5,7 +5,7 @@ import Button from './Button';
 import { CompanyLogo } from './Avatar';
 import { applicationService } from '../../services/otherServices';
 import { describeError } from '../../services/http';
-import type { ApplicationStatus, JobOffer } from '../../types/models';
+import type { ApplicationStatus, JobApplication, JobOffer } from '../../types/models';
 
 // Las columnas donde tiene sentido guardar una oferta recién vista. Las otras
 // dos del tablero —entrevista y rechazado— describen algo que ya pasó, así que
@@ -67,12 +67,29 @@ function TagList({ title, values }: { title: string; values?: string[] }) {
     );
 }
 
-export default function JobDetailDialog({
-    job, onClose,
-}: {
+interface JobDetailDialogProps {
     job: JobOffer | null;
     onClose: () => void;
-}) {
+    /** Se avisa con la postulación ya creada para que quien lo abrió la agregue
+     *  a su lista sin volver a pedirle todo al servidor. */
+    onAdded?: (application: JobApplication) => void;
+}
+
+/**
+ * Todo lo que el diálogo recuerda —si ya se guardó, el error, el selector de
+ * columna— es de la oferta que se está mirando, no del diálogo. Sin esto, al
+ * abrir una segunda oferta seguía diciendo que ya estaba en el tablero, porque
+ * el estado sobrevivía al cambio de oferta.
+ *
+ * La `key` obliga a volver a montar el contenido cuando cambia la oferta, que
+ * es la forma de garantizar que empiece de cero sin tener que acordarse de
+ * reiniciar cada dato a mano cada vez que se agregue uno nuevo.
+ */
+export default function JobDetailDialog(props: JobDetailDialogProps) {
+    return <JobDetailDialogContent key={props.job?.id ?? 'sin-oferta'} {...props} />;
+}
+
+function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps) {
     const posted = formatDate(job?.postedAt);
     const [applying, setApplying] = useState(false);
     const [applied, setApplied] = useState(false);
@@ -97,7 +114,7 @@ export default function JobDetailDialog({
         setApplying(true);
         setError(null);
         try {
-            await applicationService.create({
+            const creada = await applicationService.create({
                 jobOfferId: job.id,
                 jobTitle: job.title,
                 company: job.company,
@@ -108,6 +125,7 @@ export default function JobDetailDialog({
             } as Parameters<typeof applicationService.create>[0], destino);
             setApplied(true);
             setEligiendo(false);
+            onAdded?.(creada);
 
             if (destino === 'applied' && job.applyUrl) {
                 const win = window.open(job.applyUrl, '_blank', 'noopener,noreferrer');

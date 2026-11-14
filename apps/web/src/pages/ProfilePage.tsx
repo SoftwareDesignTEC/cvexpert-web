@@ -125,7 +125,6 @@ export default function ProfilePage() {
     // habilidades no depende del perfil, así que puede mostrarse de todos modos.
     const availability = profile?.types?.map(t => availabilityLabel[t]) ?? [];
     const modalities   = profile?.modalities?.map(m => modalityLabel[m]) ?? [];
-    const sectors      = profile?.sectors ?? [];
     const joined       = (values: string[]) => (values.length > 0 ? values.join(', ') : EMPTY);
 
     return (
@@ -169,7 +168,6 @@ export default function ProfilePage() {
                             {profile?.location && <Chip value={profile.location} />}
                             {availability.map(v => <Chip key={v} value={v} />)}
                             {modalities.map(v => <Chip key={v} value={v} />)}
-                            {sectors.map(v => <Chip key={v} value={v} />)}
                         </div>
 
                         <div className="rounded-xl bg-canvas/70 dark:bg-gray-800/60 p-4">
@@ -237,7 +235,6 @@ export default function ProfilePage() {
                             onEdit={() => setDialog('preferences')}
                             actionLabel="Editar Preferencias"
                             items={[
-                                { label: 'Sector de interés', value: joined(sectors) },
                                 { label: 'Disponibilidad',    value: joined(availability) },
                                 { label: 'Modalidad',         value: joined(modalities) },
                             ]}

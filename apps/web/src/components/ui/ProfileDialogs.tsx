@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { ChipGroup, DialogActions, Field, TextArea } from './FormBits';
+import Button from './Button';
+import { useAuth } from '../../context/AuthContext';
+import { profileService } from '../../services/profileService';
+import { describeError } from '../../services/http';
 import type { UserProfile } from '../../types/models';
 
 // Como los de Configuración, estos formularios validan pero no envían nada todavía.
@@ -138,35 +142,61 @@ export function EditPreferencesDialog({
     onClose: () => void;
     profile: UserProfile | null;
 }) {
+    const { userId, reloadProfile } = useAuth();
     const [types, setTypes] = useState<Availability[]>([]);
     const [modalities, setModalities] = useState<Modality[]>([]);
-    const [sectors, setSectors] = useState('');
-    const [saved, setSaved] = useState(false);
+    const [intentado, setIntentado] = useState(false);
+    const [guardando, setGuardando] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useResetOnOpen(open, () => {
         setTypes(profile?.types ?? []);
         setModalities(profile?.modalities ?? []);
-        setSectors((profile?.sectors ?? []).join(', '));
-        setSaved(false);
+        setIntentado(false);
+        setGuardando(false);
+        setError(null);
     });
 
     const toggle = <T extends string>(list: T[], value: T) =>
         list.includes(value) ? list.filter(v => v !== value) : [...list, value];
 
     const errors = {
-        types: saved && types.length === 0 ? 'Elegí al menos una disponibilidad.' : undefined,
-        modalities: saved && modalities.length === 0 ? 'Elegí al menos una modalidad.' : undefined,
+        types: intentado && types.length === 0 ? 'Elegí al menos una disponibilidad.' : undefined,
+        modalities: intentado && modalities.length === 0 ? 'Elegí al menos una modalidad.' : undefined,
     };
     const valid = types.length > 0 && modalities.length > 0;
+
+    // A diferencia del resto de estos formularios, éste sí guarda: las
+    // preferencias deciden qué ofertas se muestran primero, así que si no
+    // viajaran al servidor no servirían para nada.
+    const guardar = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIntentado(true);
+        if (!valid || !userId) return;
+
+        setGuardando(true);
+        setError(null);
+        try {
+            await profileService.update(userId, { types, modalities });
+            // El perfil vive en el contexto, así que se vuelve a pedir para que
+            // las ofertas se reordenen con lo recién elegido.
+            reloadProfile();
+            onClose();
+        } catch (err) {
+            setError(describeError(err, 'guardar tus preferencias'));
+        } finally {
+            setGuardando(false);
+        }
+    };
 
     return (
         <Modal
             open={open}
             title="Editar Preferencias"
-            description="Qué tipo de oportunidades querés que te mostremos."
+            description="Con esto decidimos qué ofertas mostrarte primero."
             onClose={onClose}
         >
-            <form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); setSaved(true); }}>
+            <form className="flex flex-col gap-4" onSubmit={guardar}>
                 <div className="flex flex-col gap-1">
                     <ChipGroup
                         label="Disponibilidad"
@@ -187,13 +217,16 @@ export function EditPreferencesDialog({
                     {errors.modalities && <p className="text-xs text-rose-500">{errors.modalities}</p>}
                 </div>
 
-                <Field
-                    label="Sectores de interés" value={sectors} onChange={setSectors}
-                    placeholder="Tecnología, Software"
-                />
-                <p className="-mt-2 text-xs text-muted">Separá cada sector con una coma.</p>
+                {error && <p className="text-xs text-rose-500">{error}</p>}
 
-                <DialogActions onCancel={onClose} saved={saved && valid} />
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" size="sm" disabled={guardando}>
+                        {guardando ? 'Guardando…' : 'Guardar cambios'}
+                    </Button>
+                </div>
             </form>
         </Modal>
     );
