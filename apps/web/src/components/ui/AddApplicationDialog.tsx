@@ -8,6 +8,9 @@ import { CompanyLogo } from './Avatar';
 import { ErrorMessage, LoadingSpinner } from './Feedback';
 import { jobService } from '../../services/otherServices';
 import { describeError } from '../../services/http';
+import { afinidad, leerPreferencias, ordenarPorPreferencias } from '../../services/jobRanking';
+import type { JobPreferences } from '../../services/jobRanking';
+import { useAuth } from '../../context/AuthContext';
 import type { JobOffer } from '../../types/models';
 
 // Cuántas se muestran a la vez. Son pocas a propósito: esto es un atajo para
@@ -26,25 +29,28 @@ const modalityLabel: Record<JobOffer['modality'], string> = {
 };
 
 /**
- * Ordena las ofertas por compatibilidad cuando el servicio la manda.
+ * Ordena las ofertas igual que la pantalla de Ofertas Laborales: primero las
+ * que cumplen las preferencias, y dentro de cada grupo las de mayor
+ * compatibilidad.
  *
- * Las que traen puntaje van primero, de mayor a menor. Las que no lo traen van
- * después y en orden aleatorio: sin un criterio para ordenarlas, mostrar
- * siempre las mismas primeras sería arbitrario y además haría que el botón de
- * mostrar otras no sirviera de nada.
+ * Las que no traen puntaje ni cumplen preferencias quedan al final y se
+ * mezclan: sin ningún criterio para ordenarlas, mostrar siempre las mismas
+ * sería arbitrario y además haría que "Mostrar otras" no sirviera de nada.
  */
-function ordenar(ofertas: JobOffer[]): JobOffer[] {
-    const con = ofertas.filter(o => typeof o.matchScore === 'number');
-    const sin = ofertas.filter(o => typeof o.matchScore !== 'number');
+function ordenar(ofertas: JobOffer[], prefs: JobPreferences): JobOffer[] {
+    const relevantes = ofertas.filter(
+        o => typeof o.matchScore === 'number' || afinidad(o, prefs) > 0,
+    );
+    const resto = ofertas.filter(
+        o => typeof o.matchScore !== 'number' && afinidad(o, prefs) === 0,
+    );
 
-    con.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
-
-    for (let i = sin.length - 1; i > 0; i--) {
+    for (let i = resto.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [sin[i], sin[j]] = [sin[j], sin[i]];
+        [resto[i], resto[j]] = [resto[j], resto[i]];
     }
 
-    return [...con, ...sin];
+    return [...ordenarPorPreferencias(relevantes, prefs), ...resto];
 }
 
 /**
@@ -62,6 +68,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
     yaEnTablero: Set<string>;
 }) {
     const navigate = useNavigate();
+    const { profile } = useAuth();
     const [ofertas, setOfertas] = useState<JobOffer[]>([]);
     const [desde, setDesde] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -78,7 +85,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
         jobService.getAll({ page: 1, pageSize: A_PEDIR, search: '' })
             .then(res => {
                 if (!vivo) return;
-                setOfertas(ordenar(res.items ?? []));
+                setOfertas(ordenar(res.items ?? [], leerPreferencias(profile)));
                 setDesde(0);
                 setError(null);
             })
@@ -87,7 +94,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
 
         // Si se cierra mientras la petición viaja, no se toca más el estado
         return () => { vivo = false; };
-    }, [ronda]);
+    }, [ronda, profile]);
 
     const recargar = () => { setLoading(true); setRonda(n => n + 1); };
 

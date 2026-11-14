@@ -26,11 +26,6 @@ import type { ApplicationStatus, JobApplication, JobOffer } from '../types/model
 // Cuántas postulaciones se muestran por columna antes de "Ver Todo"
 const INITIAL_VISIBLE = 3;
 
-// Cuántas se muestran en la fila de cada estado antes de "Ver más". Cuatro
-// llenan una fila de la rejilla en una pantalla normal y dejan libre el hueco
-// del botón, así que la sección no cambia de alto según lo que haya.
-const EN_FILA = 4;
-
 // applicationService.getAll no filtra por status, así que se descargan todas
 // las páginas y se reparten en las 4 columnas en el frontend.
 const FETCH_PAGE_SIZE = 50;
@@ -267,7 +262,7 @@ function KanbanColumn({
     onVerMas: () => void;
 }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
-    const visible = items.slice(0, EN_FILA);
+    const visible = items.slice(0, INITIAL_VISIBLE);
     const resto = items.length - visible.length;
 
     return (
@@ -287,35 +282,30 @@ function KanbanColumn({
                 </span>
             </div>
 
-            {/* Las tarjetas en rejilla: aprovechan el ancho de la sección y
-                se reacomodan solas según el espacio, sin número fijo. */}
-            <div className="p-2">
+            <div className="flex flex-col gap-2 p-2">
                 {items.length === 0 ? (
                     <p className="px-1 py-2 text-xs text-muted">Sin postulaciones.</p>
                 ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2">
-                        {visible.map(app => (
-                            <DraggableApplicationCard
-                                key={app.id}
-                                application={app}
-                                disabled={pendingId === app.id}
-                                onChangeStatus={() => onChangeStatus(app)}
-                                onOpenDetail={() => onOpenDetail(app)}
-                            />
-                        ))}
+                    visible.map(app => (
+                        <DraggableApplicationCard
+                            key={app.id}
+                            application={app}
+                            disabled={pendingId === app.id}
+                            onChangeStatus={() => onChangeStatus(app)}
+                            onOpenDetail={() => onOpenDetail(app)}
+                        />
+                    ))
+                )}
 
-                        {/* Ocupa una celda más de la rejilla, junto a la última
-                            tarjeta, en vez de una franja aparte. */}
-                        {resto > 0 && (
-                            <button
-                                onClick={onVerMas}
-                                className={`flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
-                            >
-                                <span className="text-base font-bold">+{resto}</span>
-                                Ver más
-                            </button>
-                        )}
-                    </div>
+                {/* Las que no entran se ven en una ventana aparte, en vez de
+                    estirar la columna y desalinear el tablero. */}
+                {resto > 0 && (
+                    <button
+                        onClick={onVerMas}
+                        className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
+                    >
+                        Ver {resto} más
+                    </button>
                 )}
             </div>
         </div>
@@ -484,12 +474,11 @@ export default function ApplicationsPage() {
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => setDraggingApp(null)}
                 >
-                    {/* Los estados van uno debajo de otro, a lo ancho. Con las
-                        cinco columnas lado a lado no entraban sin encogerse, y
-                        el tablero terminaba desplazándose de lado o partiéndose
-                        en dos filas desalineadas. Apilados, cada estado usa todo
-                        el ancho y no hay desplazamiento horizontal nunca. */}
-                    <div className="flex flex-col gap-4">
+                    {/* Las cinco columnas en una fila, sin desplazamiento: el
+                        ancho se reparte en cinco partes iguales y siempre
+                        entran. Esta pantalla lo permite porque la barra lateral
+                        no le quita espacio, se superpone al abrirse. */}
+                    <div className="grid grid-cols-5 gap-3">
                         {columns.map(col => (
                             <KanbanColumn
                                 key={col.status}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Filter, MapPin, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -11,6 +12,8 @@ import JobDetailDialog from '../components/ui/JobDetailDialog';
 import Pagination from '../components/ui/Pagination';
 import { jobService } from '../services/otherServices';
 import { describeError } from '../services/http';
+import { hayPreferencias, leerPreferencias, ordenarPorPreferencias } from '../services/jobRanking';
+import { useAuth } from '../context/AuthContext';
 import type { JobOffer } from '../types/models';
 
 // El APIM todavía no filtra, así que se descarga el catálogo completo una vez y
@@ -156,6 +159,8 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function JobsPage() {
+    const { profile } = useAuth();
+    const navigate = useNavigate();
 
     const [items, setItems] = useState<JobOffer[]>([]);
     const [page, setPage] = useState(1);
@@ -215,6 +220,9 @@ export default function JobsPage() {
     const toggle = <T,>(list: T[], value: T) =>
         list.includes(value) ? list.filter(v => v !== value) : [...list, value];
 
+    const prefs = useMemo(() => leerPreferencias(profile), [profile]);
+    const ordenadoPorPrefs = quickFilter === 'recommended' && hayPreferencias(prefs);
+
     const activeFilters = modalities.length + (minMatch > 0 ? 1 : 0);
 
     const clearFilters = () => { setModalities([]); setMinMatch(0); };
@@ -234,10 +242,13 @@ export default function JobsPage() {
             case 'recent':
                 return list.filter(j => new Date(j.postedAt).getTime() >= recentCutoff);
             default:
-                // "Recomendadas": todas, de mayor a menor compatibilidad
-                return [...list].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+                // "Recomendadas": primero las que coinciden con lo que el
+                // usuario dijo que busca, y dentro de cada grupo las de mayor
+                // compatibilidad. Sin preferencias elegidas queda el orden por
+                // compatibilidad de siempre.
+                return ordenarPorPreferencias(list, prefs);
         }
-    }, [items, quickFilter, recentCutoff, modalities, minMatch]);
+    }, [items, quickFilter, recentCutoff, modalities, minMatch, prefs]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
     // Si los filtros reducen la lista, la página actual puede quedar fuera de rango
@@ -305,6 +316,24 @@ export default function JobsPage() {
                     </button>
                 ))}
             </div>
+
+            {/* Se dice por qué están en ese orden. Sin esto, "Recomendadas" no
+                explica nada y el usuario no tiene motivo para ir a elegir sus
+                preferencias, que es lo que mejora la lista. */}
+            {quickFilter === 'recommended' && !loading && !error && filtered.length > 0 && (
+                <p className="-mt-1 text-xs text-muted">
+                    {ordenadoPorPrefs
+                        ? 'Ordenadas de acuerdo a tus preferencias.'
+                        : 'Elegí tus preferencias para que ordenemos las ofertas según lo que buscás.'}{' '}
+                    <button
+                        type="button"
+                        onClick={() => navigate('/profile')}
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                        {ordenadoPorPrefs ? 'Cambiar preferencias' : 'Elegir preferencias'}
+                    </button>
+                </p>
+            )}
 
             {/* ── Contenido ───────────────────────────────────────────────────── */}
             {loading ? (
