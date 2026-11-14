@@ -55,9 +55,11 @@ function ordenar(ofertas: JobOffer[]): JobOffer[] {
  * donde se decide en qué columna queda: duplicar esa decisión acá habría
  * significado dos lugares distintos para lo mismo.
  */
-export default function AddApplicationDialog({ onClose, onPick }: {
+export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
     onClose: () => void;
     onPick: (job: JobOffer) => void;
+    /** Ofertas que ya están en el tablero, en cualquier columna. */
+    yaEnTablero: Set<string>;
 }) {
     const navigate = useNavigate();
     const [ofertas, setOfertas] = useState<JobOffer[]>([]);
@@ -89,19 +91,25 @@ export default function AddApplicationDialog({ onClose, onPick }: {
 
     const recargar = () => { setLoading(true); setRonda(n => n + 1); };
 
+    // Las que ya están en el tablero no se ofrecen: agregar dos veces la misma
+    // dejaría dos tarjetas de la misma oferta y no hay nada que eso signifique.
+    // Se filtra al dibujar y no al traer, así una que se acaba de agregar
+    // desaparece de la lista sin tener que volver a pedir nada.
+    const disponibles = ofertas.filter(o => !yaEnTablero.has(o.id));
+
     // Avanza dentro de lo ya traído y vuelve al principio al llegar al final.
     // Sólo se vuelve a pedir al servidor si no alcanzan para rotar.
     const otras = () => {
-        if (ofertas.length <= VISIBLES) return recargar();
-        setDesde(d => (d + VISIBLES) % ofertas.length);
+        if (disponibles.length <= VISIBLES) return recargar();
+        setDesde(d => (d + VISIBLES) % disponibles.length);
     };
 
     // Al llegar al final se completa con las del principio, para que siempre se
     // vean VISIBLES y no una fila suelta.
-    const visibles = ofertas.length === 0
+    const visibles = disponibles.length === 0
         ? []
-        : Array.from({ length: Math.min(VISIBLES, ofertas.length) },
-            (_, i) => ofertas[(desde + i) % ofertas.length]);
+        : Array.from({ length: Math.min(VISIBLES, disponibles.length) },
+            (_, i) => disponibles[(desde + i) % disponibles.length]);
 
     return (
         <Modal
@@ -118,9 +126,13 @@ export default function AddApplicationDialog({ onClose, onPick }: {
                     <div className="py-10">
                         <LoadingSpinner />
                     </div>
-                ) : !error && ofertas.length === 0 ? (
+                ) : !error && disponibles.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted">
-                        No hay ofertas disponibles en este momento.
+                        {/* Se distinguen los dos casos: no es lo mismo que no
+                            haya ofertas a que ya estén todas en el tablero. */}
+                        {ofertas.length === 0
+                            ? 'No hay ofertas disponibles en este momento.'
+                            : 'Ya tenés en el tablero todas las ofertas que encontramos.'}
                     </p>
                 ) : (
                     <div className="flex flex-col gap-2">
@@ -163,7 +175,7 @@ export default function AddApplicationDialog({ onClose, onPick }: {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={loading || ofertas.length === 0}
+                        disabled={loading || disponibles.length === 0}
                         onClick={otras}
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />

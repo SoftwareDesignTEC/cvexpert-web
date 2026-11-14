@@ -584,6 +584,7 @@ export default function ApplicationsPage() {
                 <AddApplicationDialog
                     onClose={() => setAgregando(false)}
                     onPick={job => { setAgregando(false); setOfertaElegida(job); }}
+                    yaEnTablero={new Set(applications.map(a => a.jobOfferId))}
                 />
             )}
 
