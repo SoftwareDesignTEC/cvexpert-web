@@ -42,8 +42,12 @@ function TemplateCard({
     actionLabel: string;
     onAction: (t: CVTemplate) => void;
 }) {
+    // El alto de la tarjeta va fijo. La vista previa se dibuja con `h-full`, y
+    // sin un alto definido acá eso no tiene contra qué resolverse: la hoja
+    // entera estira la tarjeta a lo largo de toda la página. De paso, todas las
+    // tarjetas quedan del mismo tamaño.
     return (
-        <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-xl overflow-hidden flex min-w-0">
+        <div className="flex h-40 min-w-0 overflow-hidden rounded-xl border border-line bg-surface dark:border-gray-800 dark:bg-gray-900">
             {/* El diseño de la plantilla, dibujado con un currículum de ejemplo.
                 Antes acá iba `previewUrl`, que hoy es un marcador gris con el
                 nombre encima: todas las plantillas se veían iguales y no había
