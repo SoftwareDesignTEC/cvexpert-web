@@ -24,6 +24,11 @@ import type { ApplicationStatus, JobApplication } from '../types/models';
 // Cuántas postulaciones se muestran por columna antes de "Ver Todo"
 const INITIAL_VISIBLE = 3;
 
+// Cuántas se muestran en la fila de cada estado antes de "Ver más". Cuatro
+// llenan una fila de la rejilla en una pantalla normal y dejan libre el hueco
+// del botón, así que la sección no cambia de alto según lo que haya.
+const EN_FILA = 4;
+
 // applicationService.getAll no filtra por status, así que se descargan todas
 // las páginas y se reparten en las 4 columnas en el frontend.
 const FETCH_PAGE_SIZE = 50;
@@ -248,7 +253,7 @@ function DraggableApplicationCard({
 
 // ── Columna del Kanban (droppable, solo desktop) ──────────────────────────────
 function KanbanColumn({
-                          status, label, tone, items, pendingId, onChangeStatus, onOpenDetail,
+                          status, label, tone, items, pendingId, onChangeStatus, onOpenDetail, onVerMas,
                       }: {
     status: ApplicationStatus;
     label: string;
@@ -257,18 +262,16 @@ function KanbanColumn({
     pendingId: string | null;
     onChangeStatus: (app: JobApplication) => void;
     onOpenDetail: (app: JobApplication) => void;
+    onVerMas: () => void;
 }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
-    const [expanded, setExpanded] = useState(false);
-    const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
+    const visible = items.slice(0, EN_FILA);
+    const resto = items.length - visible.length;
 
-    // `flex-1` reparte el ancho sobrante entre las columnas, y el ancho mínimo
-    // evita que se aplasten hasta no poder leer una tarjeta: llegado ese punto
-    // es mejor que la fila se desplace de lado.
     return (
         <div
             ref={setNodeRef}
-            className={`flex min-w-[190px] flex-1 flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 min-h-[160px] transition-colors
+            className={`flex flex-col rounded-xl overflow-hidden bg-surface dark:bg-gray-900 transition-colors
                 ${tone.column} ${isOver ? tone.over : ''}`}
         >
             {/* Cabecera con el color del estado, su punto y el contador */}
@@ -282,28 +285,35 @@ function KanbanColumn({
                 </span>
             </div>
 
-            <div className="flex flex-col gap-2 p-2">
-                {visible.length === 0 ? (
-                    <p className="text-xs text-muted px-1 py-2">Sin postulaciones.</p>
+            {/* Las tarjetas en rejilla: aprovechan el ancho de la sección y
+                se reacomodan solas según el espacio, sin número fijo. */}
+            <div className="p-2">
+                {items.length === 0 ? (
+                    <p className="px-1 py-2 text-xs text-muted">Sin postulaciones.</p>
                 ) : (
-                    visible.map(app => (
-                        <DraggableApplicationCard
-                            key={app.id}
-                            application={app}
-                            disabled={pendingId === app.id}
-                            onChangeStatus={() => onChangeStatus(app)}
-                            onOpenDetail={() => onOpenDetail(app)}
-                        />
-                    ))
-                )}
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2">
+                        {visible.map(app => (
+                            <DraggableApplicationCard
+                                key={app.id}
+                                application={app}
+                                disabled={pendingId === app.id}
+                                onChangeStatus={() => onChangeStatus(app)}
+                                onOpenDetail={() => onOpenDetail(app)}
+                            />
+                        ))}
 
-                {items.length > INITIAL_VISIBLE && (
-                    <button
-                        onClick={() => setExpanded(v => !v)}
-                        className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
-                    >
-                        {expanded ? 'Ver menos' : 'Ver Todo'}
-                    </button>
+                        {/* Ocupa una celda más de la rejilla, junto a la última
+                            tarjeta, en vez de una franja aparte. */}
+                        {resto > 0 && (
+                            <button
+                                onClick={onVerMas}
+                                className={`flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
+                            >
+                                <span className="text-base font-bold">+{resto}</span>
+                                Ver más
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
@@ -363,6 +373,7 @@ export default function ApplicationsPage() {
     const [statusFor, setStatusFor] = useState<JobApplication | null>(null);
     const [draggingApp, setDraggingApp] = useState<JobApplication | null>(null);
     const [detailApp, setDetailApp] = useState<JobApplication | null>(null);
+    const [verMas, setVerMas] = useState<ApplicationStatus | null>(null);
     const [moveError, setMoveError] = useState<string | null>(null);
 
     // Mobile: pestañas en vez de columnas lado a lado
@@ -435,6 +446,9 @@ export default function ApplicationsPage() {
     if (error) return <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />;
 
     const activeColumnItems = applications.filter(a => a.status === activeTab);
+    // Se recalcula en cada cambio a propósito: si una se mueve de estado
+    // mientras la ventana está abierta, la lista tiene que reflejarlo.
+    const verMasItems = verMas ? applications.filter(a => a.status === verMas) : [];
     const visibleMobile = mobileExpanded ? activeColumnItems : activeColumnItems.slice(0, INITIAL_VISIBLE);
 
     return (
@@ -467,13 +481,12 @@ export default function ApplicationsPage() {
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => setDraggingApp(null)}
                 >
-                    {/* Una sola fila, como cualquier tablero Kanban. Con una
-                        rejilla de ancho fijo la quinta columna caía sola a otra
-                        fila y el tablero se veía partido; además cada fila
-                        tomaba una altura distinta. Acá las columnas se reparten
-                        el ancho disponible y, si no caben, la fila se desplaza
-                        de lado en vez de romperse. */}
-                    <div className="flex items-stretch gap-4 overflow-x-auto pb-2">
+                    {/* Los estados van uno debajo de otro, a lo ancho. Con las
+                        cinco columnas lado a lado no entraban sin encogerse, y
+                        el tablero terminaba desplazándose de lado o partiéndose
+                        en dos filas desalineadas. Apilados, cada estado usa todo
+                        el ancho y no hay desplazamiento horizontal nunca. */}
+                    <div className="flex flex-col gap-4">
                         {columns.map(col => (
                             <KanbanColumn
                                 key={col.status}
@@ -484,6 +497,7 @@ export default function ApplicationsPage() {
                                 pendingId={pendingId}
                                 onChangeStatus={setStatusFor}
                                 onOpenDetail={setDetailApp}
+                                onVerMas={() => setVerMas(col.status)}
                             />
                         ))}
                     </div>
@@ -559,6 +573,31 @@ export default function ApplicationsPage() {
                 onClose={() => setStatusFor(null)}
                 onSelect={status => { if (statusFor) void changeStatus(statusFor.id, status); }}
             />
+
+            {/* Todas las de un estado, sin estirar su sección del tablero. Acá
+                no se arrastra: fuera del tablero no hay dónde soltar, así que
+                para mover una se usa el botón de cambiar de estado. */}
+            <Modal
+                open={verMas !== null}
+                size="xl"
+                title={verMas ? labelFor(verMas) : ''}
+                description={verMasItems.length === 1
+                    ? '1 postulación en este estado'
+                    : `${verMasItems.length} postulaciones en este estado`}
+                onClose={() => setVerMas(null)}
+            >
+                <div className="grid max-h-[65vh] grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2 overflow-y-auto">
+                    {verMasItems.map(app => (
+                        <ApplicationCardContent
+                            key={app.id}
+                            application={app}
+                            dimmed={pendingId === app.id}
+                            onChangeStatus={() => { setVerMas(null); setStatusFor(app); }}
+                            onOpenDetail={() => { setVerMas(null); setDetailApp(app); }}
+                        />
+                    ))}
+                </div>
+            </Modal>
         </div>
     );
 }
