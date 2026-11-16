@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocale } from '../../i18n/LocaleContext';
 
 interface PaginationProps {
     page: number;          // página actual, empezando en 1
@@ -25,6 +26,7 @@ function pagesToShow(page: number, totalPages: number): (number | 'gap')[] {
 }
 
 export default function Pagination({ page, totalPages, onChange }: PaginationProps) {
+    const { t } = useLocale();
     // Con una sola página no hay nada que elegir
     if (totalPages <= 1) return null;
 
@@ -33,11 +35,11 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
     const arrowClass = 'inline-flex items-center justify-center w-9 h-9 rounded-lg border border-line dark:border-gray-800 text-body dark:text-gray-300 transition-colors enabled:hover:border-primary enabled:hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed';
 
     return (
-        <nav className="flex items-center justify-center gap-1.5" aria-label="Paginación">
+        <nav className="flex items-center justify-center gap-1.5" aria-label={t.dialogs.pagination}>
             <button
                 onClick={() => go(page - 1)}
                 disabled={page === 1}
-                aria-label="Página anterior"
+                aria-label={t.dialogs.prevPage}
                 className={arrowClass}
             >
                 <ChevronLeft size={16} />
@@ -65,7 +67,7 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
             <button
                 onClick={() => go(page + 1)}
                 disabled={page === totalPages}
-                aria-label="Página siguiente"
+                aria-label={t.dialogs.nextPage}
                 className={arrowClass}
             >
                 <ChevronRight size={16} />

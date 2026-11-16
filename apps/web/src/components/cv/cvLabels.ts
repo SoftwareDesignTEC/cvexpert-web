@@ -85,12 +85,41 @@ export function toDate(value: unknown): Date | null {
     return null;
 }
 
-/** "mar 2024" — la granularidad que usa un currículum */
+/**
+ * Hay dos clases de fecha en el sistema y se muestran distinto.
+ *
+ * Un INSTANTE es un momento que ocurrió: cuándo se editó un currículum, cuándo
+ * llegó una notificación. Se muestra en la zona horaria del dispositivo, para
+ * que diga la hora que el usuario vivió.
+ *
+ * Una FECHA DE CALENDARIO es un día del almanaque: el nacimiento, el inicio de
+ * un puesto, la emisión de un certificado. No tiene hora ni lugar. El editor
+ * las guarda como la medianoche UTC de ese día, así que hay que mostrarlas en
+ * UTC: aplicarles la zona del dispositivo las corre.
+ *
+ * No es teórico. En Costa Rica, que va seis horas detrás de UTC, un "1 de marzo
+ * de 2024" guardado a medianoche UTC cae a las 18:00 del 29 de febrero en hora
+ * local. El usuario elegía marzo de 2024 y el currículum le decía feb 2024.
+ */
+const DIA_DEL_ALMANAQUE = { timeZone: 'UTC' } as const;
+
+/** "mar 2024" — la granularidad que usa un currículum. Fecha de calendario. */
 export function formatMonthYear(value: unknown, locale: Locale = 'es'): string | null {
     const d = toDate(value);
-    return d && d.toLocaleDateString(DATE_LOCALE[locale], { month: 'short', year: 'numeric' });
+    return d && d.toLocaleDateString(DATE_LOCALE[locale], {
+        month: 'short', year: 'numeric', ...DIA_DEL_ALMANAQUE,
+    });
 }
 
+/** "01 mar 2024" para una fecha de calendario: nacimiento, emisión, vencimiento. */
+export function formatCalendarDate(value: unknown, locale: Locale = 'es'): string | null {
+    const d = toDate(value);
+    return d && d.toLocaleDateString(DATE_LOCALE[locale], {
+        day: '2-digit', month: 'short', year: 'numeric', ...DIA_DEL_ALMANAQUE,
+    });
+}
+
+/** "01 mar 2024" para un instante, en la zona horaria del dispositivo. */
 export function formatLongDate(value: unknown, locale: Locale = 'es'): string | null {
     const d = toDate(value);
     return d && d.toLocaleDateString(DATE_LOCALE[locale], { day: '2-digit', month: 'short', year: 'numeric' });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { useLocale } from '../../i18n/LocaleContext';
 import { Field } from './ListEditor';
 import DictatableTextArea from './DictatableTextArea';
 import { aiService } from '../../services/aiService';
@@ -23,6 +24,7 @@ export default function AiCvDialog({
     onCreated: (cv: CV) => void;
 }) {
     const [fullName, setFullName] = useState(defaultFullName ?? '');
+    const { t } = useLocale();
     const [phone, setPhone] = useState('');
     const [freeText, setFreeText] = useState('');
     const [working, setWorking] = useState(false);
@@ -54,19 +56,19 @@ export default function AiCvDialog({
         <Modal
             open={open}
             size="lg"
-            title="Crear con IA"
-            description="Contanos tu historia y armamos el currículum por vos."
+            title={t.cvDialogs.aiTitle}
+            description={t.cvDialogs.aiDesc}
             onClose={onClose}
         >
             <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Field
-                        spec={{ key: 'fullName', label: 'Nombre completo', kind: 'text', required: true }}
+                        spec={{ key: 'fullName', label: t.cvDialogs.aiFullName, kind: 'text', required: true }}
                         value={fullName}
                         onChange={v => setFullName(String(v))}
                     />
                     <Field
-                        spec={{ key: 'phone', label: 'Teléfono', kind: 'text' }}
+                        spec={{ key: 'phone', label: t.cvDialogs.aiPhone, kind: 'text' }}
                         value={phone}
                         onChange={v => setPhone(String(v))}
                     />
@@ -105,8 +107,8 @@ export default function AiCvDialog({
                     {!canGenerate && !working && (
                         <p className="text-xs text-muted sm:mr-auto">
                             {fullName.trim() === ''
-                                ? 'Falta completar el nombre.'
-                                : 'Contanos un poco más para poder armarlo.'}
+                                ? t.cvDialogs.aiMissingName
+                                : t.cvDialogs.aiTellMore}
                         </p>
                     )}
                     <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={working}>
@@ -114,7 +116,7 @@ export default function AiCvDialog({
                     </Button>
                     <Button type="button" size="sm" onClick={generate} disabled={!canGenerate}>
                         <Sparkles size={14} />
-                        {working ? 'Generando…' : 'Generar currículum'}
+                        {working ? t.cvDialogs.aiGenerating : t.cvDialogs.aiGenerate}
                     </Button>
                 </div>
             </div>

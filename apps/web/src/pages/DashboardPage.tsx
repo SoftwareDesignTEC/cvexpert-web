@@ -18,6 +18,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
 import { cvService, porUltimaEdicion } from '../services/cvService';
+import { useLocale } from '../i18n/LocaleContext';
 import { jobService } from '../services/otherServices';
 import {
     SKILL_SCALE_MAX,
@@ -27,11 +28,7 @@ import {
 } from '../services/skillsGapService';
 import type { SkillGapApiItem } from '../services/skillsGapService';
 
-const modalityLabel: Record<JobOffer['modality'], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
+
 
 /** Los últimos que se editaron, de más reciente a más viejo. */
 function masRecientes(cvs: CV[], cuantos: number): CV[] {
@@ -40,20 +37,24 @@ function masRecientes(cvs: CV[], cuantos: number): CV[] {
 
 export default function DashboardPage() {
     const { profile } = useAuth();
+    const { locale, t } = useLocale();
     const navigate = useNavigate();
 
     const [cvs, setCvs]         = useState<CV[]>([]);
     const [jobs, setJobs]       = useState<JobOffer[]>([]);
     const [loadingCvs, setLoadingCvs]   = useState(true);
     const [loadingJobs, setLoadingJobs] = useState(true);
-    const [errorCvs, setErrorCvs]       = useState<string | null>(null);
-    const [errorJobs, setErrorJobs]     = useState<string | null>(null);
+    const [errorCvs, setErrorCvs]       = useState(false);
+    // Que falle una descarga no es lo mismo que no poder cargar la lista: con
+    // un solo estado, un PDF fallido borraba los currículums de la pantalla.
+    const [errorPdf, setErrorPdf]       = useState<string | null>(null);
+    const [errorJobs, setErrorJobs]     = useState(false);
     const [detailJob, setDetailJob]     = useState<JobOffer | null>(null);
     const [viewingCv, setViewingCv]     = useState<CV | null>(null);
     const [editingCv, setEditingCv]     = useState<CV | null>(null);
     const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
-    const [errorSkills, setErrorSkills]     = useState<string | null>(null);
+    const [errorSkills, setErrorSkills]     = useState(false);
     const [needsSkills, setNeedsSkills]     = useState(false);
     const { templates, loading: loadingTemplates } = useTemplates();
 
@@ -63,14 +64,14 @@ export default function DashboardPage() {
         // tres cualesquiera en vez de los tres últimos que se tocaron.
         cvService.getAll({ page: 1, pageSize: 20 })
             .then(res => setCvs(masRecientes(res.items ?? [], 3)))
-            .catch(() => setErrorCvs('No se pudieron cargar los currículums.'))
+            .catch(() => setErrorCvs(true))
             .finally(() => setLoadingCvs(false));
     }, []);
 
     useEffect(() => {
         jobService.getAll({ page: 1, pageSize: 3 })
             .then(res => setJobs(res.items ?? []))
-            .catch(() => setErrorJobs('No se pudieron cargar las ofertas.'))
+            .catch(() => setErrorJobs(true))
             .finally(() => setLoadingJobs(false));
     }, []);
 
@@ -81,7 +82,7 @@ export default function DashboardPage() {
                 // Un 409 significa que faltan las habilidades, no que algo falló:
                 // en vez de un error rojo se invita a cargarlas desde su pantalla.
                 if (isSkillsInputRequired(err)) setNeedsSkills(true);
-                else setErrorSkills('No se pudo cargar el análisis de brecha.');
+                else setErrorSkills(true);
             })
             .finally(() => setLoadingSkills(false));
     }, []);
@@ -93,10 +94,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
-                        Panel Principal
+                        {t.home.title}
                     </h1>
                     <p className="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">
-                        ¡Bienvenido! Aquí está tu resumen...
+                        {t.home.welcome}
                     </p>
                 </div>
             </div>
@@ -108,18 +109,21 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                     <Card className="h-full flex flex-col">
                         <CardHeader
-                            title="Currículums Recientes"
+                            title={t.dashboard.recentCvs}
                             action={
                                 <Button variant="secondary" size="sm" onClick={() => navigate('/cvs')}>
-                                    Ver todos
+                                    {t.dashboard.seeAllCvs}
                                 </Button>
                             }
                         />
                         <CardBody className="flex-1 min-h-0">
+                            {errorPdf && (
+                                <p className="mb-2 text-xs text-red-500">{errorPdf}</p>
+                            )}
                             {loadingCvs ? (
                                 <RecentCvsSkeleton />
                             ) : errorCvs ? (
-                                <p className="text-xs text-red-500 text-center py-4">{errorCvs}</p>
+                                <p className="text-xs text-red-500 text-center py-4">{t.dashboard.cvsError}</p>
                             ) : cvs.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-4">No tienes currículums aún.</p>
                             ) : (
@@ -138,8 +142,9 @@ export default function DashboardPage() {
                                                     cv as unknown as Record<string, unknown>,
                                                     layoutFor(templates, cv),
                                                     cv.title,
+                                                    locale,
                                                 );
-                                                if (problema) setErrorCvs(problema);
+                                                setErrorPdf(problema);
                                             }}
                                         />
                                     ))}
@@ -153,10 +158,10 @@ export default function DashboardPage() {
                 <div className="w-full lg:w-80 shrink-0">
                     <Card className="h-full flex flex-col">
                         <CardHeader
-                            title="Análisis de Brecha"
+                            title={t.dashboard.skillsGap}
                             action={
                                 <Button variant="secondary" size="sm" onClick={() => navigate('/skills-gap')}>
-                                    Ver análisis
+                                    {t.dashboard.seeAnalysis}
                                 </Button>
                             }
                         />
@@ -164,7 +169,7 @@ export default function DashboardPage() {
                             {loadingSkills ? (
                                 <SkillsGapSkeleton />
                             ) : errorSkills ? (
-                                <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
+                                <p className="text-xs text-red-500 text-center py-4">{t.dashboard.skillsError}</p>
                             ) : needsSkills ? (
                                 <div className="flex flex-col items-center gap-2 py-4 text-center">
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -201,7 +206,7 @@ export default function DashboardPage() {
                                             <div key={s.skillName} className="flex items-center justify-between gap-1 text-xs">
                                                 <span className="text-gray-700 dark:text-gray-300 truncate">{s.skillName}</span>
                                                 <span className="text-amber-500 font-medium shrink-0">
-                                                    -{s.deficitSteps} {s.deficitSteps === 1 ? 'nivel' : 'niveles'}
+                                                    -{s.deficitSteps} {s.deficitSteps === 1 ? t.dashboard.levelSingular : t.dashboard.levelPlural}
                                                 </span>
                                             </div>
                                         ))}
@@ -221,14 +226,14 @@ export default function DashboardPage() {
                         <FilePlus2 size={18} />
                     </span>
                     <div className="min-w-0">
-                        <p className="text-sm font-bold text-ink dark:text-white">Crear Nuevo Currículum</p>
-                        <p className="text-xs text-muted">Empieza desde cero o usa una plantilla</p>
+                        <p className="text-sm font-bold text-ink dark:text-white">{t.home.createCv}</p>
+                        <p className="text-xs text-muted">{t.home.createCvHint}</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
                     <Button size="sm" onClick={() => navigate('/cvs')} className="px-8 sm:px-10">
                         <Sparkles size={15} />
-                        IA
+                        {t.home.ai}
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => navigate('/templates')} className="px-8 sm:px-10">
                         Manual
@@ -239,10 +244,10 @@ export default function DashboardPage() {
             {/* ── Fila 2: Ofertas laborales ───────────────────────────────────── */}
             <Card>
                 <CardHeader
-                    title="Recomendación Ofertas Laborales"
+                    title={t.dashboard.recommendedJobs}
                     action={
                         <Button variant="secondary" size="sm" onClick={() => navigate('/jobs')}>
-                            Ver todas las ofertas
+                            {t.dashboard.seeAllJobs}
                         </Button>
                     }
                 />
@@ -250,7 +255,7 @@ export default function DashboardPage() {
                     {loadingJobs ? (
                         <RecommendedJobsSkeleton />
                     ) : errorJobs ? (
-                        <p className="text-xs text-red-500 text-center py-4">{errorJobs}</p>
+                        <p className="text-xs text-red-500 text-center py-4">{t.dashboard.jobsError}</p>
                     ) : (
                         <>
                             {/* Mobile: lista compacta */}
@@ -311,7 +316,7 @@ export default function DashboardPage() {
                                             )}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
-                                            <Badge label={modalityLabel[job.modality]} variant="info" />
+                                            <Badge label={t.modality[job.modality]} variant="info" />
                                             <div className="flex items-center gap-1 text-xs text-gray-400">
                                                 <MapPin size={12} />
                                                 <span>{job.location}</span>

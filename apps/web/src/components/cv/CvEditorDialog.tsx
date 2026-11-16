@@ -18,71 +18,68 @@ import { dropEmptyRows, humanizeFieldErrors, isRequired, missingInRows } from '.
 import { cvService, emptyCvInput, toCvInput } from '../../services/cvService';
 import type { CvInput } from '../../services/cvService';
 import type { CV, CVTemplate } from '../../types/models';
+import { LANGUAGE_LEVEL, SKILL_LEVEL, WORK_TYPE } from './cvLabels';
+import type { Locale } from './cvLabels';
+import { useLocale } from '../../i18n/LocaleContext';
+import type { Dict } from '../../i18n/dictionary';
 
-// Los enums viajan en inglés; las etiquetas son nuestras
-const SKILL_LEVELS = [
-    { value: 'beginner', label: 'Principiante' },
-    { value: 'intermediate', label: 'Intermedio' },
-    { value: 'advanced', label: 'Avanzado' },
-    { value: 'expert', label: 'Experto' },
-];
+// Los enums viajan en inglés y sus etiquetas salen de `cvLabels`, que es de
+// donde las toma el documento dibujado. Reusarlas, en vez de escribirlas otra
+// vez acá, evita que el formulario diga "Avanzado" y el currículum "Advanced".
+const opciones = (dicc: Record<string, string>, claves: readonly string[]) =>
+    claves.map(value => ({ value, label: dicc[value] ?? value }));
 
-const LANGUAGE_LEVELS = [
-    { value: 'basic', label: 'Básico' },
-    { value: 'intermediate', label: 'Intermedio' },
-    { value: 'advanced', label: 'Avanzado' },
-    { value: 'native', label: 'Nativo' },
-];
-
-const WORK_TYPES = [
-    { value: 'formal', label: 'Formal' },
-    { value: 'freelance', label: 'Independiente' },
-    { value: 'volunteer', label: 'Voluntariado' },
-    { value: 'school-project', label: 'Proyecto académico' },
-    { value: 'informal', label: 'Informal' },
-];
+const SKILL_LEVEL_KEYS = ['beginner', 'intermediate', 'advanced', 'expert'] as const;
+const LANGUAGE_LEVEL_KEYS = ['basic', 'intermediate', 'advanced', 'native'] as const;
+const WORK_TYPE_KEYS = ['formal', 'freelance', 'volunteer', 'school-project', 'informal'] as const;
 
 // `required` sale de REQUIRED_BY_SOURCE para que la marca visible y el bloqueo
 // del botón no se puedan desincronizar de lo que valida el servicio.
 const marcar = (source: string, fields: FieldSpec[]): FieldSpec[] =>
     fields.map(f => ({ ...f, required: isRequired(source, f.key) }));
 
-const WORK_FIELDS: FieldSpec[] = marcar('workExperiences', [
-    { key: 'position', label: 'Puesto', kind: 'text' },
+const workFields = (t: Dict, locale: Locale): FieldSpec[] => marcar('workExperiences', [
+    { key: 'position', label: t.editor.position, kind: 'text' },
     // Sólo obligatoria en un empleo formal
-    { key: 'company', label: 'Empresa', kind: 'text', requiredWhen: row => row.type === 'formal' },
-    { key: 'startDate', label: 'Inicio', kind: 'date' },
-    { key: 'endDate', label: 'Fin', kind: 'date' },
-    { key: 'type', label: 'Tipo', kind: 'select', options: WORK_TYPES },
-    { key: 'current', label: 'Sigo trabajando acá', kind: 'checkbox' },
+    { key: 'company', label: t.editor.company, kind: 'text', requiredWhen: row => row.type === 'formal' },
+    { key: 'startDate', label: t.editor.start, kind: 'date' },
+    { key: 'endDate', label: t.editor.end, kind: 'date' },
+    { key: 'type', label: t.editor.type, kind: 'select', options: opciones(WORK_TYPE[locale], WORK_TYPE_KEYS) },
+    { key: 'current', label: t.editor.stillWorking, kind: 'checkbox' },
     {
-        key: 'description', label: 'Descripción', kind: 'textarea', wide: true,
+        key: 'description', label: t.editor.description, kind: 'textarea', wide: true,
         // Se le pasa el puesto y la empresa para que la redacción tenga de dónde agarrarse
         generate: (actual, row) => aiService.generateText({
             field: 'experienceDescription',
             context: [row.position, row.company, row.type, actual]
                 .filter(Boolean).join(' · '),
-            language: 'es',
+            // En el idioma de la aplicación: si no, con la interfaz en inglés
+            // la IA escribiría el párrafo en español y el currículum saldría
+            // mezclado.
+            language: locale,
         }),
     },
 ]);
 
-const EDUCATION_FIELDS: FieldSpec[] = marcar('education', [
-    { key: 'degree', label: 'Título', kind: 'text' },
-    { key: 'institution', label: 'Institución', kind: 'text' },
-    { key: 'field', label: 'Área', kind: 'text' },
-    { key: 'startDate', label: 'Inicio', kind: 'date' },
-    { key: 'endDate', label: 'Fin', kind: 'date' },
-    { key: 'current', label: 'En curso', kind: 'checkbox' },
+const educationFields = (t: Dict): FieldSpec[] => marcar('education', [
+    { key: 'degree', label: t.editor.degree, kind: 'text' },
+    { key: 'institution', label: t.editor.institution, kind: 'text' },
+    { key: 'field', label: t.editor.field, kind: 'text' },
+    { key: 'startDate', label: t.editor.start, kind: 'date' },
+    { key: 'endDate', label: t.editor.end, kind: 'date' },
+    { key: 'current', label: t.editor.inProgress, kind: 'checkbox' },
 ]);
 
 // Separar técnicas de blandas es práctica estándar en un currículum: quien
 // recluta busca unas u otras según el puesto. El contrato deja `category` como
 // texto libre, así que acá se fija a estos dos valores para que la lista salga
 // agrupada y no con categorías escritas de veinte formas distintas.
-const SKILL_CATEGORIES = [
-    { value: 'Técnica', label: 'Técnica (dura)' },
-    { value: 'Blanda', label: 'Blanda' },
+// Los valores se guardan en español a propósito: son los que ya tienen los
+// currículums existentes, y cambiarlos partiría la agrupación de los que están
+// guardados. Lo que cambia con el idioma es lo que se lee, no lo que se guarda.
+const skillCategories = (t: Dict) => [
+    { value: 'Técnica', label: t.editor.technical },
+    { value: 'Blanda', label: t.editor.soft },
 ];
 
 // Los más frecuentes en la región; el campo igual acepta cualquier otro
@@ -91,40 +88,41 @@ const COMMON_LANGUAGES = [
     'Mandarín', 'Japonés', 'Coreano', 'Árabe', 'Ruso', 'Lengua de señas costarricense',
 ] as const;
 
-const SKILL_FIELDS: FieldSpec[] = marcar('skills', [
-    { key: 'name', label: 'Habilidad', kind: 'text' },
-    { key: 'category', label: 'Tipo', kind: 'select', options: SKILL_CATEGORIES },
-    { key: 'level', label: 'Nivel', kind: 'select', options: SKILL_LEVELS },
+const skillFields = (t: Dict, locale: Locale): FieldSpec[] => marcar('skills', [
+    { key: 'name', label: t.editor.skillName, kind: 'text' },
+    { key: 'category', label: t.editor.type, kind: 'select', options: skillCategories(t) },
+    { key: 'level', label: t.editor.level, kind: 'select', options: opciones(SKILL_LEVEL[locale], SKILL_LEVEL_KEYS) },
 ]);
 
-const languageFields = (usados: string[]): FieldSpec[] => marcar('languages', [
+const languageFields = (usados: string[], t: Dict, locale: Locale): FieldSpec[] => marcar('languages', [
     {
         key: 'name',
-        label: 'Idioma',
+        label: t.editor.language,
         kind: 'text',
         // Primero los que ya declaró, después la lista general
         suggestions: [...new Set([...usados, ...COMMON_LANGUAGES])],
     },
-    { key: 'level', label: 'Nivel', kind: 'select', options: LANGUAGE_LEVELS },
+    { key: 'level', label: t.editor.level, kind: 'select', options: opciones(LANGUAGE_LEVEL[locale], LANGUAGE_LEVEL_KEYS) },
 ]);
 
-const CERT_FIELDS: FieldSpec[] = marcar('certifications', [
-    { key: 'name', label: 'Certificación', kind: 'text' },
-    { key: 'issuer', label: 'Emisor', kind: 'text' },
-    { key: 'issuedAt', label: 'Emitida', kind: 'date' },
-    { key: 'expiresAt', label: 'Vence', kind: 'date' },
-    { key: 'credentialUrl', label: 'Enlace', kind: 'text', wide: true },
+const certFields = (t: Dict): FieldSpec[] => marcar('certifications', [
+    { key: 'name', label: t.editor.certName, kind: 'text' },
+    { key: 'issuer', label: t.editor.issuer, kind: 'text' },
+    { key: 'issuedAt', label: t.editor.issuedAt, kind: 'date' },
+    { key: 'expiresAt', label: t.editor.expiresAt, kind: 'date' },
+    { key: 'credentialUrl', label: t.editor.credentialUrl, kind: 'text', wide: true },
 ]);
 
 // email no está acá: el servicio lo exige, así que se dibuja junto a fullName
 const personalFields = (
     s: CvSuggestions,
     generarBio: (actual: string) => Promise<string>,
+    t: Dict,
 ): FieldSpec[] => [
-    { key: 'phone', label: 'Teléfono', kind: 'text', suggestions: s.phone },
-    { key: 'address', label: 'Dirección', kind: 'text', suggestions: s.address },
-    { key: 'birthDate', label: 'Fecha de nacimiento', kind: 'date' },
-    { key: 'bio', label: 'Perfil profesional', kind: 'textarea', wide: true, generate: generarBio },
+    { key: 'phone', label: t.editor.phone, kind: 'text', suggestions: s.phone },
+    { key: 'address', label: t.editor.address, kind: 'text', suggestions: s.address },
+    { key: 'birthDate', label: t.editor.birthDate, kind: 'date' },
+    { key: 'bio', label: t.editor.bio, kind: 'textarea', wide: true, generate: generarBio },
 ];
 
 export default function CvEditorDialog({
@@ -141,6 +139,7 @@ export default function CvEditorDialog({
     onClose: () => void;
     onSaved: (saved: CV) => void;
 }) {
+    const { locale, t } = useLocale();
     const [input, setInput] = useState<CvInput>(() =>
         cv
             ? toCvInput(cv)
@@ -259,8 +258,8 @@ export default function CvEditorDialog({
             // Un 400 con detalle por campo se explica en palabras y sin el código:
             // el número no le dice nada a quien tiene que corregir el formulario.
             if (err instanceof ApiError && err.errors) {
-                setProblems(humanizeFieldErrors(err.errors));
-                setError('Revisá lo siguiente antes de volver a guardar:');
+                setProblems(humanizeFieldErrors(err.errors, t.cvErrors));
+                setError(t.editor.fixBeforeSaving);
             } else {
                 setError(describeError(err, cv ? 'guardar los cambios' : 'crear el currículum'));
             }
@@ -282,11 +281,11 @@ export default function CvEditorDialog({
     // Una fila a medias también bloquea: antes pasaba el filtro de filas vacías
     // y la rechazaba el servicio. Es mejor no dejar intentarlo.
     const incompleteRows = [
-        ...missingInRows('workExperiences', dropEmptyRows(input.workExperiences ?? [])),
-        ...missingInRows('education', dropEmptyRows(input.education ?? [])),
-        ...missingInRows('skills', dropEmptyRows(input.skills ?? [])),
-        ...missingInRows('languages', dropEmptyRows(input.languages ?? [])),
-        ...missingInRows('certifications', dropEmptyRows(input.certifications ?? [])),
+        ...missingInRows('workExperiences', dropEmptyRows(input.workExperiences ?? []), t.cvErrors),
+        ...missingInRows('education', dropEmptyRows(input.education ?? []), t.cvErrors),
+        ...missingInRows('skills', dropEmptyRows(input.skills ?? []), t.cvErrors),
+        ...missingInRows('languages', dropEmptyRows(input.languages ?? []), t.cvErrors),
+        ...missingInRows('certifications', dropEmptyRows(input.certifications ?? []), t.cvErrors),
     ];
 
     const canSave = missing.length === 0 && incompleteRows.length === 0 && !saving;
@@ -306,35 +305,35 @@ export default function CvEditorDialog({
     const fases: Phase[] = [
         {
             id: 'personal',
-            label: 'Datos personales',
+            label: t.editor.personalData,
             state: !visitadas.has(0) ? 'pendiente' : missing.length > 0 ? 'incompleta' : 'lista',
         },
         {
             id: 'experiencia',
-            label: 'Experiencia',
-            state: estadoDeFase(1, missingInRows('workExperiences', dropEmptyRows(input.workExperiences ?? [])), input.workExperiences as unknown as Row[]),
+            label: t.editor.experience,
+            state: estadoDeFase(1, missingInRows('workExperiences', dropEmptyRows(input.workExperiences ?? []), t.cvErrors), input.workExperiences as unknown as Row[]),
         },
         {
             id: 'educacion',
-            label: 'Educación',
-            state: estadoDeFase(2, missingInRows('education', dropEmptyRows(input.education ?? [])), input.education as unknown as Row[]),
+            label: t.editor.education,
+            state: estadoDeFase(2, missingInRows('education', dropEmptyRows(input.education ?? []), t.cvErrors), input.education as unknown as Row[]),
         },
         {
             id: 'habilidades',
-            label: 'Habilidades e idiomas',
+            label: t.editor.skillsAndLanguages,
             state: estadoDeFase(
                 3,
                 [
-                    ...missingInRows('skills', dropEmptyRows(input.skills ?? [])),
-                    ...missingInRows('languages', dropEmptyRows(input.languages ?? [])),
+                    ...missingInRows('skills', dropEmptyRows(input.skills ?? []), t.cvErrors),
+                    ...missingInRows('languages', dropEmptyRows(input.languages ?? []), t.cvErrors),
                 ],
                 [...(input.skills ?? []), ...(input.languages ?? [])] as unknown as Row[],
             ),
         },
         {
             id: 'certificaciones',
-            label: 'Certificaciones',
-            state: estadoDeFase(4, missingInRows('certifications', dropEmptyRows(input.certifications ?? [])), (input.certifications ?? []) as unknown as Row[]),
+            label: t.editor.certifications,
+            state: estadoDeFase(4, missingInRows('certifications', dropEmptyRows(input.certifications ?? []), t.cvErrors), (input.certifications ?? []) as unknown as Row[]),
         },
     ];
 
@@ -345,16 +344,45 @@ export default function CvEditorDialog({
     const [touched, setTouched] = useState<Record<string, boolean>>({});
     const touch = (key: string) => setTouched(t => ({ ...t, [key]: true }));
     const errorFor = (key: string, value: string) =>
-        touched[key] && value.trim() === '' ? 'Este campo es obligatorio' : undefined;
+        touched[key] && value.trim() === '' ? t.cvDialogs.requiredField : undefined;
 
     return (
         <>
         <Modal
             open={open}
             size="lg"
-            title={cv ? 'Editar currículum' : 'Nuevo currículum'}
-            description={cv ? undefined : 'Los datos los completás vos; no se copian del perfil automáticamente.'}
+            title={cv ? t.editor.editCv : t.editor.newCv}
+            description={cv ? undefined : t.editor.newCvDesc}
             onClose={intentarCerrar}
+            // En qué fase se está y cómo avanzar: las dos cosas tienen que
+            // quedar a la vista mientras se recorre un formulario largo, así
+            // que van en las franjas fijas del diálogo y no con el contenido.
+            toolbar={tab === 'form'
+                ? <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
+                : undefined}
+            footer={
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>
+                        Cancelar
+                    </Button>
+
+                    {tab === 'form' && fase > 0 && (
+                        <Button type="button" variant="secondary" size="sm" onClick={() => irA(fase - 1)}>
+                            <ChevronLeft size={14} /> Atrás
+                        </Button>
+                    )}
+
+                    {tab === 'form' && !esUltima ? (
+                        <Button type="button" size="sm" onClick={() => irA(fase + 1)}>
+                            Siguiente <ChevronRight size={14} />
+                        </Button>
+                    ) : (
+                        <Button type="button" size="sm" disabled={!canSave} onClick={save}>
+                            {saving ? t.common.saving : cv ? t.common.save : t.editor.createCv}
+                        </Button>
+                    )}
+                </div>
+            }
         >
             <div className="flex flex-col gap-4">
                 <div className="flex gap-2">
@@ -372,15 +400,13 @@ export default function CvEditorDialog({
                         variant={tab === 'preview' ? 'primary' : 'secondary'}
                         onClick={() => setTab('preview')}
                     >
-                        <Eye size={14} /> Vista previa
+                        <Eye size={14} /> {t.editor.preview}
                     </Button>
                 </div>
 
-                {tab === 'form' && (
-                    <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
-                )}
-
-                <div className="max-h-[60vh] overflow-auto pr-1">
+                {/* Sin zona desplazable propia: la del diálogo alcanza, y dos
+                    barras una al lado de la otra se leen como un error. */}
+                <div>
                     {tab === 'preview' ? (
                         layout ? (
                             <div className="rounded-xl bg-canvas p-2 dark:bg-gray-800">
@@ -396,7 +422,7 @@ export default function CvEditorDialog({
                             {fase === 0 && (<>
                             <section className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <Field
-                                    spec={{ key: 'title', label: 'Título del currículum', kind: 'text', required: true }}
+                                    spec={{ key: 'title', label: t.editor.cvTitle, kind: 'text', required: true }}
                                     value={input.title}
                                     onChange={v => patch({ title: String(v) })}
                                     onBlur={() => touch('title')}
@@ -405,7 +431,7 @@ export default function CvEditorDialog({
                                 <Field
                                     spec={{
                                         key: 'templateId',
-                                        label: 'Plantilla',
+                                        label: t.editor.template,
                                         kind: 'select',
                                         required: true,
                                         options: templates.map(t => ({ value: t.id, label: t.name })),
@@ -416,7 +442,7 @@ export default function CvEditorDialog({
                             </section>
 
                             <section className="flex flex-col gap-2">
-                                <h3 className="text-sm font-bold text-ink dark:text-white">Datos personales</h3>
+                                <h3 className="text-sm font-bold text-ink dark:text-white">{t.editor.personalData}</h3>
                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     <Field
                                         spec={{
@@ -454,7 +480,7 @@ export default function CvEditorDialog({
                                             Se guardan igual.
                                         </p>
                                     )}
-                                    {personalFields(suggestions, generarBio).map(f => (
+                                    {personalFields(suggestions, generarBio, t).map(f => (
                                         <div key={f.key} className={`min-w-0 ${f.wide ? 'sm:col-span-2' : ''}`}>
                                             <Field
                                                 spec={f}
@@ -469,8 +495,8 @@ export default function CvEditorDialog({
 
                             {fase === 1 && (
                             <ListEditor
-                                title="Experiencia" note={nota('workExperiences')} addLabel="Agregar experiencia"
-                                fields={WORK_FIELDS}
+                                title={t.editor.experience} note={nota('workExperiences')} addLabel={t.editor.addExperience}
+                                fields={workFields(t, locale)}
                                 rows={input.workExperiences as unknown as Row[]}
                                 onChange={r => patch({ workExperiences: r as CvInput['workExperiences'] })}
                             />
@@ -478,8 +504,8 @@ export default function CvEditorDialog({
 
                             {fase === 2 && (
                             <ListEditor
-                                title="Educación" note={nota('education')} addLabel="Agregar estudio"
-                                fields={EDUCATION_FIELDS}
+                                title={t.editor.education} note={nota('education')} addLabel={t.editor.addEducation}
+                                fields={educationFields(t)}
                                 rows={input.education as unknown as Row[]}
                                 onChange={r => patch({ education: r as CvInput['education'] })}
                             />
@@ -487,14 +513,14 @@ export default function CvEditorDialog({
 
                             {fase === 3 && (<>
                             <ListEditor
-                                title="Habilidades" note={nota('skills')} addLabel="Agregar habilidad"
-                                fields={SKILL_FIELDS}
+                                title={t.editor.skills} note={nota('skills')} addLabel={t.editor.addSkill}
+                                fields={skillFields(t, locale)}
                                 rows={input.skills as unknown as Row[]}
                                 onChange={r => patch({ skills: r as CvInput['skills'] })}
                             />
                             <ListEditor
-                                title="Idiomas" note={nota('languages')} addLabel="Agregar idioma"
-                                fields={languageFields(suggestions.languageNames)}
+                                title={t.editor.languages} note={nota('languages')} addLabel={t.editor.addLanguage}
+                                fields={languageFields(suggestions.languageNames, t, locale)}
                                 rows={input.languages as unknown as Row[]}
                                 onChange={r => patch({ languages: r as CvInput['languages'] })}
                             />
@@ -502,8 +528,8 @@ export default function CvEditorDialog({
 
                             {fase === 4 && (
                             <ListEditor
-                                title="Certificaciones" note={nota('certifications')} addLabel="Agregar certificación"
-                                fields={CERT_FIELDS}
+                                title={t.editor.certifications} note={nota('certifications')} addLabel={t.editor.addCertification}
+                                fields={certFields(t)}
                                 rows={(input.certifications ?? []) as unknown as Row[]}
                                 onChange={r => patch({ certifications: r as CvInput['certifications'] })}
                             />
@@ -528,55 +554,34 @@ export default function CvEditorDialog({
                 {(missing.length > 0 || incompleteRows.length > 0) && (
                     <div className="flex flex-col gap-0.5 text-xs text-muted">
                         {missing.length > 0 && (
-                            <p>Falta completar: <strong>{missing.join(', ')}</strong></p>
+                            <p>{t.editor.missing} <strong>{missing.join(', ')}</strong></p>
                         )}
-                        {incompleteRows.map(r => <p key={r}>Falta completar en {r}.</p>)}
+                        {incompleteRows.map(r => <p key={r}>{t.editor.missingIn} {r}.</p>)}
                     </div>
                 )}
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>
-                        Cancelar
-                    </Button>
-
-                    {tab === 'form' && fase > 0 && (
-                        <Button type="button" variant="secondary" size="sm" onClick={() => irA(fase - 1)}>
-                            <ChevronLeft size={14} /> Atrás
-                        </Button>
-                    )}
-
-                    {tab === 'form' && !esUltima ? (
-                        <Button type="button" size="sm" onClick={() => irA(fase + 1)}>
-                            Siguiente <ChevronRight size={14} />
-                        </Button>
-                    ) : (
-                        <Button type="button" size="sm" disabled={!canSave} onClick={save}>
-                            {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}
-                        </Button>
-                    )}
-                </div>
             </div>
         </Modal>
 
         {/* Va encima del editor: se dibuja después, así que queda por delante */}
         <Modal
             open={confirmingClose}
-            title="¿Salir sin guardar?"
+            title={t.editor.leaveTitle}
             onClose={() => setConfirmingClose(false)}
         >
             <div className="flex flex-col gap-4">
                 <div className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-500/40 dark:bg-amber-500/10">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="text-xs text-amber-900 dark:text-amber-200">
-                        Tenés cambios sin guardar. Si salís ahora se pierden.
+                        {t.editor.leaveWarning}
                     </p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <Button type="button" variant="secondary" size="sm" onClick={() => setConfirmingClose(false)}>
-                        Seguir editando
+                        {t.editor.keepEditing}
                     </Button>
                     <Button type="button" variant="danger" size="sm" onClick={() => { setConfirmingClose(false); onClose(); }}>
-                        Salir y perder los cambios
+                        {t.editor.leaveAndLose}
                     </Button>
                 </div>
             </div>

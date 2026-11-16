@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { useLocale } from '../../i18n/LocaleContext';
 import { cvService } from '../../services/cvService';
 import { ApiError, describeError } from '../../services/http';
 import type { CV } from '../../types/models';
@@ -20,6 +21,7 @@ export default function DeleteCvDialog({
     onClose: () => void;
     onDeleted: (id: string) => void;
 }) {
+    const { t } = useLocale();
     const [working, setWorking] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -44,15 +46,15 @@ export default function DeleteCvDialog({
     return (
         <Modal
             open={cv !== null}
-            title="Borrar currículum"
+            title={t.cvDialogs.deleteTitle}
             onClose={onClose}
         >
             <div className="flex flex-col gap-4">
                 <div className="flex gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 dark:border-rose-500/40 dark:bg-rose-500/10">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" />
                     <p className="text-xs text-rose-900 dark:text-rose-200">
-                        Vas a borrar <strong>{cv?.title}</strong> con todo su contenido.
-                        No se puede deshacer.
+                        {t.cvDialogs.deleteWarningBefore} <strong>{cv?.title}</strong>{' '}
+                        {t.cvDialogs.deleteWarningAfter}
                     </p>
                 </div>
 
@@ -60,10 +62,10 @@ export default function DeleteCvDialog({
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={working}>
-                        Cancelar
+                        {t.common.cancel}
                     </Button>
                     <Button type="button" variant="danger" size="sm" onClick={borrar} disabled={working}>
-                        {working ? 'Borrando…' : 'Sí, borrarlo'}
+                        {working ? t.cvDialogs.deleting : t.cvDialogs.deleteConfirm}
                     </Button>
                 </div>
             </div>

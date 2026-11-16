@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { ChipGroup, DialogActions, Field, TextArea } from './FormBits';
 import Button from './Button';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../i18n/LocaleContext';
 import { profileService } from '../../services/profileService';
 import { describeError } from '../../services/http';
 import type { UserProfile } from '../../types/models';
@@ -12,18 +13,8 @@ import type { UserProfile } from '../../types/models';
 type Availability = UserProfile['types'][number];
 type Modality = UserProfile['modalities'][number];
 
-const AVAILABILITY_OPTIONS: { value: Availability; label: string }[] = [
-    { value: 'full-time',  label: 'Tiempo completo' },
-    { value: 'part-time',  label: 'Medio tiempo' },
-    { value: 'freelance',  label: 'Freelance' },
-    { value: 'internship', label: 'Práctica profesional' },
-];
-
-const MODALITY_OPTIONS: { value: Modality; label: string }[] = [
-    { value: 'remote',  label: 'Remoto' },
-    { value: 'on-site', label: 'Presencial' },
-    { value: 'hybrid',  label: 'Híbrido' },
-];
+const AVAILABILITY_VALUES: Availability[] = ['full-time', 'part-time', 'freelance', 'internship'];
+const MODALITY_VALUES: Modality[] = ['remote', 'on-site', 'hybrid'];
 
 // Vuelve a cargar los valores del perfil cada vez que se abre el diálogo
 function useResetOnOpen(open: boolean, reset: () => void) {
@@ -41,6 +32,7 @@ export function EditProfileDialog({
     onClose: () => void;
     profile: UserProfile | null;
 }) {
+    const { t } = useLocale();
     const [name, setName] = useState('');
     const [bio, setBio] = useState('');
     const [photoUrl, setPhotoUrl] = useState('');
@@ -53,27 +45,27 @@ export function EditProfileDialog({
         setSaved(false);
     });
 
-    const nameError = saved && name.trim().length < 3 ? 'Ingresá tu nombre completo.' : undefined;
+    const nameError = saved && name.trim().length < 3 ? t.forms.fullNameError : undefined;
 
     return (
         <Modal
             open={open}
-            title="Editar Perfil"
-            description="Así es como te ven las empresas."
+            title={t.forms.editProfile}
+            description={t.forms.editProfileDesc}
             onClose={onClose}
         >
             <form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); setSaved(true); }}>
                 <Field
-                    label="Nombre completo" value={name} onChange={setName}
-                    error={nameError} placeholder="Nombre y apellidos"
+                    label={t.forms.fullName} value={name} onChange={setName}
+                    error={nameError} placeholder={t.forms.fullNamePlaceholder}
                 />
                 <Field
-                    label="Foto de perfil (URL)" type="url" value={photoUrl} onChange={setPhotoUrl}
+                    label={t.forms.photoUrl} type="url" value={photoUrl} onChange={setPhotoUrl}
                     placeholder="https://..."
                 />
                 <TextArea
-                    label="Descripción" value={bio} onChange={setBio}
-                    placeholder="Contá en pocas líneas a qué te dedicás y qué buscás."
+                    label={t.forms.bio} value={bio} onChange={setBio}
+                    placeholder={t.forms.bioPlaceholder}
                 />
                 <DialogActions onCancel={onClose} saved={saved && !nameError} />
             </form>
@@ -89,6 +81,7 @@ export function EditContactDialog({
     onClose: () => void;
     profile: UserProfile | null;
 }) {
+    const { t } = useLocale();
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [location, setLocation] = useState('');
@@ -103,30 +96,30 @@ export function EditContactDialog({
 
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const errors = {
-        email: saved && !emailOk ? 'Ingresá un correo electrónico válido.' : undefined,
-        location: saved && !location.trim() ? 'Indicá dónde residís.' : undefined,
+        email: saved && !emailOk ? t.forms.emailError : undefined,
+        location: saved && !location.trim() ? t.forms.residenceError : undefined,
     };
     const valid = emailOk && location.trim().length > 0;
 
     return (
         <Modal
             open={open}
-            title="Editar Contacto"
-            description="Cómo pueden comunicarse con vos."
+            title={t.forms.editContact}
+            description={t.forms.editContactDesc}
             onClose={onClose}
         >
             <form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); setSaved(true); }}>
                 <Field
-                    label="Número de teléfono" type="tel" value={phone} onChange={setPhone}
+                    label={t.forms.phone} type="tel" value={phone} onChange={setPhone}
                     placeholder="+506 0000-0000" autoComplete="tel"
                 />
                 <Field
-                    label="Correo electrónico" type="email" value={email} onChange={setEmail}
+                    label={t.forms.email} type="email" value={email} onChange={setEmail}
                     error={errors.email} autoComplete="email"
                 />
                 <Field
-                    label="Residencia" value={location} onChange={setLocation}
-                    error={errors.location} placeholder="Ciudad, país"
+                    label={t.forms.residence} value={location} onChange={setLocation}
+                    error={errors.location} placeholder={t.forms.residencePlaceholder}
                 />
                 <DialogActions onCancel={onClose} saved={saved && valid} />
             </form>
@@ -142,6 +135,7 @@ export function EditPreferencesDialog({
     onClose: () => void;
     profile: UserProfile | null;
 }) {
+    const { t } = useLocale();
     const { userId, reloadProfile } = useAuth();
     const [types, setTypes] = useState<Availability[]>([]);
     const [modalities, setModalities] = useState<Modality[]>([]);
@@ -161,8 +155,8 @@ export function EditPreferencesDialog({
         list.includes(value) ? list.filter(v => v !== value) : [...list, value];
 
     const errors = {
-        types: intentado && types.length === 0 ? 'Elegí al menos una disponibilidad.' : undefined,
-        modalities: intentado && modalities.length === 0 ? 'Elegí al menos una modalidad.' : undefined,
+        types: intentado && types.length === 0 ? t.forms.availabilityError : undefined,
+        modalities: intentado && modalities.length === 0 ? t.forms.modalityError : undefined,
     };
     const valid = types.length > 0 && modalities.length > 0;
 
@@ -183,7 +177,7 @@ export function EditPreferencesDialog({
             reloadProfile();
             onClose();
         } catch (err) {
-            setError(describeError(err, 'guardar tus preferencias'));
+            setError(describeError(err, t.forms.savePrefsError));
         } finally {
             setGuardando(false);
         }
@@ -192,15 +186,15 @@ export function EditPreferencesDialog({
     return (
         <Modal
             open={open}
-            title="Editar Preferencias"
-            description="Con esto decidimos qué ofertas mostrarte primero."
+            title={t.forms.editPreferences}
+            description={t.forms.editPreferencesDesc}
             onClose={onClose}
         >
             <form className="flex flex-col gap-4" onSubmit={guardar}>
                 <div className="flex flex-col gap-1">
                     <ChipGroup
-                        label="Disponibilidad"
-                        options={AVAILABILITY_OPTIONS}
+                        label={t.forms.availability}
+                        options={AVAILABILITY_VALUES.map(v => ({ value: v, label: t.availability[v] }))}
                         selected={types}
                         onToggle={v => setTypes(prev => toggle(prev, v))}
                     />
@@ -209,8 +203,8 @@ export function EditPreferencesDialog({
 
                 <div className="flex flex-col gap-1">
                     <ChipGroup
-                        label="Modalidad"
-                        options={MODALITY_OPTIONS}
+                        label={t.forms.modality}
+                        options={MODALITY_VALUES.map(v => ({ value: v, label: t.modality[v] }))}
                         selected={modalities}
                         onToggle={v => setModalities(prev => toggle(prev, v))}
                     />
@@ -224,7 +218,7 @@ export function EditPreferencesDialog({
                         Cancelar
                     </Button>
                     <Button type="submit" size="sm" disabled={guardando}>
-                        {guardando ? 'Guardando…' : 'Guardar cambios'}
+                        {guardando ? t.common.saving : t.common.save}
                     </Button>
                 </div>
             </form>

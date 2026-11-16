@@ -15,6 +15,7 @@ import MoreMenu from '../components/ui/MoreMenu';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService, porUltimaEdicion } from '../services/cvService';
+import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { describeError } from '../services/http';
 import type { CV } from '../types/models';
@@ -44,6 +45,7 @@ function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onD
     cv: CV; layout: unknown; loadingLayout: boolean;
     onView: () => void; onEdit: () => void; onDownload: () => void; onDelete: () => void;
 }) {
+    const { t } = useLocale();
 
     // updatedAt puede llegar como epoch ms o como texto; el ayudante cubre ambos
     const formattedDate = formatLongDate(cv.updatedAt) ?? '';
@@ -92,8 +94,8 @@ function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onD
                 <MoreMenu
                     label={`Más acciones para ${cv.title}`}
                     items={[
-                        { label: 'Descargar PDF', icon: Download, onSelect: onDownload },
-                        { label: 'Borrar currículum', icon: Trash2, onSelect: onDelete, danger: true },
+                        { label: t.cvs.downloadPdf, icon: Download, onSelect: onDownload },
+                        { label: t.cvs.deleteCv, icon: Trash2, onSelect: onDelete, danger: true },
                     ]}
                 />
             </div>
@@ -104,6 +106,7 @@ function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onD
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function MyCVsPage() {
     const { profile } = useAuth();
+    const { locale, t } = useLocale();
 
     const [items, setItems] = useState<CV[]>([]);
     const [page, setPage] = useState(1);
@@ -148,7 +151,7 @@ export default function MyCVsPage() {
                 setTotalRecords(todos.length);
             } catch (err) {
                 if (!cancelled) {
-                    setError(describeError(err, 'cargar tus currículums'));
+                    setError(describeError(err, t.cvs.loadError));
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -159,7 +162,7 @@ export default function MyCVsPage() {
         return () => { cancelled = true; };
         // `page` no está en las dependencias a propósito: cambiar de página
         // ya no vuelve a pedir nada, sólo corta la lista que ya está en memoria.
-    }, [search, reloadKey]);
+    }, [search, reloadKey, t.cvs.loadError]);
 
 
     const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
@@ -171,8 +174,8 @@ export default function MyCVsPage() {
         <div className="flex flex-col gap-3 sm:gap-6">
 
             <PageHeader
-                eyebrow="Tu espacio profesional"
-                title="Mis Currículums"
+                eyebrow={t.cvs.eyebrow}
+                title={t.cvs.title}
                 action={
                     <div className="relative w-full lg:w-80">
                         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
@@ -180,7 +183,7 @@ export default function MyCVsPage() {
                             type="text"
                             value={searchInput}
                             onChange={e => setSearchInput(e.target.value)}
-                            placeholder="Buscar currículum"
+                            placeholder={t.cvs.searchPlaceholder}
                             className="w-full rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-2.5 pl-11 pr-4 text-sm text-ink dark:text-white placeholder:text-muted shadow-sm focus:outline-none focus:border-primary"
                         />
                     </div>
@@ -190,18 +193,18 @@ export default function MyCVsPage() {
             {/* Bloque de creación, en alto contraste como en el mockup */}
             <div className="rounded-2xl bg-gradient-to-r from-ink via-ink to-deep px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                    <h2 className="text-base font-bold text-white sm:text-lg">Crear Nuevo Currículum</h2>
-                    <p className="text-xs text-white/60 sm:text-sm">Elige cómo quieres comenzar tu próxima oportunidad.</p>
+                    <h2 className="text-base font-bold text-white sm:text-lg">{t.home.createCv}</h2>
+                    <p className="text-xs text-white/60 sm:text-sm">{t.home.createCvSubtitle}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
                     <Button size="sm" onClick={() => setAiOpen(true)}>
-                        Modo IA
+                        {t.home.aiMode}
                     </Button>
                     <button
                         onClick={() => setEditing({ cv: null })}
                         className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 transition-colors"
                     >
-                        Offline / Plantilla
+                        {t.home.offlineMode}
                     </button>
                 </div>
             </div>
@@ -214,7 +217,7 @@ export default function MyCVsPage() {
             ) : error ? (
                 <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />
             ) : items.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400">Aún no tienes currículums creados.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t.cvs.empty}</p>
             ) : (
                 <div className="flex flex-col gap-3 sm:gap-4">
                     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
@@ -232,6 +235,7 @@ export default function MyCVsPage() {
                                         cv as unknown as Record<string, unknown>,
                                         layoutFor(templates, cv),
                                         cv.title,
+                                        locale,
                                     );
                                     if (problema) setError(problema);
                                 }}

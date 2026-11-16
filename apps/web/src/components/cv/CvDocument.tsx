@@ -12,10 +12,11 @@ import {
     SKILL_LEVEL,
     UI_TEXT,
     WORK_TYPE,
-    formatLongDate,
+    formatCalendarDate,
     formatRange,
 } from './cvLabels';
 import type { Locale } from './cvLabels';
+import { useLocale } from '../../i18n/LocaleContext';
 
 // El CV llega crudo de GET /cvs/{id}: se recorre por nombre de campo contra las
 // listas blancas del contrato, así que no hace falta un tipo cerrado y los
@@ -68,7 +69,7 @@ function Header({ section, cv, colors, locale }: {
     const contact = leaves
         .filter(l => !['photoUrl', 'fullName', 'bio'].includes(l))
         .map(l => (l === 'birthDate'
-            ? formatLongDate(readPersonal(personal, l), locale)
+            ? formatCalendarDate(readPersonal(personal, l), locale)
             : asText(readPersonal(personal, l))))
         .filter((v): v is string => !!v);
 
@@ -146,11 +147,11 @@ function ListItem({ item, source, fields, colors, locale }: {
     // `category` no se repite acá: cuando está, es el encabezado del grupo
     if (has('type')) { const v = WORK_TYPE[locale][String(item.type)]; if (v) extras.push(v); }
     if (has('expiresAt')) {
-        const v = formatLongDate(item.expiresAt, locale);
+        const v = formatCalendarDate(item.expiresAt, locale);
         if (v) extras.push(`${locale === 'es' ? 'Vence' : 'Expires'} ${v}`);
     }
 
-    const issued = has('issuedAt') ? formatLongDate(item.issuedAt, locale) : null;
+    const issued = has('issuedAt') ? formatCalendarDate(item.issuedAt, locale) : null;
     const description = has('description') ? asText(item.description) : null;
     const credential = has('credentialUrl') ? asText(item.credentialUrl) : null;
 
@@ -163,7 +164,7 @@ function ListItem({ item, source, fields, colors, locale }: {
     ]);
     const rest = fields
         .filter(f => !placed.has(f) && (ITEM_FIELDS[source] as readonly string[]).includes(f))
-        .map(f => (DATE_FIELDS.has(f) ? formatLongDate(item[f], locale) : asText(item[f])))
+        .map(f => (DATE_FIELDS.has(f) ? formatCalendarDate(item[f], locale) : asText(item[f])))
         .filter((v): v is string => !!v);
 
     const right = [range, issued].filter(Boolean).join(' · ');
@@ -287,7 +288,14 @@ function List({ section, cv, colors, locale }: {
  * Devuelve null cuando el layout no sirve: quien lo use debe caer entonces en
  * la vista de imagen (previewUrl) de siempre.
  */
-export default function CvDocument({ cv, layout, locale = 'es' }: CvDocumentProps) {
+export default function CvDocument({ cv, layout, locale: forzado }: CvDocumentProps) {
+    // Sin `locale` explícito se usa el idioma de la aplicación. Así el
+    // documento, las miniaturas y el visor cambian de idioma solos, sin que
+    // cada pantalla tenga que acordarse de pasarlo. Queda la opción de
+    // forzarlo, para mostrar una vista previa en otro idioma.
+    const { locale: delApp } = useLocale();
+    const locale = forzado ?? delApp;
+
     const parsed: CvLayout | null = parseLayout(layout);
     if (!parsed) return null;
 

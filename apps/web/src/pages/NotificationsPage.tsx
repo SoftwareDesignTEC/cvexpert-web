@@ -9,6 +9,7 @@ import Pagination from '../components/ui/Pagination';
 import { useNotifications } from '../context/NotificationsContext';
 import { internalLink, notificationService } from '../services/notificationService';
 import { describeError } from '../services/http';
+import { useLocale } from '../i18n/LocaleContext';
 import type { AppNotification } from '../types/models';
 
 const PAGE_SIZE = 10;
@@ -16,6 +17,7 @@ const PAGE_SIZE = 10;
 type Filter = 'all' | 'unread';
 
 export default function NotificationsPage() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     const { unreadCount, liveVersion, markAsRead, markAllAsRead, refreshUnreadCount } = useNotifications();
 
@@ -50,7 +52,7 @@ export default function NotificationsPage() {
                 setItems(res.items);
                 setTotalRecords(res.totalRecords);
             } catch (err) {
-                if (!cancelled) setError(describeError(err, 'cargar tus notificaciones'));
+                if (!cancelled) setError(describeError(err, t.notifications.loadError));
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -58,7 +60,7 @@ export default function NotificationsPage() {
         load();
 
         return () => { cancelled = true; };
-    }, [filter, page, reloadKey, liveVersion]);
+    }, [filter, page, reloadKey, liveVersion, t.notifications.loadError]);
 
     const changeFilter = (next: Filter) => {
         if (next === filter) return;
@@ -87,7 +89,7 @@ export default function NotificationsPage() {
                     : n)));
             }
         } catch (err) {
-            setActionError(describeError(err, 'marcar la notificación como leída'));
+            setActionError(describeError(err, t.notifications.markReadError));
         } finally {
             setBusyId(null);
         }
@@ -122,8 +124,8 @@ export default function NotificationsPage() {
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
             <PageHeader
-                eyebrow="Tu actividad"
-                title="Notificaciones"
+                eyebrow={t.notifications.eyebrow}
+                title={t.notifications.title}
                 action={
                     <Button
                         variant="secondary"
@@ -134,17 +136,17 @@ export default function NotificationsPage() {
                         className="w-full lg:w-auto"
                     >
                         {!markingAll && <CheckCheck size={15} />}
-                        Marcar todas como leídas
+                        {t.notifications.markAllRead}
                     </Button>
                 }
             />
 
             <div role="tablist" aria-label="Filtrar notificaciones" className="inline-flex self-start gap-1 rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 p-1">
                 <button role="tab" aria-selected={filter === 'all'} onClick={() => changeFilter('all')} className={tabClass(filter === 'all')}>
-                    Todas
+                    {t.notifications.all}
                 </button>
                 <button role="tab" aria-selected={filter === 'unread'} onClick={() => changeFilter('unread')} className={tabClass(filter === 'unread')}>
-                    No leídas{unreadCount ? ` (${unreadCount})` : ''}
+                    {t.notifications.unread}{unreadCount ? ` (${unreadCount})` : ''}
                 </button>
             </div>
 
@@ -160,7 +162,7 @@ export default function NotificationsPage() {
                 <ErrorMessage message={error} onRetry={retry} />
             ) : items.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {filter === 'unread' ? 'No tenés notificaciones sin leer.' : 'Todavía no tenés notificaciones.'}
+                    {filter === 'unread' ? t.notifications.noneUnread : t.notifications.none}
                 </p>
             ) : (
                 <div className="flex flex-col gap-3 sm:gap-4">

@@ -7,6 +7,7 @@ import MyCVsPage from '../pages/MyCVsPage';
 import SettingsPage from '../pages/SettingsPage';
 import ApplicationsPage from '../pages/ApplicationsPage';
 import SkillsGapPage from '../pages/SkillsGapPage';
+import CoursesPage from '../pages/CoursesPage';
 import ProtectedRoute from './ProtectedRoute';
 import LoginPage from '../pages/LoginPage';
 import ErrorPage from '../pages/ErrorPage';
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
                     { path: 'cvs/new',       element: <Navigate to="/cvs" replace /> },
                     { path: 'profile',       element: <ProfilePage /> },
                     { path: 'skills-gap',    element: <SkillsGapPage /> },
+                    { path: 'courses',       element: <CoursesPage /> },
                     { path: 'templates',     element: <TemplatesPage /> },
                     { path: 'jobs',          element: <JobsPage /> },
                     { path: 'applications',  element: <ApplicationsPage /> },

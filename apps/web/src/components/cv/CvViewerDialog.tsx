@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import CvDocumentDialog from './CvDocumentDialog';
+import { useLocale } from '../../i18n/LocaleContext';
 import { templateService } from '../../services/otherServices';
 import type { CV, CVTemplate } from '../../types/models';
 import type { Locale } from './cvLabels';
@@ -24,6 +25,7 @@ export default function CvViewerDialog({
     onClose: () => void;
 }) {
     const [fetched, setFetched] = useState<CVTemplate | null>(null);
+    const { t } = useLocale();
     const [loading, setLoading] = useState(false);
 
     // `undefined` significa "la pantalla no me lo pasó"; `null` significa
@@ -58,7 +60,7 @@ export default function CvViewerDialog({
             cv={cv as unknown as Record<string, unknown> | null}
             layout={faltaBuscarlo ? fetched?.layout ?? null : layout}
             loading={loading}
-            title={cv?.title ?? 'Currículum'}
+            title={cv?.title ?? t.cvDialogs.untitled}
             fallbackImageUrl={cv?.thumbnailUrl}
             locale={locale}
             onClose={onClose}

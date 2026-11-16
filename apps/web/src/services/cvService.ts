@@ -1,6 +1,7 @@
 import { http, toPaginated } from './http';
-import type { CV, Certification, Education, Language, Skill, WorkExperience } from '../types/models';
+import type { CV, CvPersonalInfo, Certification, Education, Language, Skill, WorkExperience } from '../types/models';
 import type { PaginationParams } from '../types/api';
+export type { CvPersonalInfo } from '../types/models';
 
 /**
  * Cuerpo de POST /cvs y PUT /cvs/{id}.
@@ -15,20 +16,6 @@ import type { PaginationParams } from '../types/api';
  *    updatedAt y thumbnailUrl. El `id` de cada elemento de las listas también
  *    es opcional; si no va, el servidor lo genera.
  */
-export interface CvPersonalInfo {
-    // fullName y email son los dos obligatorios del bloque (required en el
-    // esquema del servicio). Ojo: el backend ignora en silencio las claves que
-    // no conoce, así que mandar `name` en vez de `fullName` termina en un 400
-    // por campo faltante, no en un error descriptivo.
-    fullName: string;
-    email: string;
-    phone?: string;
-    /** Opcional, a diferencia de fullName y email */
-    address?: string;
-    photoUrl?: string;
-    bio?: string;
-    birthDate?: number | null;
-}
 
 /** Igual que los del modelo, pero con `id` opcional: lo genera el servidor. */
 type Draft<T> = Omit<T, 'id'> & { id?: string };
@@ -60,18 +47,14 @@ export function emptyCvInput(templateId: string, fullName = '', email = ''): CvI
 
 /** Pasa un CV existente a cuerpo de envío, quitando lo que pone el servidor. */
 export function toCvInput(cv: CV): CvInput {
-    const p = cv.personalInfo as unknown as Partial<CvPersonalInfo>;
+    const p = cv.personalInfo;
     return {
         title: cv.title,
         templateId: cv.templateId,
         personalInfo: {
+            ...p,
             fullName: p.fullName ?? '',
             email: p.email ?? '',
-            phone: p.phone,
-            address: p.address,
-            photoUrl: p.photoUrl,
-            bio: p.bio,
-            birthDate: typeof p.birthDate === 'number' ? p.birthDate : undefined,
         },
         workExperiences: cv.workExperiences ?? [],
         education: cv.education ?? [],
@@ -79,6 +62,40 @@ export function toCvInput(cv: CV): CvInput {
         languages: cv.languages ?? [],
         ...(cv.certifications ? { certifications: cv.certifications } : {}),
     };
+}
+
+/** El PUT solo se construye a partir del detalle recién leído, nunca de la lista o del análisis. */
+export function withAddedSkill(cv: CV, skill: Draft<Skill>): CvInput {
+    const known = ['id', 'userId', 'title', 'templateId', 'thumbnailUrl', 'createdAt', 'updatedAt',
+        'personalInfo', 'workExperiences', 'education', 'skills', 'languages', 'certifications'];
+    const personalFields = ['id', 'fullName', 'email', 'phone', 'address', 'photoUrl', 'bio', 'birthDate', 'types', 'modalities', 'sectors'];
+    const sections: [unknown, string[]][] = [
+        [cv.workExperiences, ['id', 'company', 'position', 'startDate', 'endDate', 'current', 'description', 'type']],
+        [cv.education, ['id', 'institution', 'degree', 'field', 'startDate', 'endDate', 'current']],
+        [cv.skills, ['id', 'name', 'level', 'category']],
+        [cv.languages, ['id', 'name', 'level']],
+        [cv.certifications ?? [], ['id', 'name', 'issuer', 'issuedAt', 'expiresAt', 'credentialUrl']],
+    ];
+    if (Object.keys(cv).some(key => !known.includes(key)) ||
+        !cv.personalInfo || Object.keys(cv.personalInfo).some(key => !personalFields.includes(key)) || typeof cv.personalInfo.fullName !== 'string' ||
+        typeof cv.personalInfo.email !== 'string' || typeof cv.title !== 'string' ||
+        typeof cv.templateId !== 'string' || !cv.templateId ||
+        ![cv.workExperiences, cv.education, cv.skills, cv.languages].every(Array.isArray) ||
+        (cv.certifications !== undefined && !Array.isArray(cv.certifications)) ||
+        sections.some(([rows, fields]) => !Array.isArray(rows) || rows.some(row => !row ||
+            typeof row !== 'object' || Array.isArray(row) || Object.keys(row).some(key => !fields.includes(key)))) ||
+        (cv.personalInfo.birthDate != null && typeof cv.personalInfo.birthDate !== 'number')) {
+        throw new Error('El CV contiene datos que no podemos preservar con seguridad. No se guardó ningún cambio.');
+    }
+    const input = toCvInput(cv);
+    // Misma equivalencia de nombres documentada por el contrato; conserva ñ y puntuación.
+    const key = (name: string) => name.trim().replace(/\s+/gu, ' ').toLowerCase()
+        .normalize('NFD').replace(/[\u0300\u0301\u0302\u0308]/gu, '').normalize('NFC');
+    if (cv.skills.some(s => !s || typeof s.name !== 'string')) {
+        throw new Error('La lista de habilidades del CV es incompatible. No se guardó ningún cambio.');
+    }
+    if (!cv.skills.some(s => key(s.name) === key(skill.name))) input.skills = [...input.skills, skill];
+    return input;
 }
 
 /** Errores por campo que devuelve un 400: {campo: mensaje} */

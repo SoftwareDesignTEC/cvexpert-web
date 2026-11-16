@@ -1,19 +1,21 @@
-import { ChevronRight, HelpCircle, KeyRound, Mail, MonitorSmartphone, Download, Trash2, Shield, FileText, Bell, GraduationCap, Briefcase } from 'lucide-react';
+import { ChevronRight, HelpCircle, KeyRound, Mail, MonitorSmartphone, Download, Trash2, Shield, FileText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import {
-    ApplicationAlertsDialog, ChangeEmailDialog, ChangePasswordDialog,
-    CourseAlertsDialog, DeleteAccountDialog, JobAlertsDialog,
+    ChangeEmailDialog, ChangePasswordDialog, DeleteAccountDialog,
 } from '../components/ui/SettingsDialogs';
 import SupportDialog from '../components/ui/SupportDialog';
 import LegalDialog from '../components/ui/LegalDialog';
 import { ActiveSessionsDialog, ExportDataDialog } from '../components/ui/AccountDialogs';
 import type { LegalKind } from '../services/legalService';
 import { useAuth } from '../context/AuthContext';
-import { NOTIFICATION_LANGUAGES, useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
+import { LOCALES, useLocale } from '../i18n/LocaleContext';
+import { useNotificationPrefs } from '../hooks/useNotificationPrefs';
+import { Toggle } from '../components/ui/FormBits';
+import type { Locale } from '../components/cv/cvLabels';
 import { useTheme } from '../context/ThemeContext';
-import type { NotificationLanguage } from '../types/models';
 
 // ── Tarjeta con título y descripción ─────────────────────────────────────────
 function SettingsCard({
@@ -71,7 +73,27 @@ function ActionRow({
     );
 }
 
-// ── Selector decorativo (Idioma / Zona Horaria) ───────────────────────────────
+/**
+ * La zona horaria no se elige: se toma del dispositivo, como pide el requisito,
+ * así que el control está para informar y no para cambiar nada. Se arma con la
+ * configuración real del navegador en vez de escribir "Costa Rica (GMT-6)" a
+ * mano, que era mentira para cualquiera que abriera la aplicación desde afuera.
+ */
+function zonaHoraria(): string {
+    try {
+        const zona = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const minutos = -new Date().getTimezoneOffset();
+        const signo = minutos < 0 ? '-' : '+';
+        const abs = Math.abs(minutos);
+        const horas = String(Math.floor(abs / 60)).padStart(2, '0');
+        const resto = String(abs % 60).padStart(2, '0');
+        return `${zona} (GMT${signo}${horas}:${resto})`;
+    } catch {
+        return 'GMT';
+    }
+}
+
+// ── Selector sólo informativo ────────────────────────────────────────────────
 function DisabledSelect({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex flex-col gap-1.5">
@@ -80,7 +102,7 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
                 disabled
                 value={value}
                 onChange={() => {}}
-                title="Todavía no disponible"
+                title={value}
                 className="text-sm rounded-xl border border-line dark:border-gray-800 bg-canvas/60 dark:bg-gray-800/50 text-muted px-3 py-2.5 cursor-not-allowed"
             >
                 <option>{value}</option>
@@ -90,78 +112,92 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
-type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | 'support' | 'sessions' | 'export' | null;
+type OpenDialog = 'password' | 'email' | 'delete' | 'support' | 'sessions' | 'export' | null;
 
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const { profile, userId } = useAuth();
-    const { notificationLanguage, setNotificationLanguage } = useLanguage();
+    const { setNotificationLanguage } = useLanguage();
+    const { locale, setLocale, t } = useLocale();
+    const { prefs, set: setPref } = useNotificationPrefs();
+
+    /**
+     * Un solo control para los dos idiomas.
+     *
+     * Por dentro son cosas distintas: el de la aplicación decide qué texto
+     * dibuja el navegador y el de las notificaciones viaja al servicio, que es
+     * quien redacta los avisos. Pero nadie quiere elegir dos veces lo mismo, y
+     * dos selectores de idioma en la misma pantalla sólo generan la duda de en
+     * qué se diferencian.
+     */
+    const cambiarIdioma = (l: Locale) => {
+        setLocale(l);
+        setNotificationLanguage(l);
+    };
     const [dialog, setDialog] = useState<OpenDialog>(null);
     const [legal, setLegal] = useState<LegalKind | null>(null);
 
     return (
         <div className="flex flex-col gap-4 sm:gap-6">
 
-            <PageHeader eyebrow="Tu cuenta" title="Configuración" />
+            <PageHeader eyebrow={t.settings.eyebrow} title={t.settings.title} />
 
             {/* Tres bloques en escritorio, apilados en móvil */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                 <SettingsCard
-                    title="Seguridad de la Cuenta"
-                    subtitle="Administra el acceso y protege tu información."
+                    title={t.settingsExtra.security}
+                    subtitle={t.settingsExtra.securitySubtitle}
                 >
-                    <ActionRow label="Cambiar Contraseña" icon={KeyRound} onClick={() => setDialog('password')} />
-                    <ActionRow label="Cambiar Correo Electrónico" icon={Mail} onClick={() => setDialog('email')} />
-                    <ActionRow label="Sesiones Activas" icon={MonitorSmartphone} onClick={() => setDialog('sessions')} />
+                    <ActionRow label={t.settingsExtra.changePassword} icon={KeyRound} onClick={() => setDialog('password')} />
+                    <ActionRow label={t.settingsExtra.changeEmail} icon={Mail} onClick={() => setDialog('email')} />
+                    <ActionRow label={t.settingsExtra.activeSessions} icon={MonitorSmartphone} onClick={() => setDialog('sessions')} />
                 </SettingsCard>
 
                 <SettingsCard
-                    title="Notificaciones"
-                    subtitle="Elige qué novedades quieres recibir."
+                    title={t.settings.notifications}
+                    subtitle={t.settings.notificationsSubtitle}
                 >
-                    <ActionRow label="Estado de Postulación" icon={Bell} onClick={() => setDialog('applications')} />
-                    <ActionRow label="Recomendación de Curso" icon={GraduationCap} onClick={() => setDialog('courses')} />
-                    <ActionRow label="Alertas de Empleo" icon={Briefcase} onClick={() => setDialog('jobs')} />
+                    {/* Interruptores en la propia tarjeta: entrar a un diálogo
+                        para mover una sola palanca es un paso de más. El estado de
+                        las postulaciones ya no está: lo cambia la persona desde su
+                        tablero, así que avisarle de algo que acaba de hacer ella
+                        misma no le dice nada nuevo. */}
+                    <Toggle
+                        label={t.settings.courseRecommendation}
+                        description={t.settings.courseRecommendationDesc}
+                        checked={prefs.courses}
+                        onChange={v => setPref('courses', v)}
+                    />
+                    <Toggle
+                        label={t.settings.jobAlerts}
+                        description={t.settings.jobAlertsDesc}
+                        checked={prefs.jobs}
+                        onChange={v => setPref('jobs', v)}
+                    />
 
-                    {/* El cambio se guarda en el dispositivo y AuthProvider lo envía al servicio */}
-                    <div className="mt-1 flex flex-col gap-1.5">
-                        <label htmlFor="notification-language" className="text-xs font-medium text-muted">
-                            Idioma de las notificaciones
-                        </label>
-                        <select
-                            id="notification-language"
-                            value={notificationLanguage}
-                            onChange={e => setNotificationLanguage(e.target.value as NotificationLanguage)}
-                            className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
-                        >
-                            {NOTIFICATION_LANGUAGES.map(l => (
-                                <option key={l.value} value={l.value}>{l.label}</option>
-                            ))}
-                        </select>
-                    </div>
                 </SettingsCard>
 
                 <SettingsCard
-                    title="Datos"
-                    subtitle="Controla tus datos y documentos legales."
+                    title={t.settings.data}
+                    subtitle={t.settings.dataSubtitle}
                 >
-                    <ActionRow label="Descargar mis datos" icon={Download} onClick={() => setDialog('export')} />
-                    <ActionRow label="Eliminar Cuenta" icon={Trash2} danger onClick={() => setDialog('delete')} />
-                    <ActionRow label="Políticas de Privacidad" icon={Shield} onClick={() => setLegal('privacy')} />
-                    <ActionRow label="Términos y Condiciones" icon={FileText} onClick={() => setLegal('terms')} />
+                    <ActionRow label={t.settings.exportData} icon={Download} onClick={() => setDialog('export')} />
+                    <ActionRow label={t.settings.deleteAccount} icon={Trash2} danger onClick={() => setDialog('delete')} />
+                    <ActionRow label={t.settings.privacy} icon={Shield} onClick={() => setLegal('privacy')} />
+                    <ActionRow label={t.settings.terms} icon={FileText} onClick={() => setLegal('terms')} />
                 </SettingsCard>
             </div>
 
             {/* Preferencias y soporte */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                 <SettingsCard
-                    title="Preferencias del Sistema"
-                    subtitle="Personaliza CVExpert para trabajar a tu manera."
+                    title={t.settingsExtra.systemPrefs}
+                    subtitle={t.settingsExtra.systemPrefsSubtitle}
                     className="lg:col-span-2"
                 >
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted">Tema</label>
+                            <label className="text-xs font-medium text-muted">{t.settings.theme}</label>
                             <select
                                 value={theme}
                                 onChange={e => {
@@ -170,13 +206,29 @@ export default function SettingsPage() {
                                 }}
                                 className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
                             >
-                                <option value="light">Claro</option>
-                                <option value="dark">Oscuro</option>
+                                <option value="light">{t.settings.themeLight}</option>
+                                <option value="dark">{t.settings.themeDark}</option>
                             </select>
                         </div>
 
-                        <DisabledSelect label="Idioma" value="Español" />
-                        <DisabledSelect label="Zona Horaria" value="Costa Rica (GMT-6)" />
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="app-language" className="text-xs font-medium text-muted">
+                                {t.settings.language}
+                            </label>
+                            <select
+                                id="app-language"
+                                value={locale}
+                                onChange={e => cambiarIdioma(e.target.value as Locale)}
+                                className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
+                            >
+                                {LOCALES.map(l => (
+                                    <option key={l.value} value={l.value}>{t.languages[l.labelKey]}</option>
+                                ))}
+                            </select>
+                            <p className="text-[11px] text-muted">{t.settings.languageHint}</p>
+                        </div>
+
+                        <DisabledSelect label={t.settings.timezone} value={zonaHoraria()} />
                     </div>
                 </SettingsCard>
 
@@ -187,15 +239,15 @@ export default function SettingsPage() {
                             <HelpCircle size={18} />
                         </span>
                         <div className="min-w-0">
-                            <h2 className="text-base font-bold text-white">¿Necesitas ayuda?</h2>
-                            <p className="text-sm text-white/60">Contacta a nuestro equipo de soporte técnico.</p>
+                            <h2 className="text-base font-bold text-white">{t.settingsExtra.needHelp}</h2>
+                            <p className="text-sm text-white/60">{t.settingsExtra.needHelpSubtitle}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => setDialog('support')}
                         className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
                     >
-                        Enviar Correo Electrónico
+                        {t.settingsExtra.sendEmail}
                     </button>
                 </div>
             </div>
@@ -207,9 +259,6 @@ export default function SettingsPage() {
                 currentEmail={profile?.email}
             />
             <DeleteAccountDialog open={dialog === 'delete'} onClose={() => setDialog(null)} />
-            <ApplicationAlertsDialog open={dialog === 'applications'} onClose={() => setDialog(null)} />
-            <CourseAlertsDialog open={dialog === 'courses'} onClose={() => setDialog(null)} />
-            <JobAlertsDialog open={dialog === 'jobs'} onClose={() => setDialog(null)} />
             <SupportDialog open={dialog === 'support'} onClose={() => setDialog(null)} />
             <LegalDialog kind={legal} onClose={() => setLegal(null)} />
             <ActiveSessionsDialog open={dialog === 'sessions'} userId={userId} onClose={() => setDialog(null)} />
