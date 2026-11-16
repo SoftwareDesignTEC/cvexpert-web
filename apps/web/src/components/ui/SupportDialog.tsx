@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, Mail } from 'lucide-react';
 import Modal from './Modal';
+import { useLocale } from '../../i18n/LocaleContext';
 import Button from './Button';
 import { LoadingSpinner } from './Feedback';
 import { contactService } from '../../services/contactService';
 import type { SupportContact } from '../../services/contactService';
 
 function ContactRow({ contact }: { contact: SupportContact }) {
+    const { t } = useLocale();
     const [copied, setCopied] = useState(false);
 
     // El aviso de "copiado" vuelve solo a su estado normal
@@ -39,8 +41,8 @@ function ContactRow({ contact }: { contact: SupportContact }) {
             </div>
             <button
                 onClick={copy}
-                title="Copiar dirección"
-                aria-label={`Copiar ${contact.email}`}
+                title={t.forms.copyAddress}
+                aria-label={`${t.forms.copyAddress}: ${contact.email}`}
                 className="shrink-0 rounded-lg p-2 text-muted hover:bg-canvas hover:text-primary dark:hover:bg-gray-800 transition-colors"
             >
                 {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
@@ -50,6 +52,7 @@ function ContactRow({ contact }: { contact: SupportContact }) {
 }
 
 export default function SupportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const { t } = useLocale();
     const [contacts, setContacts] = useState<SupportContact[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -66,7 +69,7 @@ export default function SupportDialog({ open, onClose }: { open: boolean; onClos
                 const res = await contactService.getAll();
                 if (!cancelled) setContacts(res);
             } catch {
-                if (!cancelled) setError('No se pudieron cargar los contactos de soporte.');
+                if (!cancelled) setError(t.forms.supportError);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -79,8 +82,8 @@ export default function SupportDialog({ open, onClose }: { open: boolean; onClos
     return (
         <Modal
             open={open}
-            title="Contactar a soporte"
-            description="Escribinos a la dirección que corresponda según tu consulta."
+            title={t.forms.support}
+            description={t.forms.supportDesc}
             onClose={onClose}
         >
             <div className="flex flex-col gap-4">
@@ -89,7 +92,7 @@ export default function SupportDialog({ open, onClose }: { open: boolean; onClos
                 ) : error ? (
                     <p className="text-sm text-rose-500">{error}</p>
                 ) : contacts.length === 0 ? (
-                    <p className="text-sm text-muted">No hay contactos disponibles por ahora.</p>
+                    <p className="text-sm text-muted">{t.forms.noContacts}</p>
                 ) : (
                     <div className="flex flex-col gap-2">
                         {contacts.map(c => <ContactRow key={c.type} contact={c} />)}
@@ -97,7 +100,7 @@ export default function SupportDialog({ open, onClose }: { open: boolean; onClos
                 )}
 
                 <div className="flex justify-end">
-                    <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                    <Button variant="secondary" size="sm" onClick={onClose}>{t.dialogs.close}</Button>
                 </div>
             </div>
         </Modal>

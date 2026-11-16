@@ -90,7 +90,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
 
         // Si se cierra mientras la petición viaja, no se toca más el estado
         return () => { vivo = false; };
-    }, [ronda, profile]);
+    }, [ronda, profile, t.dialogs.loadOffersError]);
 
     const recargar = () => { setLoading(true); setRonda(n => n + 1); };
 
