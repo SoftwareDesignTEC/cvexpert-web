@@ -45,10 +45,14 @@ export default function Modal({ open, title, description, size = 'md', onClose, 
                 aria-label={title}
                 // El clic dentro del panel no debe cerrar el diálogo
                 onClick={e => e.stopPropagation()}
-                className={`w-full max-h-full overflow-y-auto rounded-t-2xl bg-surface dark:bg-gray-900 shadow-xl sm:rounded-2xl
+                // Columna con el encabezado fijo y una única zona que se
+                // desplaza. Antes el panel entero se desplazaba, y cuando el
+                // contenido traía su propia zona desplazable aparecían dos
+                // barras pegadas, además de la de la página.
+                className={`flex w-full max-h-full flex-col overflow-hidden rounded-t-2xl bg-surface dark:bg-gray-900 shadow-xl sm:rounded-2xl
                     ${size === 'xl' ? 'max-w-5xl' : size === 'lg' ? 'max-w-3xl' : 'max-w-md'}`}
             >
-                <div className="flex items-start justify-between gap-3 border-b border-line dark:border-gray-800 px-5 py-4">
+                <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line dark:border-gray-800 px-5 py-4">
                     <div className="min-w-0">
                         <h2 className="text-base font-bold text-ink dark:text-white">{title}</h2>
                         {description && <p className="text-sm text-muted mt-0.5">{description}</p>}
@@ -62,7 +66,7 @@ export default function Modal({ open, title, description, size = 'md', onClose, 
                     </button>
                 </div>
 
-                <div className="px-5 py-4">{children}</div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
             </div>
         </div>
     );

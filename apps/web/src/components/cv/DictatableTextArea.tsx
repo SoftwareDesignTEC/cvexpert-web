@@ -47,15 +47,33 @@ export default function DictatableTextArea({
         onChange(previo ? `${previo} ${texto}` : texto);
     });
 
+    /**
+     * El campo crece con lo que se escribe, en vez de quedarse del alto fijo y
+     * sacar su propia barra de desplazamiento. Dentro de un diálogo que ya
+     * tiene la suya, dos barras juntas se leen como un error; y para revisar lo
+     * que uno escribió es mejor verlo entero que de a tres renglones.
+     *
+     * Se mide con una referencia de función para que también se ajuste al
+     * montar, cuando el campo ya trae texto de un currículum que se está
+     * editando. Primero se pone en 'auto': sin eso, scrollHeight nunca
+     * devolvería un valor menor al alto actual y el campo sólo podría crecer.
+     */
+    const ajustar = (el: HTMLTextAreaElement | null) => {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    };
+
     return (
         <div className="flex flex-col gap-1">
             <div className="relative">
                 <textarea
+                    ref={ajustar}
                     rows={rows}
                     placeholder={placeholder}
                     value={value}
-                    onChange={e => onChange(e.target.value)}
-                    className={`${inputClass} resize-y ${supported ? 'pr-10' : ''}`}
+                    onChange={e => { ajustar(e.target); onChange(e.target.value); }}
+                    className={`${inputClass} resize-none overflow-hidden ${supported ? 'pr-10' : ''}`}
                 />
                 <div className="absolute right-2 top-2 flex gap-1">
                 {supported && (

@@ -376,11 +376,17 @@ export default function CvEditorDialog({
                     </Button>
                 </div>
 
+                {/* Pegada arriba: dice en qué fase se está, y si se fuera de
+                    pantalla al desplazarse habría que subir para saberlo. */}
                 {tab === 'form' && (
-                    <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
+                    <div className="sticky top-0 z-10 -mx-5 -mt-4 bg-surface px-5 pb-2 pt-4 dark:bg-gray-900">
+                        <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
+                    </div>
                 )}
 
-                <div className="max-h-[60vh] overflow-auto pr-1">
+                {/* Sin zona desplazable propia: la del diálogo alcanza, y dos
+                    barras una al lado de la otra se leen como un error. */}
+                <div>
                     {tab === 'preview' ? (
                         layout ? (
                             <div className="rounded-xl bg-canvas p-2 dark:bg-gray-800">
@@ -534,7 +540,12 @@ export default function CvEditorDialog({
                     </div>
                 )}
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                {/* Pegado abajo: al desplazarse con la barra del diálogo, los
+                    botones de avanzar tienen que quedar siempre a la vista, que
+                    es lo que antes conseguía la zona desplazable interna. Los
+                    márgenes negativos lo estiran hasta los bordes del diálogo
+                    para que nada se vea pasar por detrás. */}
+                <div className="sticky bottom-0 z-10 -mx-5 -mb-4 flex flex-col gap-2 border-t border-line bg-surface px-5 py-3 sm:flex-row sm:items-center sm:justify-end dark:border-gray-800 dark:bg-gray-900">
                     <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>
                         Cancelar
                     </Button>
