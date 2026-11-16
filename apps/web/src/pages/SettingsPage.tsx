@@ -11,9 +11,10 @@ import LegalDialog from '../components/ui/LegalDialog';
 import { ActiveSessionsDialog, ExportDataDialog } from '../components/ui/AccountDialogs';
 import type { LegalKind } from '../services/legalService';
 import { useAuth } from '../context/AuthContext';
-import { NOTIFICATION_LANGUAGES, useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
+import { LOCALES, useLocale } from '../i18n/LocaleContext';
+import type { Locale } from '../components/cv/cvLabels';
 import { useTheme } from '../context/ThemeContext';
-import type { NotificationLanguage } from '../types/models';
 
 // ── Tarjeta con título y descripción ─────────────────────────────────────────
 function SettingsCard({
@@ -71,7 +72,27 @@ function ActionRow({
     );
 }
 
-// ── Selector decorativo (Idioma / Zona Horaria) ───────────────────────────────
+/**
+ * La zona horaria no se elige: se toma del dispositivo, como pide el requisito,
+ * así que el control está para informar y no para cambiar nada. Se arma con la
+ * configuración real del navegador en vez de escribir "Costa Rica (GMT-6)" a
+ * mano, que era mentira para cualquiera que abriera la aplicación desde afuera.
+ */
+function zonaHoraria(): string {
+    try {
+        const zona = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const minutos = -new Date().getTimezoneOffset();
+        const signo = minutos < 0 ? '-' : '+';
+        const abs = Math.abs(minutos);
+        const horas = String(Math.floor(abs / 60)).padStart(2, '0');
+        const resto = String(abs % 60).padStart(2, '0');
+        return `${zona} (GMT${signo}${horas}:${resto})`;
+    } catch {
+        return 'GMT';
+    }
+}
+
+// ── Selector sólo informativo ────────────────────────────────────────────────
 function DisabledSelect({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex flex-col gap-1.5">
@@ -80,7 +101,7 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
                 disabled
                 value={value}
                 onChange={() => {}}
-                title="Todavía no disponible"
+                title={value}
                 className="text-sm rounded-xl border border-line dark:border-gray-800 bg-canvas/60 dark:bg-gray-800/50 text-muted px-3 py-2.5 cursor-not-allowed"
             >
                 <option>{value}</option>
@@ -95,7 +116,22 @@ type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' |
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const { profile, userId } = useAuth();
-    const { notificationLanguage, setNotificationLanguage } = useLanguage();
+    const { setNotificationLanguage } = useLanguage();
+    const { locale, setLocale, t } = useLocale();
+
+    /**
+     * Un solo control para los dos idiomas.
+     *
+     * Por dentro son cosas distintas: el de la aplicación decide qué texto
+     * dibuja el navegador y el de las notificaciones viaja al servicio, que es
+     * quien redacta los avisos. Pero nadie quiere elegir dos veces lo mismo, y
+     * dos selectores de idioma en la misma pantalla sólo generan la duda de en
+     * qué se diferencian.
+     */
+    const cambiarIdioma = (l: Locale) => {
+        setLocale(l);
+        setNotificationLanguage(l);
+    };
     const [dialog, setDialog] = useState<OpenDialog>(null);
     const [legal, setLegal] = useState<LegalKind | null>(null);
 
@@ -123,22 +159,6 @@ export default function SettingsPage() {
                     <ActionRow label="Recomendación de Curso" icon={GraduationCap} onClick={() => setDialog('courses')} />
                     <ActionRow label="Alertas de Empleo" icon={Briefcase} onClick={() => setDialog('jobs')} />
 
-                    {/* El cambio se guarda en el dispositivo y AuthProvider lo envía al servicio */}
-                    <div className="mt-1 flex flex-col gap-1.5">
-                        <label htmlFor="notification-language" className="text-xs font-medium text-muted">
-                            Idioma de las notificaciones
-                        </label>
-                        <select
-                            id="notification-language"
-                            value={notificationLanguage}
-                            onChange={e => setNotificationLanguage(e.target.value as NotificationLanguage)}
-                            className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
-                        >
-                            {NOTIFICATION_LANGUAGES.map(l => (
-                                <option key={l.value} value={l.value}>{l.label}</option>
-                            ))}
-                        </select>
-                    </div>
                 </SettingsCard>
 
                 <SettingsCard
@@ -161,7 +181,7 @@ export default function SettingsPage() {
                 >
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-muted">Tema</label>
+                            <label className="text-xs font-medium text-muted">{t.settings.theme}</label>
                             <select
                                 value={theme}
                                 onChange={e => {
@@ -170,13 +190,29 @@ export default function SettingsPage() {
                                 }}
                                 className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
                             >
-                                <option value="light">Claro</option>
-                                <option value="dark">Oscuro</option>
+                                <option value="light">{t.settings.themeLight}</option>
+                                <option value="dark">{t.settings.themeDark}</option>
                             </select>
                         </div>
 
-                        <DisabledSelect label="Idioma" value="Español" />
-                        <DisabledSelect label="Zona Horaria" value="Costa Rica (GMT-6)" />
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="app-language" className="text-xs font-medium text-muted">
+                                {t.settings.language}
+                            </label>
+                            <select
+                                id="app-language"
+                                value={locale}
+                                onChange={e => cambiarIdioma(e.target.value as Locale)}
+                                className="text-sm rounded-xl border border-line dark:border-gray-800 bg-surface dark:bg-gray-800 text-ink dark:text-white px-3 py-2.5 focus:outline-none focus:border-primary"
+                            >
+                                {LOCALES.map(l => (
+                                    <option key={l.value} value={l.value}>{t.languages[l.labelKey]}</option>
+                                ))}
+                            </select>
+                            <p className="text-[11px] text-muted">{t.settings.languageHint}</p>
+                        </div>
+
+                        <DisabledSelect label={t.settings.timezone} value={zonaHoraria()} />
                     </div>
                 </SettingsCard>
 

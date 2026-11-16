@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LocaleProvider } from './i18n/LocaleContext';
 import { router } from './router';
 import './index.css';
 
@@ -16,13 +17,15 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <LanguageProvider>
-                <AuthProvider>
-                    <ThemeProvider>
-                        <RouterProvider router={router} />
-                    </ThemeProvider>
-                </AuthProvider>
-            </LanguageProvider>
+            <LocaleProvider>
+                <LanguageProvider>
+                    <AuthProvider>
+                        <ThemeProvider>
+                            <RouterProvider router={router} />
+                        </ThemeProvider>
+                    </AuthProvider>
+                </LanguageProvider>
+            </LocaleProvider>
         </GoogleOAuthProvider>
     </StrictMode>,
 );

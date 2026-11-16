@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, LogOut, Menu, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../i18n/LocaleContext';
 import { Avatar } from './Avatar';
 import logo from '../../assets/logo.png';
 import NotificationsBell from './NotificationsBell';
@@ -15,13 +16,14 @@ interface HeaderProps {
 // Las dos pantallas de cuenta. Están también en el menú lateral, que resalta
 // la activa por su cuenta, así que al entrar desde acá se ve dónde se quedó.
 const CUENTA = [
-    { to: '/profile',  icon: User,     label: 'Mi Perfil' },
-    { to: '/settings', icon: Settings, label: 'Configuración' },
-];
+    { to: '/profile',  icon: User,     key: 'profile'  },
+    { to: '/settings', icon: Settings, key: 'settings' },
+] as const;
 
 export default function Header({ onMenuClick, showMenuButton = true }: HeaderProps) {
     const navigate = useNavigate();
     const { isAuthenticated, profile, logout } = useAuth();
+    const { t } = useLocale();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -83,14 +85,14 @@ export default function Header({ onMenuClick, showMenuButton = true }: HeaderPro
                             muestran, y mientras tanto se usan las iniciales. */}
                         <button
                             onClick={() => setMenuOpen(v => !v)}
-                            title="Mi cuenta"
+                            title={t.account.myAccount}
                             aria-haspopup="menu"
                             aria-expanded={menuOpen}
                             className="flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-1 pl-1 pr-2 shadow-sm hover:border-primary transition-colors"
                         >
-                            <Avatar src={profile?.photoUrl} name={profile?.name ?? 'Mi cuenta'} size={32} />
+                            <Avatar src={profile?.photoUrl} name={profile?.name ?? t.account.myAccount} size={32} />
                             <span className="text-sm font-medium text-ink dark:text-gray-200 hidden sm:block max-w-[12rem] truncate">
-                                {profile?.name ?? 'Mi cuenta'}
+                                {profile?.name ?? t.account.myAccount}
                             </span>
                             <ChevronDown size={14} className="text-muted shrink-0" />
                         </button>
@@ -100,7 +102,7 @@ export default function Header({ onMenuClick, showMenuButton = true }: HeaderPro
                                 role="menu"
                                 className="absolute right-0 top-full z-40 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
                             >
-                                {CUENTA.map(({ to, icon: Icon, label }) => (
+                                {CUENTA.map(({ to, icon: Icon, key }) => (
                                     <button
                                         key={to}
                                         role="menuitem"
@@ -108,7 +110,7 @@ export default function Header({ onMenuClick, showMenuButton = true }: HeaderPro
                                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-body transition-colors hover:bg-canvas dark:text-gray-300 dark:hover:bg-gray-800"
                                     >
                                         <Icon size={15} />
-                                        {label}
+                                        {t.account[key]}
                                     </button>
                                 ))}
 
@@ -120,7 +122,7 @@ export default function Header({ onMenuClick, showMenuButton = true }: HeaderPro
                                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
                                 >
                                     <LogOut size={15} />
-                                    Cerrar sesión
+                                    {t.account.logout}
                                 </button>
                             </div>
                         )}

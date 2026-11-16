@@ -18,6 +18,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
 import { cvService, porUltimaEdicion } from '../services/cvService';
+import { useLocale } from '../i18n/LocaleContext';
 import { jobService } from '../services/otherServices';
 import {
     SKILL_SCALE_MAX,
@@ -40,6 +41,7 @@ function masRecientes(cvs: CV[], cuantos: number): CV[] {
 
 export default function DashboardPage() {
     const { profile } = useAuth();
+    const { locale } = useLocale();
     const navigate = useNavigate();
 
     const [cvs, setCvs]         = useState<CV[]>([]);
@@ -138,6 +140,7 @@ export default function DashboardPage() {
                                                     cv as unknown as Record<string, unknown>,
                                                     layoutFor(templates, cv),
                                                     cv.title,
+                                                    locale,
                                                 );
                                                 if (problema) setErrorCvs(problema);
                                             }}

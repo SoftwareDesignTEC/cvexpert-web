@@ -4,18 +4,31 @@ import {
     Menu, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
 } from 'lucide-react';
 import { useNotificationAdmin } from '../../context/NotificationAdminContext';
+import { useLocale } from '../../i18n/LocaleContext';
+import type { LucideIcon } from 'lucide-react';
+import type { Dict } from '../../i18n/dictionary';
 
-// adminOnly: sólo se muestra si el usuario puede editar las plantillas de notificaciones
-const navItems = [
-    { to: '/',             icon: LayoutDashboard, label: 'Panel Principal'      },
-    { to: '/cvs',          icon: FileText,         label: 'Mis Currículums'      },
-    { to: '/profile',      icon: User,             label: 'Mi Perfil'            },
-    { to: '/skills-gap',   icon: TrendingUp,       label: 'Análisis de Brechas'  },
-    { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline' },
-    { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'    },
-    { to: '/applications', icon: Kanban,           label: 'Postulaciones'        },
-    { to: '/admin/notification-templates', icon: MessageSquareText, label: 'Plantillas de notificaciones', adminOnly: true },
-    { to: '/settings',     icon: Settings,         label: 'Configuración'        },
+interface NavItem {
+    to: string;
+    icon: LucideIcon;
+    /** Clave del diccionario, no el texto: se resuelve con el idioma activo */
+    key: keyof Dict['nav'];
+    /** Sólo para quien puede editar las plantillas de avisos */
+    adminOnly?: boolean;
+}
+
+// `key` en lugar del texto: la etiqueta se resuelve al dibujar, con el idioma
+// activo. adminOnly sólo se muestra a quien puede editar plantillas de avisos.
+const navItems: NavItem[] = [
+    { to: '/',             icon: LayoutDashboard,  key: 'dashboard'  },
+    { to: '/cvs',          icon: FileText,         key: 'cvs'        },
+    { to: '/profile',      icon: User,             key: 'profile'    },
+    { to: '/skills-gap',   icon: TrendingUp,       key: 'skillsGap'  },
+    { to: '/templates',    icon: Layout,           key: 'templates'  },
+    { to: '/jobs',         icon: Briefcase,        key: 'jobs'       },
+    { to: '/applications', icon: Kanban,           key: 'applications' },
+    { to: '/admin/notification-templates', icon: MessageSquareText, key: 'notificationTemplates', adminOnly: true },
+    { to: '/settings',     icon: Settings,         key: 'settings'   },
 ];
 
 interface SidebarProps {
@@ -26,6 +39,7 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose, onNavigate }: SidebarProps) {
     const { canEditTemplates } = useNotificationAdmin();
+    const { t } = useLocale();
     const visibleItems = navItems.filter(item => !item.adminOnly || canEditTemplates === true);
 
     return (
@@ -36,13 +50,13 @@ export default function Sidebar({ onClose, onNavigate }: SidebarProps) {
                     <img src={logo} alt="" aria-hidden="true" className="w-9 h-9 shrink-0 object-contain" />
                     <div className="flex flex-col min-w-0">
                         <span className="text-ink dark:text-white font-bold text-base tracking-tight leading-tight">CVExpert</span>
-                        <span className="text-muted text-[11px] leading-tight truncate">Tu carrera, más clara</span>
+                        <span className="text-muted text-[11px] leading-tight truncate">{t.nav.tagline}</span>
                     </div>
                 </div>
                 <button
                     onClick={onClose}
-                    title="Cerrar el menú"
-                    aria-label="Cerrar el menú"
+                    title={t.nav.closeMenu}
+                    aria-label={t.nav.closeMenu}
                     className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-canvas hover:text-ink dark:hover:bg-gray-800 dark:hover:text-white"
                 >
                     {/* El mismo icono que lo abre: es un interruptor, no dos
@@ -53,7 +67,7 @@ export default function Sidebar({ onClose, onNavigate }: SidebarProps) {
 
             {/* Navegación */}
             <nav className="flex-1 py-4 px-3 overflow-y-auto flex flex-col gap-1">
-                {visibleItems.map(({ to, icon: Icon, label }) => (
+                {visibleItems.map(({ to, icon: Icon, key }) => (
                     <NavLink
                         key={to}
                         to={to}
@@ -68,14 +82,14 @@ export default function Sidebar({ onClose, onNavigate }: SidebarProps) {
                         }
                     >
                         <Icon size={18} />
-                        {label}
+                        {t.nav[key]}
                     </NavLink>
                 ))}
             </nav>
 
             {/* Version publicada: coincide con el tag de Git que crea el pipeline */}
             <div className="px-5 py-3 border-t border-line dark:border-gray-800">
-                <span className="text-xs text-muted">Versión {__APP_VERSION__}</span>
+                <span className="text-xs text-muted">{t.nav.version} {__APP_VERSION__}</span>
             </div>
         </aside>
     );

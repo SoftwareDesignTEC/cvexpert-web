@@ -16,6 +16,7 @@ import {
     formatRange,
 } from './cvLabels';
 import type { Locale } from './cvLabels';
+import { useLocale } from '../../i18n/LocaleContext';
 
 // El CV llega crudo de GET /cvs/{id}: se recorre por nombre de campo contra las
 // listas blancas del contrato, así que no hace falta un tipo cerrado y los
@@ -287,7 +288,14 @@ function List({ section, cv, colors, locale }: {
  * Devuelve null cuando el layout no sirve: quien lo use debe caer entonces en
  * la vista de imagen (previewUrl) de siempre.
  */
-export default function CvDocument({ cv, layout, locale = 'es' }: CvDocumentProps) {
+export default function CvDocument({ cv, layout, locale: forzado }: CvDocumentProps) {
+    // Sin `locale` explícito se usa el idioma de la aplicación. Así el
+    // documento, las miniaturas y el visor cambian de idioma solos, sin que
+    // cada pantalla tenga que acordarse de pasarlo. Queda la opción de
+    // forzarlo, para mostrar una vista previa en otro idioma.
+    const { locale: delApp } = useLocale();
+    const locale = forzado ?? delApp;
+
     const parsed: CvLayout | null = parseLayout(layout);
     if (!parsed) return null;
 

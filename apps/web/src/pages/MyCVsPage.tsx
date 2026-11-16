@@ -15,6 +15,7 @@ import MoreMenu from '../components/ui/MoreMenu';
 import { formatLongDate } from '../components/cv/cvLabels';
 import PageHeader from '../components/ui/PageHeader';
 import { cvService, porUltimaEdicion } from '../services/cvService';
+import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { describeError } from '../services/http';
 import type { CV } from '../types/models';
@@ -104,6 +105,7 @@ function CVListCard({ cv, layout, loadingLayout, onView, onEdit, onDownload, onD
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function MyCVsPage() {
     const { profile } = useAuth();
+    const { locale } = useLocale();
 
     const [items, setItems] = useState<CV[]>([]);
     const [page, setPage] = useState(1);
@@ -232,6 +234,7 @@ export default function MyCVsPage() {
                                         cv as unknown as Record<string, unknown>,
                                         layoutFor(templates, cv),
                                         cv.title,
+                                        locale,
                                     );
                                     if (problema) setError(problema);
                                 }}
