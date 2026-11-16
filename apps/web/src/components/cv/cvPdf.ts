@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { COLOR_SCHEMES, HEADER_FIELDS, ITEM_FIELDS, parseLayout } from '../../types/cvLayout';
 import type { ColorRoles, ListSource } from '../../types/cvLayout';
 import {
-    LANGUAGE_LEVEL, SECTION_TITLE, SKILL_LEVEL, WORK_TYPE, formatLongDate, formatRange,
+    LANGUAGE_LEVEL, SECTION_TITLE, SKILL_LEVEL, WORK_TYPE, formatCalendarDate, formatRange,
 } from './cvLabels';
 import type { Locale } from './cvLabels';
 
@@ -131,7 +131,7 @@ function drawHeader(f: Flow, fields: string[], cv: Raw, c: ColorRoles, locale: L
 
     const contacto = leaves
         .filter(l => !['photoUrl', 'fullName', 'bio'].includes(l))
-        .map(l => (l === 'birthDate' ? formatLongDate(personal[l], locale) : text(personal[l])))
+        .map(l => (l === 'birthDate' ? formatCalendarDate(personal[l], locale) : text(personal[l])))
         .filter((v): v is string => !!v);
     if (contacto.length > 0) texto.write(contacto.join('  ·  '), 9.5, 'normal', c.secondary, 2.5);
 
@@ -168,7 +168,7 @@ function drawItem(f: Flow, item: Raw, source: ListSource, fields: string[], c: C
     const rango = (has('startDate') || has('endDate'))
         ? formatRange(item.startDate, item.endDate, item.current, locale)
         : null;
-    const emitida = has('issuedAt') ? formatLongDate(item.issuedAt, locale) : null;
+    const emitida = has('issuedAt') ? formatCalendarDate(item.issuedAt, locale) : null;
     const derecha = [rango, emitida].filter(Boolean).join(' · ');
 
     if (titulo) {
@@ -184,7 +184,7 @@ function drawItem(f: Flow, item: Raw, source: ListSource, fields: string[], c: C
     if (has('field')) { const v = text(item.field); if (v) extras.push(v); }
     if (has('type')) { const v = WORK_TYPE[locale][String(item.type)]; if (v) extras.push(v); }
     if (has('expiresAt')) {
-        const v = formatLongDate(item.expiresAt, locale);
+        const v = formatCalendarDate(item.expiresAt, locale);
         if (v) extras.push(`${locale === 'es' ? 'Vence' : 'Expires'} ${v}`);
     }
     if (extras.length > 0) f.write(extras.join('  ·  '), 9, 'normal', c.secondary, 1.2);
