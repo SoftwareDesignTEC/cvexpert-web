@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ExternalLink, GraduationCap } from 'lucide-react';
 import type { Course } from '../../services/courseService';
 import { publishedCourse, validCourse } from '../../services/courseService';
+import { useLocale } from '../../i18n/LocaleContext';
 
 function CoursePlatformLogo({ logoUrl, platform }: { logoUrl: string | null; platform: string }) {
     const [failed, setFailed] = useState(false);
@@ -27,6 +28,9 @@ function CoursePlatformLogo({ logoUrl, platform }: { logoUrl: string | null; pla
 
 
 export default function CourseCard({ course }: { course: Course & { skillName?: string } }) {
+    // Antes del descarte: un hook no puede quedar después de un return.
+    const { t } = useLocale();
+
     if (!validCourse(course) || !publishedCourse(course)) return null;
     // durationHours puede venir null: hay cursos sin duración publicada.
     // Se omite el dato en vez de escribir "null h".
@@ -47,7 +51,7 @@ export default function CourseCard({ course }: { course: Course & { skillName?: 
                             : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
                     }`}
                 >
-                    {course.isPaid ? 'De pago' : 'Gratis'}
+                    {course.isPaid ? t.courses.pricePaid : t.courses.priceFree}
                 </span>
             </div>
 
@@ -55,7 +59,7 @@ export default function CourseCard({ course }: { course: Course & { skillName?: 
                 {course.title}
             </h3>
             <p className="text-[11px] text-muted">{meta}</p>
-            {course.skills.length > 0 && <p className="text-[11px] text-muted break-words">Habilidades: {course.skills.join(' · ')}</p>}
+            {course.skills.length > 0 && <p className="text-[11px] text-muted break-words">{t.courses.skills}: {course.skills.join(' · ')}</p>}
 
             <a
                 href={course.url}
@@ -64,7 +68,7 @@ export default function CourseCard({ course }: { course: Course & { skillName?: 
                 aria-label={`Ver curso ${course.title} en ${course.platform}`}
                 className="mt-auto inline-flex items-center justify-center gap-1 text-xs font-medium text-primary border border-primary rounded-lg px-2 py-1.5 hover:bg-primary-tint dark:hover:bg-primary/10 transition-colors"
             >
-                Ver Curso <ExternalLink size={12} />
+                {t.courses.viewCourse} <ExternalLink size={12} />
             </a>
         </div>
     );
