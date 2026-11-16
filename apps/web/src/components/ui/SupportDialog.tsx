@@ -77,7 +77,7 @@ export default function SupportDialog({ open, onClose }: { open: boolean; onClos
         load();
 
         return () => { cancelled = true; };
-    }, [open]);
+    }, [open, t.forms.supportError]);
 
     return (
         <Modal

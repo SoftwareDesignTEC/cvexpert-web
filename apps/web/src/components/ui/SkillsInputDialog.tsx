@@ -9,6 +9,7 @@ import {
     skillsGapService,
 } from '../../services/skillsGapService';
 import type { SkillInput, SkillLevel } from '../../services/skillsGapService';
+import { useLocale } from '../../i18n/LocaleContext';
 
 interface Row {
     // Clave estable: el nombre cambia mientras se escribe y no sirve como key
@@ -27,6 +28,7 @@ export default function SkillsInputDialog({
     onClose: () => void;
     onSaved: () => void;
 }) {
+    const { t } = useLocale();
     // El formulario arranca vacío a propósito. GET /skills-gap NO devuelve la
     // lista guardada: `items` trae sólo las brechas positivas y `unresolved` las
     // no comparables, así que las habilidades que ya cumplen el requisito no
@@ -83,8 +85,8 @@ export default function SkillsInputDialog({
         <Modal
             open={open}
             size="lg"
-            title="Mis habilidades"
-            description="Con esto calculamos tu brecha frente a la vacante de referencia."
+            title={t.forms.mySkills}
+            description={t.forms.mySkillsDesc}
             onClose={onClose}
         >
             <div className="flex flex-col gap-4">
@@ -106,7 +108,7 @@ export default function SkillsInputDialog({
                                 <input
                                     value={row.skillName}
                                     onChange={e => update(row.id, { skillName: e.target.value })}
-                                    placeholder="Nombre de la habilidad"
+                                    placeholder={t.forms.skillName}
                                     className={`w-full rounded-xl border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none dark:bg-gray-800 dark:text-white
                                         ${isDuplicate(row)
                                         ? 'border-rose-400 focus:border-rose-500'
@@ -114,7 +116,7 @@ export default function SkillsInputDialog({
                                     }`}
                                 />
                                 {isDuplicate(row) && (
-                                    <p className="mt-1 text-xs text-rose-500">Está repetida</p>
+                                    <p className="mt-1 text-xs text-rose-500">{t.forms.duplicated}</p>
                                 )}
                             </div>
 
@@ -123,7 +125,7 @@ export default function SkillsInputDialog({
                                 onChange={e => update(row.id, { level: e.target.value as SkillLevel | '' })}
                                 className="w-36 shrink-0 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink focus:border-primary focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                             >
-                                <option value="">Sin definir</option>
+                                <option value="">{t.forms.undefinedLevel}</option>
                                 {SKILL_LEVELS.map(l => (
                                     <option key={l} value={l}>{LEVEL_LABEL[l]}</option>
                                 ))}
@@ -132,7 +134,7 @@ export default function SkillsInputDialog({
                             <button
                                 type="button"
                                 onClick={() => setRows(rs => (rs.length === 1 ? [emptyRow()] : rs.filter(r => r.id !== row.id)))}
-                                aria-label={`Quitar ${row.skillName || 'la fila'}`}
+                                aria-label={`${t.forms.removeRow} ${row.skillName || t.forms.thisRow}`}
                                 className="mt-1 shrink-0 rounded-lg p-2 text-muted hover:bg-canvas hover:text-rose-500 dark:hover:bg-gray-800"
                             >
                                 <Trash2 size={16} />
@@ -148,12 +150,11 @@ export default function SkillsInputDialog({
                     className="self-start"
                     onClick={() => setRows(rs => [...rs, emptyRow()])}
                 >
-                    <Plus size={14} /> Agregar habilidad
+                    <Plus size={14} /> {t.forms.addSkill}
                 </Button>
 
                 <p className="text-xs text-muted">
-                    Los nombres distinguen mayúsculas. Si una habilidad no está en el catálogo
-                    igual se guarda, pero va a aparecer como no comparable en el análisis.
+                    {t.forms.skillsNote}
                 </p>
 
                 {error && <p className="text-sm text-rose-500">{error}</p>}
@@ -162,25 +163,25 @@ export default function SkillsInputDialog({
                     <div className="flex flex-col gap-3 rounded-xl border border-line bg-canvas/60 p-3 dark:border-gray-800 dark:bg-gray-800/60">
                         <p className="text-sm text-body dark:text-gray-300">
                             {named.length === 0
-                                ? '¿Guardar una lista vacía? Vas a quedarte sin análisis de brecha hasta que cargues habilidades de nuevo.'
-                                : `¿Reemplazar todas tus habilidades guardadas por estas ${named.length}? Las que no estén en la lista se pierden.`}
+                                ? t.forms.confirmEmptySkills
+                                : t.forms.confirmReplaceSkills.replace('{n}', String(named.length))}
                         </p>
                         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                             <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(false)}>
-                                Volver
+                                {t.forms.goBack}
                             </Button>
                             <Button type="button" size="sm" onClick={save} disabled={saving}>
-                                {saving ? 'Guardando…' : 'Sí, reemplazar'}
+                                {saving ? t.common.saving : t.forms.yesReplace}
                             </Button>
                         </div>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-                            Cancelar
+                            {t.common.cancel}
                         </Button>
                         <Button type="button" size="sm" disabled={!canSave} onClick={() => setConfirming(true)}>
-                            Guardar habilidades
+                            {t.forms.saveSkills}
                         </Button>
                     </div>
                 )}
