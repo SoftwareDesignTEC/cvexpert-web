@@ -1,5 +1,8 @@
 import { Bell, Briefcase, FileText, GraduationCap, Kanban } from 'lucide-react';
 import type { AppNotification } from '../../types/models';
+import { useLocale } from '../../i18n/LocaleContext';
+import type { Dict } from '../../i18n/dictionary';
+import type { Locale } from '../cv/cvLabels';
 
 // El mismo ícono que la sección del Sidebar a la que lleva cada tipo
 function renderIcon(type: AppNotification['type']) {
@@ -13,15 +16,20 @@ function renderIcon(type: AppNotification['type']) {
     }
 }
 
-// Las fechas llegan en epoch ms. Lo reciente se dice en relativo; lo viejo, con fecha.
-function formatWhen(epochMs: number): string {
+// Las fechas llegan en epoch ms. Lo reciente se dice en relativo; lo viejo, con
+// fecha, en la zona horaria del dispositivo: es un instante, no un día del
+// almanaque. El formato de fecha sigue el idioma activo.
+function formatWhen(epochMs: number, t: Dict['notifications'], locale: Locale): string {
     const minutes = Math.floor((Date.now() - epochMs) / 60_000);
     if (!Number.isFinite(minutes)) return '';
-    if (minutes < 1) return 'Recién';
-    if (minutes < 60) return `Hace ${minutes} min`;
+    if (minutes < 1) return t.justNow;
+    if (minutes < 60) return t.minutesAgo.replace('{n}', String(minutes));
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `Hace ${hours} h`;
-    return new Date(epochMs).toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (hours < 24) return t.hoursAgo.replace('{n}', String(hours));
+    return new Date(epochMs).toLocaleDateString(
+        locale === 'en' ? 'en-US' : 'es-CR',
+        { day: '2-digit', month: 'short', year: 'numeric' },
+    );
 }
 
 interface NotificationItemProps {
@@ -35,6 +43,7 @@ interface NotificationItemProps {
 }
 
 export default function NotificationItem({ notification, compact, onOpen, action }: NotificationItemProps) {
+    const { locale, t } = useLocale();
     const unread = !notification.read;
 
     const content = (
@@ -45,7 +54,7 @@ export default function NotificationItem({ notification, compact, onOpen, action
             {notification.body && (
                 <p className={`text-xs text-muted ${compact ? 'line-clamp-2' : ''}`}>{notification.body}</p>
             )}
-            <p className="mt-0.5 text-[11px] text-muted">{formatWhen(notification.createdAt)}</p>
+            <p className="mt-0.5 text-[11px] text-muted">{formatWhen(notification.createdAt, t.notifications, locale)}</p>
         </>
     );
 

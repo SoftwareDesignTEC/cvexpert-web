@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Sparkles, Square } from 'lucide-react';
 import { useDictation } from '../../hooks/useDictation';
+import { useLocale } from '../../i18n/LocaleContext';
 
 const inputClass =
     'w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white';
@@ -21,6 +22,7 @@ export default function DictatableTextArea({
     onGenerate?: (actual: string) => Promise<string>;
 }) {
     const [generating, setGenerating] = useState(false);
+    const { t } = useLocale();
     const [genError, setGenError] = useState<string | null>(null);
 
     const generar = async () => {
@@ -32,7 +34,7 @@ export default function DictatableTextArea({
             // continuación. Lo anterior se va como contexto.
             onChange(await onGenerate(valorRef.current));
         } catch (err) {
-            setGenError(err instanceof Error ? err.message : 'No pudimos generar el texto.');
+            setGenError(err instanceof Error ? err.message : t.cvDialogs.aiTextError);
         } finally {
             setGenerating(false);
         }
@@ -80,8 +82,8 @@ export default function DictatableTextArea({
                     <button
                         type="button"
                         onClick={listening ? stop : start}
-                        title={listening ? 'Detener el dictado' : 'Dictar'}
-                        aria-label={listening ? 'Detener el dictado' : 'Dictar'}
+                        title={listening ? t.cvDialogs.stopDictation : t.cvDialogs.dictate}
+                        aria-label={listening ? t.cvDialogs.stopDictation : t.cvDialogs.dictate}
                         className={`rounded-lg p-1.5 transition-colors
                             ${listening
                             ? 'bg-rose-500 text-white'
@@ -103,11 +105,11 @@ export default function DictatableTextArea({
                     className="inline-flex items-center gap-1.5 self-start rounded-lg border border-primary bg-primary-tint px-2.5 py-1.5 text-[11px] font-semibold text-primary-dark transition-colors hover:bg-primary hover:text-white disabled:opacity-60 dark:bg-primary/10 dark:text-primary dark:hover:bg-primary dark:hover:text-white"
                 >
                     <Sparkles size={13} className={generating ? 'animate-pulse' : ''} />
-                    {generating ? 'Redactando…' : 'Redactar con IA'}
+                    {generating ? t.cvDialogs.writing : t.cvDialogs.writeWithAi}
                 </button>
             )}
 
-            {listening && <p className="text-[11px] text-primary">Escuchando… hablá y se va escribiendo.</p>}
+            {listening && <p className="text-[11px] text-primary">{t.cvDialogs.listening}</p>}
             {error && <p className="text-[11px] text-rose-500">{error}</p>}
             {genError && <p className="text-[11px] text-rose-500">{genError}</p>}
         </div>

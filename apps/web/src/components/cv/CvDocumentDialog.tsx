@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { useLocale } from '../../i18n/LocaleContext';
 import CvZoomView from './CvZoomView';
 import { UI_TEXT } from './cvLabels';
 import type { Locale } from './cvLabels';
@@ -26,6 +27,7 @@ export default function CvDocumentDialog({
     onClose: () => void;
 }) {
     const [imgFailed, setImgFailed] = useState(false);
+    const { t } = useLocale();
     const [error, setError] = useState<string | null>(null);
 
     const parsed = parseLayout(layout);
@@ -45,7 +47,7 @@ export default function CvDocumentDialog({
             }
             doc.save(pdfFileName(title));
         } catch {
-            setError('No pudimos generar el PDF. Intentá de nuevo.');
+            setError(t.cvDialogs.pdfError);
         }
     };
 
@@ -95,7 +97,7 @@ export default function CvDocumentDialog({
                     {error && <p className="text-sm text-rose-500">{error}</p>}
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                        <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                        <Button variant="secondary" size="sm" onClick={onClose}>{t.dialogs.close}</Button>
                         {canRender && (
                             <Button size="sm" onClick={exportPdf}>
                                 <Download size={14} /> Descargar PDF

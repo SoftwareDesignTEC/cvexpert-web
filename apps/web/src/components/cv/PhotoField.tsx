@@ -3,6 +3,7 @@ import { Trash2, Upload, User } from 'lucide-react';
 import Button from '../ui/Button';
 import { cvService } from '../../services/cvService';
 import { describeError } from '../../services/http';
+import { useLocale } from '../../i18n/LocaleContext';
 
 // La foto ya no viaja dentro del JSON del currículum: se sube aparte y lo que
 // se guarda en el documento es el enlace.
@@ -64,16 +65,13 @@ async function shrink(file: File): Promise<Blob> {
 
 type Fase = 'quieto' | 'procesando' | 'subiendo';
 
-const ETIQUETA: Record<Fase, string> = {
-    quieto: 'Elegir del dispositivo',
-    procesando: 'Preparando…',
-    subiendo: 'Subiendo…',
-};
+
 
 export default function PhotoField({ value, onChange }: {
     value?: string;
     onChange: (v: string | undefined) => void;
 }) {
+    const { t } = useLocale();
     const input = useRef<HTMLInputElement>(null);
     const [error, setError] = useState<string | null>(null);
     // Se distinguen las dos esperas porque duran cosas distintas: recortar es
@@ -90,7 +88,7 @@ export default function PhotoField({ value, onChange }: {
             setFase('subiendo');
             onChange(await cvService.uploadPhoto(recortada));
         } catch (err) {
-            setError(describeError(err, 'subir la foto'));
+            setError(describeError(err, t.cvDialogs.photoError));
         } finally {
             setFase('quieto');
             // Permite volver a elegir el mismo archivo si hizo falta corregir
@@ -102,7 +100,7 @@ export default function PhotoField({ value, onChange }: {
 
     return (
         <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-medium text-body dark:text-gray-300">Foto de perfil</span>
+            <span className="text-[11px] font-medium text-body dark:text-gray-300">{t.cvDialogs.photo}</span>
 
             <div className="flex items-center gap-3">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-line bg-canvas dark:border-gray-700 dark:bg-gray-800">
@@ -132,18 +130,20 @@ export default function PhotoField({ value, onChange }: {
                         disabled={ocupado}
                         onClick={() => input.current?.click()}
                     >
-                        <Upload size={14} /> {ETIQUETA[fase]}
+                        <Upload size={14} /> {fase === 'procesando' ? t.cvDialogs.photoPreparing
+                            : fase === 'subiendo' ? t.cvDialogs.photoUploading
+                            : t.cvDialogs.photoPick}
                     </Button>
                     {value && !ocupado && (
                         <Button type="button" variant="secondary" size="sm" onClick={() => onChange(undefined)}>
-                            <Trash2 size={14} /> Quitar
+                            <Trash2 size={14} /> {t.cvDialogs.photoRemove}
                         </Button>
                     )}
                 </div>
             </div>
 
             <p className="text-[11px] text-muted">
-                Se recorta al centro y se guarda aparte del currículum. Formatos JPG, PNG o WebP.
+                {t.cvDialogs.photoHint}
             </p>
 
             {error && <p className="text-[11px] text-rose-500">{error}</p>}

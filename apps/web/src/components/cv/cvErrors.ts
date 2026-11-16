@@ -1,57 +1,27 @@
+import type { Dict } from '../../i18n/dictionary';
+
 // El servicio devuelve los errores con la ruta del campo, p. ej.
 // "workExperiences.0.startDate": "Field required". Eso es la estructura interna
 // del contrato, no algo que el usuario pueda entender ni corregir.
 // Acá se traduce a una frase que nombra la sección, la fila y el campo.
 
-const SECTION_LABEL: Record<string, string> = {
-    personalInfo: 'Datos personales',
-    workExperiences: 'Experiencia',
-    education: 'Educación',
-    skills: 'Habilidades',
-    languages: 'Idiomas',
-    certifications: 'Certificaciones',
-};
+// Los textos salen del diccionario, así que las funciones los reciben en vez
+// de tenerlos escritos: son mensajes que el usuario lee, y tienen que estar en
+// el idioma que eligió.
+type Textos = Dict['cvErrors'];
 
-const FIELD_LABEL: Record<string, string> = {
-    // Datos personales
-    fullName: 'el nombre completo',
-    email: 'el correo',
-    phone: 'el teléfono',
-    address: 'la dirección',
-    photoUrl: 'la foto',
-    bio: 'el perfil profesional',
-    birthDate: 'la fecha de nacimiento',
-    // Experiencia
-    company: 'la empresa',
-    position: 'el puesto',
-    startDate: 'la fecha de inicio',
-    endDate: 'la fecha de fin',
-    description: 'la descripción',
-    type: 'el tipo',
-    // Educación
-    institution: 'la institución',
-    degree: 'el título',
-    field: 'el área',
-    // Habilidades e idiomas
-    name: 'el nombre',
-    level: 'el nivel',
-    category: 'la categoría',
-    // Certificaciones
-    issuer: 'el emisor',
-    issuedAt: 'la fecha de emisión',
-    expiresAt: 'la fecha de vencimiento',
-    credentialUrl: 'el enlace',
-    // Raíz
-    title: 'el título del currículum',
-    templateId: 'la plantilla',
-};
+const seccionDe = (t: Textos, clave: string) =>
+    (t.sections as Record<string, string>)[clave] ?? clave;
+
+const campoDe = (t: Textos, clave: string) =>
+    (t.fields as Record<string, string>)[clave] ?? clave;
 
 // Los mensajes del servicio vienen en inglés y con jerga de validación
-function motivo(mensaje: string): string {
+function motivo(t: Textos, mensaje: string): string {
     const m = mensaje.toLowerCase();
-    if (m.includes('required')) return 'falta completar';
-    if (m.includes('not found') || m.includes('exist')) return 'no existe';
-    if (m.includes('invalid') || m.includes('valid')) return 'no es válido';
+    if (m.includes('required')) return t.reasonRequired;
+    if (m.includes('not found') || m.includes('exist')) return t.reasonNotFound;
+    if (m.includes('invalid') || m.includes('valid')) return t.reasonInvalid;
     return mensaje;
 }
 
@@ -60,32 +30,29 @@ function motivo(mensaje: string): string {
  * "workExperiences.0.startDate: Field required"
  *   → "Experiencia, fila 1: falta completar la fecha de inicio"
  */
-export function humanizeFieldErrors(errors: Record<string, string>): string[] {
+export function humanizeFieldErrors(errors: Record<string, string>, t: Textos): string[] {
     return Object.entries(errors).map(([ruta, mensaje]) => {
         const partes = ruta.split('.');
-        const razon = motivo(mensaje);
+        const razon = motivo(t, mensaje);
 
         // raiz: "title", "templateId"
         if (partes.length === 1) {
-            const campo = FIELD_LABEL[partes[0]] ?? partes[0];
-            return `Falta completar ${campo}.`;
+            return t.rootMissing.replace('{campo}', campoDe(t, partes[0]));
         }
 
         // bloque simple: "personalInfo.fullName"
         if (partes.length === 2) {
-            const seccion = SECTION_LABEL[partes[0]] ?? partes[0];
-            const campo = FIELD_LABEL[partes[1]] ?? partes[1];
-            return `${seccion}: ${razon} ${campo}.`;
+            return `${seccionDe(t, partes[0])}: ${razon} ${campoDe(t, partes[1])}.`;
         }
 
         // lista: "workExperiences.0.startDate" — la fila se cuenta desde 1
         const [raiz, indice, ...resto] = partes;
-        const seccion = SECTION_LABEL[raiz] ?? raiz;
-        const campo = FIELD_LABEL[resto.join('.')] ?? resto.join('.');
+        const seccion = seccionDe(t, raiz);
+        const campo = campoDe(t, resto.join('.'));
         const fila = Number(indice);
 
         return Number.isFinite(fila)
-            ? `${seccion}, fila ${fila + 1}: ${razon} ${campo}.`
+            ? `${seccion}, ${t.row} ${fila + 1}: ${razon} ${campo}.`
             : `${seccion}: ${razon} ${campo}.`;
     });
 }
@@ -139,8 +106,9 @@ export function isRequired(source: string, field: string, row?: Record<string, u
 export function missingInRows(
     source: string,
     rows: Record<string, unknown>[],
+    t: Textos,
 ): string[] {
-    const seccion = SECTION_LABEL[source] ?? source;
+    const seccion = seccionDe(t, source);
     const requeridos = REQUIRED_BY_SOURCE[source] ?? [];
 
     return rows.flatMap((row, i) => {
@@ -149,7 +117,7 @@ export function missingInRows(
             : requeridos;
         const faltan = campos.filter(f => vacio(row[f]));
         if (faltan.length === 0) return [];
-        const nombres = faltan.map(f => FIELD_LABEL[f] ?? f).join(', ');
-        return [`${seccion}, fila ${i + 1}: ${nombres}`];
+        const nombres = faltan.map(f => campoDe(t, f)).join(', ');
+        return [`${seccion}, ${t.row} ${i + 1}: ${nombres}`];
     });
 }

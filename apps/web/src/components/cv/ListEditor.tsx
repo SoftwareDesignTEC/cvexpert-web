@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import DateFieldInput from './DateField';
 import DictatableTextArea from './DictatableTextArea';
+import { useLocale } from '../../i18n/LocaleContext';
 
 export type FieldKind = 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
 
@@ -36,9 +37,10 @@ const inputClassError = `${inputBase} border border-rose-400 focus:border-rose-5
 
 /** Punto rojo fijo; el texto sigue el tema, para que no grite en cada campo. */
 export function RequiredMark() {
+    const { t } = useLocale();
     return (
         <span className="ml-1.5 whitespace-nowrap text-[10px] text-muted">
-            <span className="text-rose-500">●</span> Obligatorio
+            <span className="text-rose-500">●</span> {t.cvDialogs.required}
         </span>
     );
 }
@@ -56,6 +58,7 @@ export function Field({ spec, value, onChange, error, onBlur, row }: {
     // El id del datalist tiene que ser único en toda la página: la misma clave
     // se repite en cada fila de una lista y entre secciones distintas.
     const listId = useId();
+    const { t } = useLocale();
     if (spec.kind === 'checkbox') {
         return (
             <label className="flex items-center gap-2 text-xs text-body dark:text-gray-300">
@@ -88,7 +91,7 @@ export function Field({ spec, value, onChange, error, onBlur, row }: {
                     onChange={e => onChange(e.target.value || null)}
                     className={inputClass}
                 >
-                    <option value="">Sin definir</option>
+                    <option value="">{t.cvDialogs.undefinedLevel}</option>
                     {spec.options?.map(o => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
@@ -138,6 +141,7 @@ export default function ListEditor({
     /** Aclaración bajo el título, p. ej. que la plantilla no dibuja esta sección */
     note?: string;
 }) {
+    const { t } = useLocale();
     const update = (i: number, key: string, v: unknown) =>
         onChange(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
 
@@ -177,7 +181,7 @@ export default function ListEditor({
                                         (f.requiredWhen ? f.requiredWhen(row) : f.required)
                                         && touched[`${i}.${f.key}`]
                                         && String(row[f.key] ?? '').trim() === ''
-                                            ? 'Este campo es obligatorio'
+                                            ? t.cvDialogs.requiredField
                                             : undefined
                                     }
                                 />
@@ -189,7 +193,7 @@ export default function ListEditor({
                         onClick={() => onChange(rows.filter((_, j) => j !== i))}
                         className="mt-2 inline-flex items-center gap-1 text-xs text-muted hover:text-rose-500"
                     >
-                        <Trash2 size={13} /> Quitar
+                        <Trash2 size={13} /> {t.cvDialogs.remove}
                     </button>
                 </div>
             ))}

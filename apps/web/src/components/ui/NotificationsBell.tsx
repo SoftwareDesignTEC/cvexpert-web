@@ -4,10 +4,12 @@ import { Bell } from 'lucide-react';
 import NotificationItem from './NotificationItem';
 import { LoadingSpinner } from './Feedback';
 import { useNotifications } from '../../context/NotificationsContext';
+import { useLocale } from '../../i18n/LocaleContext';
 import { internalLink } from '../../services/notificationService';
 import type { AppNotification } from '../../types/models';
 
 export default function NotificationsBell() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     // Las últimas llegan precargadas y al día con los avisos en vivo desde el contexto
     const { unreadCount, latest: items, latestLoaded, latestError, refreshLatest, markAsRead } = useNotifications();
@@ -49,8 +51,10 @@ export default function NotificationsBell() {
         <div className="relative" ref={panelRef}>
             <button
                 onClick={() => setOpen(v => !v)}
-                title="Notificaciones"
-                aria-label={badge ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones'}
+                title={t.notifications.bell}
+                aria-label={badge
+                    ? `${t.notifications.bell}, ${unreadCount} ${t.notifications.unreadCount}`
+                    : t.notifications.bell}
                 aria-expanded={open}
                 className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
