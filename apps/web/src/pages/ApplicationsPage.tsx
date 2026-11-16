@@ -21,6 +21,7 @@ import { ErrorMessage, LoadingSpinner } from '../components/ui/Feedback';
 import PageHeader from '../components/ui/PageHeader';
 import { applicationService } from '../services/otherServices';
 import { describeError } from '../services/http';
+import { useLocale } from '../i18n/LocaleContext';
 import type { ApplicationStatus, JobApplication, JobOffer } from '../types/models';
 
 // Cuántas postulaciones se muestran por columna antes de "Ver Todo"
@@ -31,7 +32,12 @@ const INITIAL_VISIBLE = 3;
 const FETCH_PAGE_SIZE = 50;
 const MAX_PAGES = 20; // salvavidas contra bucles si el endpoint ignora la paginación
 
-interface ColumnTone {
+/** Clave de la etiqueta en el diccionario; el texto se resuelve al dibujar */
+type ColumnKey =
+    | 'statusInterested' | 'statusApplied' | 'statusInProgress'
+    | 'statusInterview' | 'statusRejected';
+
+type ColumnTone = {
     column: string;   // borde superior y marco de la columna
     header: string;   // fondo de la cabecera
     title: string;
@@ -44,9 +50,9 @@ interface ColumnTone {
     tab: string;      // pestaña activa en movil
 }
 
-const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] = [
+const COLUMNS: { status: ApplicationStatus; key: ColumnKey; tone: ColumnTone }[] = [
     {
-        status: 'interested', label: 'Me interesa',
+        status: 'interested', key: 'statusInterested',
         tone: {
             column: 'border-t-4 border-t-violet-500 border border-violet-200 dark:border-violet-900',
             header: 'bg-violet-50 dark:bg-violet-950/30',
@@ -61,7 +67,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
         },
     },
     {
-        status: 'applied', label: 'Aplicado',
+        status: 'applied', key: 'statusApplied',
         tone: {
             column: 'border-t-4 border-t-blue-500 border border-blue-200 dark:border-blue-900',
             header: 'bg-blue-50 dark:bg-blue-950/30',
@@ -76,7 +82,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
         },
     },
     {
-        status: 'in-progress', label: 'En Proceso',
+        status: 'in-progress', key: 'statusInProgress',
         tone: {
             column: 'border-t-4 border-t-cyan-500 border border-cyan-200 dark:border-cyan-900',
             header: 'bg-cyan-50 dark:bg-cyan-950/30',
@@ -91,7 +97,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
         },
     },
     {
-        status: 'interview', label: 'Entrevista',
+        status: 'interview', key: 'statusInterview',
         tone: {
             column: 'border-t-4 border-t-emerald-600 border border-emerald-200 dark:border-emerald-900',
             header: 'bg-emerald-50 dark:bg-emerald-950/30',
@@ -106,7 +112,7 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
         },
     },
     {
-        status: 'rejected', label: 'Rechazado',
+        status: 'rejected', key: 'statusRejected',
         tone: {
             column: 'border-t-4 border-t-rose-500 border border-rose-200 dark:border-rose-900',
             header: 'bg-rose-50 dark:bg-rose-950/30',
@@ -125,14 +131,8 @@ const COLUMNS: { status: ApplicationStatus; label: string; tone: ColumnTone }[] 
 const toneFor = (status: ApplicationStatus) =>
     COLUMNS.find(c => c.status === status)!.tone;
 
-const labelFor = (status: ApplicationStatus) =>
-    COLUMNS.find(c => c.status === status)?.label ?? status;
-
-const modalityLabel: Record<JobApplication['modality'], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
+const keyFor = (status: ApplicationStatus): ColumnKey | null =>
+    COLUMNS.find(c => c.status === status)?.key ?? null;
 
 async function fetchAllApplications(): Promise<{ items: JobApplication[]; total: number }> {
     const all: JobApplication[] = [];
@@ -159,6 +159,7 @@ function ApplicationCardContent({
     onChangeStatus?: () => void;
     onOpenDetail?: () => void;
 }) {
+    const { t } = useLocale();
     const tone = toneFor(application.status);
 
     return (
@@ -180,7 +181,7 @@ function ApplicationCardContent({
                         <span className="truncate">{application.location}</span>
                     </div>
                     <div className="mt-1">
-                        <Badge label={modalityLabel[application.modality]} variant="info" />
+                        <Badge label={t.modality[application.modality]} variant="info" />
                     </div>
                 </div>
             </div>
@@ -194,8 +195,8 @@ function ApplicationCardContent({
                             onClick={e => { e.stopPropagation(); onChangeStatus(); }}
                             // Evita que el gesto inicie un arrastre en vez de pulsar
                             onPointerDown={e => e.stopPropagation()}
-                            title="Cambiar de estado"
-                            aria-label="Cambiar de estado"
+                            title={t.applications.changeStatus}
+                            aria-label={t.applications.changeStatus}
                             className={`rounded-md p-1.5 transition-colors ${tone.action}`}
                         >
                             <ArrowLeftRight size={13} />
@@ -207,7 +208,7 @@ function ApplicationCardContent({
                         disabled={!onOpenDetail}
                         className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${tone.action}`}
                     >
-                        Detalles
+                        {t.applications.details}
                     </button>
                 </div>
             </div>
@@ -261,6 +262,7 @@ function KanbanColumn({
     onOpenDetail: (app: JobApplication) => void;
     onVerMas: () => void;
 }) {
+    const { t } = useLocale();
     const { setNodeRef, isOver } = useDroppable({ id: status });
     const visible = items.slice(0, INITIAL_VISIBLE);
     const resto = items.length - visible.length;
@@ -284,7 +286,7 @@ function KanbanColumn({
 
             <div className="flex flex-col gap-2 p-2">
                 {items.length === 0 ? (
-                    <p className="px-1 py-2 text-xs text-muted">Sin postulaciones.</p>
+                    <p className="px-1 py-2 text-xs text-muted">{t.applications.emptyColumn}</p>
                 ) : (
                     visible.map(app => (
                         <DraggableApplicationCard
@@ -304,7 +306,7 @@ function KanbanColumn({
                         onClick={onVerMas}
                         className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${tone.action}`}
                     >
-                        Ver {resto} más
+                        {t.applications.seeMore} {resto} {t.applications.seeMoreSuffix}
                     </button>
                 )}
             </div>
@@ -320,10 +322,11 @@ function StatusPickerDialog({
     onClose: () => void;
     onSelect: (status: ApplicationStatus) => void;
 }) {
+    const { t } = useLocale();
     return (
         <Modal
             open={application !== null}
-            title="Cambiar de estado"
+            title={t.applications.changeStatus}
             description={application?.jobTitle}
             onClose={onClose}
         >
@@ -340,7 +343,7 @@ function StatusPickerDialog({
                             <span className="flex items-center gap-2 min-w-0">
                                 <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${col.tone.dot}`} />
                                 <span className={`text-sm font-medium truncate ${current ? col.tone.title : 'text-ink dark:text-gray-100'}`}>
-                                    {col.label}
+                                    {t.applications[col.key]}
                                 </span>
                             </span>
                             {current && <Check size={16} className="text-primary shrink-0" />}
@@ -354,6 +357,7 @@ function StatusPickerDialog({
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function ApplicationsPage() {
+    const { t } = useLocale();
     const [applications, setApplications] = useState<JobApplication[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -419,7 +423,7 @@ export default function ApplicationsPage() {
             // Recién ahora que APIM confirmó el cambio se mueve la card visualmente
             setApplications(prev => prev.map(a => (a.id === appId ? { ...a, status: newStatus } : a)));
         } catch (err) {
-            setMoveError(describeError(err, 'actualizar el estado de la postulación'));
+            setMoveError(describeError(err, t.applications.updateError));
         } finally {
             setPendingId(null);
         }
@@ -449,16 +453,16 @@ export default function ApplicationsPage() {
         <div className="flex flex-col gap-3 sm:gap-6">
 
             <PageHeader
-                eyebrow="Tu búsqueda en movimiento"
-                title="Rastreador de Postulaciones"
+                eyebrow={t.applications.eyebrow}
+                title={t.applications.title}
                 action={
                     <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-2 rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 px-4 py-2 text-sm text-body dark:text-gray-300 shadow-sm">
-                            Postulaciones
+                            {t.applications.counter}
                             <span className="font-bold text-ink dark:text-white">{total}</span>
                         </span>
                         <Button size="sm" onClick={() => setAgregando(true)}>
-                            + Agregar
+                            {t.applications.add}
                         </Button>
                     </div>
                 }
@@ -483,7 +487,7 @@ export default function ApplicationsPage() {
                             <KanbanColumn
                                 key={col.status}
                                 status={col.status}
-                                label={col.label}
+                                label={t.applications[col.key]}
                                 tone={col.tone}
                                 items={col.items}
                                 pendingId={pendingId}
@@ -518,13 +522,13 @@ export default function ApplicationsPage() {
                                 : 'text-body dark:text-gray-300 border-line dark:border-gray-800 bg-surface dark:bg-gray-900'
                             }`}
                         >
-                            {c.label}
+                            {t.applications[c.key]}
                         </button>
                     ))}
                 </div>
 
                 {activeColumnItems.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Sin postulaciones en esta columna.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t.applications.emptyColumnLong}</p>
                 ) : (
                     <div className="flex flex-col gap-2">
                         {visibleMobile.map(app => (
@@ -539,7 +543,7 @@ export default function ApplicationsPage() {
 
                         {activeColumnItems.length > INITIAL_VISIBLE && (
                             <Button variant="secondary" className="w-full" onClick={() => setMobileExpanded(v => !v)}>
-                                {mobileExpanded ? 'Ver menos' : 'Ver Todo'}
+                                {mobileExpanded ? t.applications.seeLess : t.applications.seeAll}
                             </Button>
                         )}
                     </div>
@@ -548,7 +552,10 @@ export default function ApplicationsPage() {
 
             <ApplicationDetailDialog
                 application={detailApp}
-                statusLabel={labelFor}
+                statusLabel={status => {
+                    const k = keyFor(status);
+                    return k ? t.applications[k] : status;
+                }}
                 statusTone={status => toneFor(status).badge}
                 onClose={() => setDetailApp(null)}
                 onChangeStatus={() => { setStatusFor(detailApp); setDetailApp(null); }}
@@ -589,10 +596,15 @@ export default function ApplicationsPage() {
             <Modal
                 open={verMas !== null}
                 size="xl"
-                title={verMas ? labelFor(verMas) : ''}
-                description={verMasItems.length === 1
-                    ? '1 postulación en este estado'
-                    : `${verMasItems.length} postulaciones en este estado`}
+                title={(() => {
+                    const k = verMas && keyFor(verMas);
+                    return k ? t.applications[k] : '';
+                })()}
+                description={`${verMasItems.length} ${
+                    verMasItems.length === 1
+                        ? t.applications.oneApplication
+                        : t.applications.manyApplications
+                } ${t.applications.inThisStatus}`}
                 onClose={() => setVerMas(null)}
             >
                 <div className="grid max-h-[65vh] grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2 overflow-y-auto">

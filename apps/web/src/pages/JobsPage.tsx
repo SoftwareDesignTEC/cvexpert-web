@@ -14,6 +14,7 @@ import { jobService } from '../services/otherServices';
 import { describeError } from '../services/http';
 import { hayPreferencias, leerPreferencias, ordenarPorPreferencias } from '../services/jobRanking';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../i18n/LocaleContext';
 import type { JobOffer } from '../types/models';
 
 // El APIM todavía no filtra, así que se descarga el catálogo completo una vez y
@@ -28,21 +29,17 @@ const MAX_REQUIREMENTS = 3;
 // Accesos rapidos del mockup. Filtran sobre las ofertas ya cargadas: el mock de APIM
 // todavia no acepta filtros, asi que hacerlo aqui es lo unico que da un resultado real.
 const QUICK_FILTERS = [
-    { id: 'recommended', label: 'Recomendadas' },
-    { id: 'remote',      label: 'Remoto' },
-    { id: 'hybrid',      label: 'Híbrido' },
-    { id: 'recent',      label: 'Últimos 7 días' },
+    { id: 'recommended', key: 'quickRecommended' },
+    { id: 'remote',      key: 'quickRemote' },
+    { id: 'hybrid',      key: 'quickHybrid' },
+    { id: 'recent',      key: 'quickRecent' },
 ] as const;
 
 type QuickFilter = typeof QUICK_FILTERS[number]['id'];
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-const MODALITY_OPTIONS: { value: JobOffer['modality']; label: string }[] = [
-    { value: 'remote',  label: 'Remoto' },
-    { value: 'on-site', label: 'Presencial' },
-    { value: 'hybrid',  label: 'Híbrido' },
-];
+
 
 async function fetchAllJobs(search?: string): Promise<JobOffer[]> {
     const all: JobOffer[] = [];
@@ -54,14 +51,11 @@ async function fetchAllJobs(search?: string): Promise<JobOffer[]> {
     return all;
 }
 
-const modalityLabel: Record<JobOffer['modality'], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
+
 
 //Círculo de compatibilidad
 function MatchRing({ score }: { score: number }) {
+    const { t } = useLocale();
     const size = 64;
     const stroke = 6;
     const radius = (size - stroke) / 2;
@@ -90,13 +84,14 @@ function MatchRing({ score }: { score: number }) {
                     {clamped}%
                 </span>
             </div>
-            <span className="text-[10px] text-muted">Compatibilidad</span>
+            <span className="text-[10px] text-muted">{t.jobs.match}</span>
         </div>
     );
 }
 
 // ── Fila de oferta ────────────────────────────────────────────────────────────
 function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
+    const { t } = useLocale();
     // `requirements` puede faltar en la respuesta; sin esto la pantalla entera falla
     const requirements = (job.requirements ?? []).slice(0, MAX_REQUIREMENTS);
 
@@ -121,7 +116,7 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
                             <MapPin size={12} className="shrink-0" />
                             <span className="truncate">{job.location}</span>
                         </div>
-                        <Badge label={modalityLabel[job.modality]} variant="info" />
+                        <Badge label={t.modality[job.modality]} variant="info" />
                     </div>
                 </div>
 
@@ -131,7 +126,7 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
             {/* Parte inferior (mobile) / centro (desktop): requisitos */}
             <div className="md:w-64 lg:w-80 md:shrink-0 border-t border-gray-100 dark:border-gray-800 pt-3 md:border-t-0 md:pt-0">
                 <p className="text-xs font-semibold text-ink dark:text-gray-200 mb-1">
-                    Requisitos principales
+                    {t.jobs.mainRequirements}
                 </p>
                 {requirements.length > 0 ? (
                     <ul className="list-disc pl-4 flex flex-col gap-0.5">
@@ -142,7 +137,7 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
                         ))}
                     </ul>
                 ) : (
-                    <p className="text-xs text-gray-400">Sin requisitos especificados</p>
+                    <p className="text-xs text-gray-400">{t.jobs.noRequirements}</p>
                 )}
             </div>
 
@@ -160,6 +155,7 @@ function JobRow({ job, onOpen }: { job: JobOffer; onOpen: () => void }) {
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function JobsPage() {
     const { profile } = useAuth();
+    const { t } = useLocale();
     const navigate = useNavigate();
 
     const [items, setItems] = useState<JobOffer[]>([]);
@@ -259,12 +255,12 @@ export default function JobsPage() {
         <div ref={topRef} className="flex flex-col gap-3 sm:gap-6 scroll-mt-4">
 
             <PageHeader
-                eyebrow="Oportunidades para ti"
-                title="Ofertas Laborales"
+                eyebrow={t.jobs.eyebrow}
+                title={t.jobs.title}
                 action={
                     filtered.length > 0 ? (
                         <span className="inline-block rounded-full bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary-dark dark:bg-primary/15 dark:text-primary">
-                            {filtered.length} {filtered.length === 1 ? 'oferta encontrada' : 'ofertas encontradas'}
+                            {filtered.length} {filtered.length === 1 ? t.jobs.foundSingular : t.jobs.foundPlural}
                         </span>
                     ) : undefined
                 }
@@ -278,7 +274,7 @@ export default function JobsPage() {
                         type="text"
                         value={searchInput}
                         onChange={e => setSearchInput(e.target.value)}
-                        placeholder="Buscar ofertas, empresas o puestos"
+                        placeholder={t.jobs.searchPlaceholder}
                         className="w-full rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-3 pl-12 pr-4 text-sm text-ink dark:text-white placeholder:text-muted shadow-sm focus:outline-none focus:border-primary"
                     />
                 </div>
@@ -291,7 +287,7 @@ export default function JobsPage() {
                     }`}
                 >
                     <Filter size={16} aria-hidden="true" />
-                    <span className="hidden sm:inline">Filtros</span>
+                    <span className="hidden sm:inline">{t.jobs.filters}</span>
                     {activeFilters > 0 && (
                         <span className="rounded-full bg-primary px-1.5 text-xs font-bold text-white">
                             {activeFilters}
@@ -312,7 +308,7 @@ export default function JobsPage() {
                             : 'bg-surface dark:bg-gray-900 text-body dark:text-gray-300 border-line dark:border-gray-800 hover:border-primary hover:text-primary'
                         }`}
                     >
-                        {f.label}
+                        {t.jobs[f.key]}
                     </button>
                 ))}
             </div>
@@ -323,14 +319,14 @@ export default function JobsPage() {
             {quickFilter === 'recommended' && !loading && !error && filtered.length > 0 && (
                 <p className="-mt-1 text-xs text-muted">
                     {ordenadoPorPrefs
-                        ? 'Ordenadas de acuerdo a tus preferencias.'
-                        : 'Elegí tus preferencias para que ordenemos las ofertas según lo que buscás.'}{' '}
+                        ? t.jobs.orderedByPrefs
+                        : t.jobs.noPrefsYet}{' '}
                     <button
                         type="button"
                         onClick={() => navigate('/profile')}
                         className="font-medium text-primary underline-offset-2 hover:underline"
                     >
-                        {ordenadoPorPrefs ? 'Cambiar preferencias' : 'Elegir preferencias'}
+                        {ordenadoPorPrefs ? t.jobs.changePrefs : t.jobs.choosePrefs}
                     </button>
                 </p>
             )}
@@ -343,8 +339,8 @@ export default function JobsPage() {
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-start gap-3">
                     <p className="text-sm text-muted">
-                        No se encontraron ofertas{search ? ` para "${search}"` : ''}
-                        {activeFilters > 0 || quickFilter !== 'recommended' ? ' con esos filtros' : ''}.
+                        {t.jobs.noneFound}{search ? ` "${search}"` : ''}
+                        {activeFilters > 0 || quickFilter !== 'recommended' ? t.jobs.withFilters : ''}.
                     </p>
                     {activeFilters > 0 && (
                         <Button variant="secondary" size="sm" onClick={clearFilters}>
@@ -367,14 +363,15 @@ export default function JobsPage() {
             {/* Panel de filtros */}
             <Modal
                 open={filtersOpen}
-                title="Filtrar ofertas"
+                title={t.jobs.filterTitle}
                 description="Se combina con los accesos rápidos y la búsqueda."
                 onClose={() => setFiltersOpen(false)}
             >
                 <div className="flex flex-col gap-5">
                     <ChipGroup
-                        label="Modalidad"
-                        options={MODALITY_OPTIONS}
+                        label={t.jobs.modalityLabel}
+                        options={(['remote', 'on-site', 'hybrid'] as const)
+                            .map(v => ({ value: v, label: t.modality[v] }))}
                         selected={modalities}
                         onToggle={v => setModalities(prev => toggle(prev, v))}
                     />
@@ -382,7 +379,7 @@ export default function JobsPage() {
                     <div className="flex flex-col gap-2">
                         <div className="flex items-baseline justify-between gap-2">
                             <label htmlFor="min-match" className="text-xs font-medium text-body dark:text-gray-300">
-                                Compatibilidad mínima
+                                {t.jobs.minMatch}
                             </label>
                             <span className="text-sm font-bold text-primary">
                                 {minMatch === 0 ? 'Cualquiera' : `${minMatch}%`}

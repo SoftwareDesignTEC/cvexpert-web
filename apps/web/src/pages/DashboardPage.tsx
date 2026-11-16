@@ -28,11 +28,7 @@ import {
 } from '../services/skillsGapService';
 import type { SkillGapApiItem } from '../services/skillsGapService';
 
-const modalityLabel: Record<JobOffer['modality'], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
+
 
 /** Los últimos que se editaron, de más reciente a más viejo. */
 function masRecientes(cvs: CV[], cuantos: number): CV[] {
@@ -41,7 +37,7 @@ function masRecientes(cvs: CV[], cuantos: number): CV[] {
 
 export default function DashboardPage() {
     const { profile } = useAuth();
-    const { locale } = useLocale();
+    const { locale, t } = useLocale();
     const navigate = useNavigate();
 
     const [cvs, setCvs]         = useState<CV[]>([]);
@@ -65,14 +61,14 @@ export default function DashboardPage() {
         // tres cualesquiera en vez de los tres últimos que se tocaron.
         cvService.getAll({ page: 1, pageSize: 20 })
             .then(res => setCvs(masRecientes(res.items ?? [], 3)))
-            .catch(() => setErrorCvs('No se pudieron cargar los currículums.'))
+            .catch(() => setErrorCvs(t.dashboard.cvsError))
             .finally(() => setLoadingCvs(false));
     }, []);
 
     useEffect(() => {
         jobService.getAll({ page: 1, pageSize: 3 })
             .then(res => setJobs(res.items ?? []))
-            .catch(() => setErrorJobs('No se pudieron cargar las ofertas.'))
+            .catch(() => setErrorJobs(t.dashboard.jobsError))
             .finally(() => setLoadingJobs(false));
     }, []);
 
@@ -83,7 +79,7 @@ export default function DashboardPage() {
                 // Un 409 significa que faltan las habilidades, no que algo falló:
                 // en vez de un error rojo se invita a cargarlas desde su pantalla.
                 if (isSkillsInputRequired(err)) setNeedsSkills(true);
-                else setErrorSkills('No se pudo cargar el análisis de brecha.');
+                else setErrorSkills(t.dashboard.skillsError);
             })
             .finally(() => setLoadingSkills(false));
     }, []);
@@ -110,10 +106,10 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                     <Card className="h-full flex flex-col">
                         <CardHeader
-                            title="Currículums Recientes"
+                            title={t.dashboard.recentCvs}
                             action={
                                 <Button variant="secondary" size="sm" onClick={() => navigate('/cvs')}>
-                                    Ver todos
+                                    {t.dashboard.seeAllCvs}
                                 </Button>
                             }
                         />
@@ -156,10 +152,10 @@ export default function DashboardPage() {
                 <div className="w-full lg:w-80 shrink-0">
                     <Card className="h-full flex flex-col">
                         <CardHeader
-                            title="Análisis de Brecha"
+                            title={t.dashboard.skillsGap}
                             action={
                                 <Button variant="secondary" size="sm" onClick={() => navigate('/skills-gap')}>
-                                    Ver análisis
+                                    {t.dashboard.seeAnalysis}
                                 </Button>
                             }
                         />
@@ -204,7 +200,7 @@ export default function DashboardPage() {
                                             <div key={s.skillName} className="flex items-center justify-between gap-1 text-xs">
                                                 <span className="text-gray-700 dark:text-gray-300 truncate">{s.skillName}</span>
                                                 <span className="text-amber-500 font-medium shrink-0">
-                                                    -{s.deficitSteps} {s.deficitSteps === 1 ? 'nivel' : 'niveles'}
+                                                    -{s.deficitSteps} {s.deficitSteps === 1 ? t.dashboard.levelSingular : t.dashboard.levelPlural}
                                                 </span>
                                             </div>
                                         ))}
@@ -242,10 +238,10 @@ export default function DashboardPage() {
             {/* ── Fila 2: Ofertas laborales ───────────────────────────────────── */}
             <Card>
                 <CardHeader
-                    title="Recomendación Ofertas Laborales"
+                    title={t.dashboard.recommendedJobs}
                     action={
                         <Button variant="secondary" size="sm" onClick={() => navigate('/jobs')}>
-                            Ver todas las ofertas
+                            {t.dashboard.seeAllJobs}
                         </Button>
                     }
                 />
@@ -314,7 +310,7 @@ export default function DashboardPage() {
                                             )}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
-                                            <Badge label={modalityLabel[job.modality]} variant="info" />
+                                            <Badge label={t.modality[job.modality]} variant="info" />
                                             <div className="flex items-center gap-1 text-xs text-gray-400">
                                                 <MapPin size={12} />
                                                 <span>{job.location}</span>
