@@ -5,29 +5,18 @@ import Button from './Button';
 import { CompanyLogo } from './Avatar';
 import { applicationService } from '../../services/otherServices';
 import { describeError } from '../../services/http';
+import { useLocale } from '../../i18n/LocaleContext';
 import type { ApplicationStatus, JobApplication, JobOffer } from '../../types/models';
 
 // Las columnas donde tiene sentido guardar una oferta recién vista. Las otras
 // dos del tablero —entrevista y rechazado— describen algo que ya pasó, así que
 // no se ofrecen al agregarla.
-const DESTINOS: { status: ApplicationStatus; label: string; hint: string }[] = [
-    { status: 'interested', label: 'Me interesa', hint: 'Para mirarla después' },
-    { status: 'applied',    label: 'Ya me postulé', hint: 'Abre el sitio de la empresa' },
-    { status: 'in-progress', label: 'En proceso',  hint: 'Ya hay conversaciones' },
+const DESTINOS: { status: ApplicationStatus; key: 'Interested' | 'Applied' | 'InProgress' }[] = [
+    { status: 'interested',  key: 'Interested' },
+    { status: 'applied',     key: 'Applied' },
+    { status: 'in-progress', key: 'InProgress' },
 ];
 
-const modalityLabel: Record<JobOffer['modality'], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
-
-const typeLabel: Record<JobOffer['type'], string> = {
-    'full-time':  'Tiempo completo',
-    'part-time':  'Medio tiempo',
-    'freelance':  'Freelance',
-    'internship': 'Práctica profesional',
-};
 
 function formatDate(iso?: string) {
     if (!iso) return null;
@@ -90,6 +79,7 @@ export default function JobDetailDialog(props: JobDetailDialogProps) {
 }
 
 function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps) {
+    const { t } = useLocale();
     const posted = formatDate(job?.postedAt);
     const [applying, setApplying] = useState(false);
     const [applied, setApplied] = useState(false);
@@ -159,7 +149,7 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                         <div className="flex flex-wrap gap-x-4 gap-y-1 min-w-0">
                             <Fact icon={MapPin}>{job.location}</Fact>
                             <Fact icon={Briefcase}>
-                                {modalityLabel[job.modality]} · {typeLabel[job.type]}
+                                {t.modality[job.modality]} · {t.availability[job.type]}
                             </Fact>
                             {posted && <Fact icon={CalendarDays}>Publicada el {posted}</Fact>}
                             {job.matchScore !== undefined && (
@@ -172,15 +162,15 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
 
                     {job.description && (
                         <div className="flex flex-col gap-2">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Descripción</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">{t.dialogs.jobDescription}</h3>
                             <p className="text-sm text-body dark:text-gray-300 whitespace-pre-line">
                                 {job.description}
                             </p>
                         </div>
                     )}
 
-                    <TagList title="Requisitos" values={job.requirements} />
-                    <TagList title="Habilidades" values={job.skills} />
+                    <TagList title={t.dialogs.jobRequirements} values={job.requirements} />
+                    <TagList title={t.dialogs.jobSkills} values={job.skills} />
 
                     {job.salary && (
                         <div className="flex flex-col gap-2">
@@ -198,10 +188,10 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                     {eligiendo && !applied && (
                         <div className="flex flex-col gap-2 rounded-xl border border-line bg-canvas/60 p-3 dark:border-gray-800 dark:bg-gray-800/60">
                             <p className="text-sm font-medium text-ink dark:text-white">
-                                ¿Dónde la guardamos?
+                                {t.dialogs.whereToSave}
                             </p>
                             <div className="flex flex-wrap gap-2">
-                                {DESTINOS.map(({ status, label, hint }) => (
+                                {DESTINOS.map(({ status, key }) => (
                                     <button
                                         key={status}
                                         type="button"
@@ -209,8 +199,12 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                                         onClick={() => guardar(status)}
                                         className="flex flex-col items-start gap-0.5 rounded-lg border border-line px-3 py-2 text-left transition-colors hover:border-primary disabled:opacity-60 dark:border-gray-700"
                                     >
-                                        <span className="text-xs font-semibold text-ink dark:text-white">{label}</span>
-                                        <span className="text-[11px] text-muted">{hint}</span>
+                                        <span className="text-xs font-semibold text-ink dark:text-white">
+                                            {t.dialogs[`dest${key}`]}
+                                        </span>
+                                        <span className="text-[11px] text-muted">
+                                            {t.dialogs[`dest${key}Hint`]}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -221,18 +215,18 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                         <div className="flex flex-col gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 dark:border-emerald-500/40 dark:bg-emerald-500/10">
                             <p className="flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
                                 <Check size={15} className="shrink-0" />
-                                La guardamos en tu tablero.
+                                {t.dialogs.savedToBoard}
                             </p>
                             {popupBlocked && job.applyUrl && (
                                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                                    El navegador bloqueó la pestaña nueva.{' '}
+                                    {t.dialogs.popupBlocked}{' '}
                                     <a
                                         href={job.applyUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="underline"
                                     >
-                                        Abrí la oferta acá
+                                        {t.dialogs.openOfferHere}
                                     </a>{' '}
                                     para completar la postulación en el sitio.
                                 </p>
@@ -241,7 +235,7 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                     )}
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                        <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                        <Button variant="secondary" size="sm" onClick={onClose}>{t.dialogs.close}</Button>
 
                         {/* Sin applyUrl no hay a dónde mandar al usuario; se omite */}
                         {job.applyUrl && (
@@ -251,7 +245,7 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-body transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-300"
                             >
-                                Ver oferta original <ExternalLink size={14} />
+                                {t.dialogs.viewOriginal} <ExternalLink size={14} />
                             </a>
                         )}
 
@@ -260,7 +254,9 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
                             onClick={() => setEligiendo(true)}
                             disabled={applying || applied || eligiendo}
                         >
-                            {applied ? 'Ya está en tu tablero' : applying ? 'Guardando…' : 'Agregar a postulaciones'}
+                            {applied
+                                ? t.dialogs.alreadyOnBoard
+                                : applying ? t.common.saving : t.dialogs.addToBoard}
                         </Button>
                     </div>
                 </div>

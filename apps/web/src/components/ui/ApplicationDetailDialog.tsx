@@ -4,13 +4,8 @@ import Modal from './Modal';
 import Button from './Button';
 import { CompanyLogo } from './Avatar';
 import { describeError } from '../../services/http';
+import { useLocale } from '../../i18n/LocaleContext';
 import type { ApplicationStatus, JobApplication } from '../../types/models';
-
-const modalityLabel: Record<JobApplication['modality'], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
 
 function formatDate(iso?: string) {
     if (!iso) return null;
@@ -42,6 +37,7 @@ export default function ApplicationDetailDialog({
     onWithdraw?: (id: string) => Promise<void>;
     onChangeStatus: () => void;
 }) {
+    const { t } = useLocale();
     const applied = formatDate(application?.appliedAt);
     const updated = formatDate(application?.updatedAt);
 
@@ -69,16 +65,16 @@ export default function ApplicationDetailDialog({
                         />
                         <div className="flex flex-wrap gap-x-4 gap-y-1 min-w-0">
                             <Fact icon={MapPin}>{application.location}</Fact>
-                            <Fact icon={Briefcase}>{modalityLabel[application.modality]}</Fact>
-                            {applied && <Fact icon={CalendarDays}>Postulación del {applied}</Fact>}
+                            <Fact icon={Briefcase}>{t.modality[application.modality]}</Fact>
+                            {applied && <Fact icon={CalendarDays}>{t.dialogs.appliedOn} {applied}</Fact>}
                             {updated && updated !== applied && (
-                                <Fact icon={Clock}>Actualizada el {updated}</Fact>
+                                <Fact icon={Clock}>{t.dialogs.updatedOn} {updated}</Fact>
                             )}
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Estado</h3>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted">{t.dialogs.status}</h3>
                         <span className={`self-start rounded-full px-3 py-1 text-sm font-semibold ${statusTone(application.status)}`}>
                             {statusLabel(application.status)}
                         </span>
@@ -86,7 +82,7 @@ export default function ApplicationDetailDialog({
 
                     {application.notes && (
                         <div className="flex flex-col gap-2">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Notas</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">{t.dialogs.notes}</h3>
                             <p className="text-sm text-body dark:text-gray-300 whitespace-pre-line">
                                 {application.notes}
                             </p>
@@ -95,7 +91,7 @@ export default function ApplicationDetailDialog({
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         {error && <p className="w-full text-sm text-rose-500">{error}</p>}
-                        <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                        <Button variant="secondary" size="sm" onClick={onClose}>{t.dialogs.close}</Button>
                         {onWithdraw && (
                             confirming ? (
                                 <Button
@@ -108,23 +104,23 @@ export default function ApplicationDetailDialog({
                                         try {
                                             await onWithdraw(application.id);
                                         } catch (err) {
-                                            setError(describeError(err, 'retirar la postulación'));
+                                            setError(describeError(err, t.dialogs.withdrawError));
                                             setWithdrawing(false);
                                             setConfirming(false);
                                         }
                                     }}
                                 >
-                                    {withdrawing ? 'Retirando…' : '¿Seguro? Retirar'}
+                                    {withdrawing ? t.dialogs.withdrawing : t.dialogs.withdrawConfirm}
                                 </Button>
                             ) : (
                                 <Button variant="danger" size="sm" onClick={() => setConfirming(true)}>
-                                    <Trash2 size={14} /> Retirar
+                                    <Trash2 size={14} /> {t.dialogs.withdraw}
                                 </Button>
                             )
                         )}
                         <Button size="sm" onClick={onChangeStatus}>
                             <ArrowLeftRight size={14} />
-                            Cambiar de estado
+                            {t.dialogs.changeStatus}
                         </Button>
                     </div>
                 </div>

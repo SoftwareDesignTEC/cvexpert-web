@@ -11,6 +11,7 @@ import { describeError } from '../../services/http';
 import { afinidad, leerPreferencias, ordenarPorPreferencias } from '../../services/jobRanking';
 import type { JobPreferences } from '../../services/jobRanking';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../i18n/LocaleContext';
 import type { JobOffer } from '../../types/models';
 
 // Cuántas se muestran a la vez. Son pocas a propósito: esto es un atajo para
@@ -21,12 +22,6 @@ const VISIBLES = 4;
 // Se piden más de las que se muestran para que "Mostrar otras" tenga de dónde
 // sacar sin volver a pedirle nada al servidor cada vez.
 const A_PEDIR = 40;
-
-const modalityLabel: Record<JobOffer['modality'], string> = {
-    remote: 'Remoto',
-    'on-site': 'Presencial',
-    hybrid: 'Híbrido',
-};
 
 /**
  * Ordena las ofertas igual que la pantalla de Ofertas Laborales: primero las
@@ -69,6 +64,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
 }) {
     const navigate = useNavigate();
     const { profile } = useAuth();
+    const { t } = useLocale();
     const [ofertas, setOfertas] = useState<JobOffer[]>([]);
     const [desde, setDesde] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -89,7 +85,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
                 setDesde(0);
                 setError(null);
             })
-            .catch(err => { if (vivo) setError(describeError(err, 'traer las ofertas')); })
+            .catch(err => { if (vivo) setError(describeError(err, t.dialogs.loadOffersError)); })
             .finally(() => { if (vivo) setLoading(false); });
 
         // Si se cierra mientras la petición viaja, no se toca más el estado
@@ -122,8 +118,8 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
         <Modal
             open
             size="lg"
-            title="Agregar una postulación"
-            description="Elegí una oferta para sumarla a tu tablero."
+            title={t.dialogs.addTitle}
+            description={t.dialogs.addSubtitle}
             onClose={onClose}
         >
             <div className="flex flex-col gap-3">
@@ -137,9 +133,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
                     <p className="py-8 text-center text-sm text-muted">
                         {/* Se distinguen los dos casos: no es lo mismo que no
                             haya ofertas a que ya estén todas en el tablero. */}
-                        {ofertas.length === 0
-                            ? 'No hay ofertas disponibles en este momento.'
-                            : 'Ya tenés en el tablero todas las ofertas que encontramos.'}
+                        {ofertas.length === 0 ? t.dialogs.noOffers : t.dialogs.allAlreadyAdded}
                     </p>
                 ) : (
                     <div className="flex flex-col gap-2">
@@ -171,7 +165,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
                                     {typeof job.matchScore === 'number' && (
                                         <Badge label={`${job.matchScore}%`} variant="success" />
                                     )}
-                                    <Badge label={modalityLabel[job.modality]} variant="info" />
+                                    <Badge label={t.modality[job.modality]} variant="info" />
                                 </span>
                             </button>
                         ))}
@@ -186,7 +180,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
                         onClick={otras}
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                        Mostrar otras
+                        {t.dialogs.showOthers}
                     </Button>
 
                     <Button
@@ -194,7 +188,7 @@ export default function AddApplicationDialog({ onClose, onPick, yaEnTablero }: {
                         size="sm"
                         onClick={() => { onClose(); navigate('/jobs'); }}
                     >
-                        Ver todas las ofertas
+                        {t.dialogs.seeAllOffers}
                         <ArrowRight size={14} />
                     </Button>
                 </div>
