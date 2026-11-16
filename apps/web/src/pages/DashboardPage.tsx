@@ -44,14 +44,17 @@ export default function DashboardPage() {
     const [jobs, setJobs]       = useState<JobOffer[]>([]);
     const [loadingCvs, setLoadingCvs]   = useState(true);
     const [loadingJobs, setLoadingJobs] = useState(true);
-    const [errorCvs, setErrorCvs]       = useState<string | null>(null);
-    const [errorJobs, setErrorJobs]     = useState<string | null>(null);
+    const [errorCvs, setErrorCvs]       = useState(false);
+    // Que falle una descarga no es lo mismo que no poder cargar la lista: con
+    // un solo estado, un PDF fallido borraba los currículums de la pantalla.
+    const [errorPdf, setErrorPdf]       = useState<string | null>(null);
+    const [errorJobs, setErrorJobs]     = useState(false);
     const [detailJob, setDetailJob]     = useState<JobOffer | null>(null);
     const [viewingCv, setViewingCv]     = useState<CV | null>(null);
     const [editingCv, setEditingCv]     = useState<CV | null>(null);
     const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
-    const [errorSkills, setErrorSkills]     = useState<string | null>(null);
+    const [errorSkills, setErrorSkills]     = useState(false);
     const [needsSkills, setNeedsSkills]     = useState(false);
     const { templates, loading: loadingTemplates } = useTemplates();
 
@@ -61,14 +64,14 @@ export default function DashboardPage() {
         // tres cualesquiera en vez de los tres últimos que se tocaron.
         cvService.getAll({ page: 1, pageSize: 20 })
             .then(res => setCvs(masRecientes(res.items ?? [], 3)))
-            .catch(() => setErrorCvs(t.dashboard.cvsError))
+            .catch(() => setErrorCvs(true))
             .finally(() => setLoadingCvs(false));
     }, []);
 
     useEffect(() => {
         jobService.getAll({ page: 1, pageSize: 3 })
             .then(res => setJobs(res.items ?? []))
-            .catch(() => setErrorJobs(t.dashboard.jobsError))
+            .catch(() => setErrorJobs(true))
             .finally(() => setLoadingJobs(false));
     }, []);
 
@@ -79,7 +82,7 @@ export default function DashboardPage() {
                 // Un 409 significa que faltan las habilidades, no que algo falló:
                 // en vez de un error rojo se invita a cargarlas desde su pantalla.
                 if (isSkillsInputRequired(err)) setNeedsSkills(true);
-                else setErrorSkills(t.dashboard.skillsError);
+                else setErrorSkills(true);
             })
             .finally(() => setLoadingSkills(false));
     }, []);
@@ -114,10 +117,13 @@ export default function DashboardPage() {
                             }
                         />
                         <CardBody className="flex-1 min-h-0">
+                            {errorPdf && (
+                                <p className="mb-2 text-xs text-red-500">{errorPdf}</p>
+                            )}
                             {loadingCvs ? (
                                 <RecentCvsSkeleton />
                             ) : errorCvs ? (
-                                <p className="text-xs text-red-500 text-center py-4">{errorCvs}</p>
+                                <p className="text-xs text-red-500 text-center py-4">{t.dashboard.cvsError}</p>
                             ) : cvs.length === 0 ? (
                                 <p className="text-xs text-gray-400 text-center py-4">No tienes currículums aún.</p>
                             ) : (
@@ -138,7 +144,7 @@ export default function DashboardPage() {
                                                     cv.title,
                                                     locale,
                                                 );
-                                                if (problema) setErrorCvs(problema);
+                                                setErrorPdf(problema);
                                             }}
                                         />
                                     ))}
@@ -163,7 +169,7 @@ export default function DashboardPage() {
                             {loadingSkills ? (
                                 <SkillsGapSkeleton />
                             ) : errorSkills ? (
-                                <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
+                                <p className="text-xs text-red-500 text-center py-4">{t.dashboard.skillsError}</p>
                             ) : needsSkills ? (
                                 <div className="flex flex-col items-center gap-2 py-4 text-center">
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -249,7 +255,7 @@ export default function DashboardPage() {
                     {loadingJobs ? (
                         <RecommendedJobsSkeleton />
                     ) : errorJobs ? (
-                        <p className="text-xs text-red-500 text-center py-4">{errorJobs}</p>
+                        <p className="text-xs text-red-500 text-center py-4">{t.dashboard.jobsError}</p>
                     ) : (
                         <>
                             {/* Mobile: lista compacta */}

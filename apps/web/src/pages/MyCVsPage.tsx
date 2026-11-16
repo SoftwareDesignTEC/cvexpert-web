@@ -162,7 +162,7 @@ export default function MyCVsPage() {
         return () => { cancelled = true; };
         // `page` no está en las dependencias a propósito: cambiar de página
         // ya no vuelve a pedir nada, sólo corta la lista que ya está en memoria.
-    }, [search, reloadKey]);
+    }, [search, reloadKey, t.cvs.loadError]);
 
 
     const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
