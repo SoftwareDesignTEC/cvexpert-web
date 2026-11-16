@@ -312,7 +312,7 @@ function AnalysisPanel({ cvId, jobId, onSaving }: { cvId: string; jobId: string;
                     {allCourses.length > COURSES_PREVIEW && <Button variant="secondary" size="sm" onClick={() => setCoursesOpen(true)}>Ver más</Button>}
                 </div>
                 <p className="text-sm text-muted">{data?.catalogStatus ? 'Cursos asociados por el catálogo a habilidades no documentadas. No certifican dominio ni garantizan cubrir un nivel.' : 'No se consultaron recomendaciones de cursos en esta evaluación.'}</p>
-                {(data?.excludedCourses ?? 0) > 0 && <p role="status" className="text-sm text-muted">Se omitieron {data?.excludedCourses} cursos inválidos, de ejemplo o repetidos. El análisis de habilidades permanece disponible.</p>
+                {(data?.excludedCourses ?? 0) > 0 && <p role="status" className="text-sm text-muted">Se omitieron {data?.excludedCourses} cursos inválidos, de ejemplo o repetidos. El análisis de habilidades permanece disponible.</p>}
                 {allCourses.length > 0 && <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">{allCourses.slice(0, COURSES_PREVIEW).map(c => <CourseCard key={c.id} course={c} />)}</div>}
                 {result.recommendations?.filter(g => g.courses.length === 0).map(g => <p key={g.skillName} className="text-sm text-muted">{g.skillName}: {g.catalogMatch === 'ambiguous' ? 'nombre ambiguo en el catálogo' : g.catalogMatch === 'not_found' ? 'habilidad no encontrada en el catálogo' : 'sin cursos elegibles asociados'}.</p>)}
                 {data?.catalogStatus === 'not_needed' && <p className="text-sm text-muted">No hay habilidades no documentadas que requieran consultar cursos.</p>}
