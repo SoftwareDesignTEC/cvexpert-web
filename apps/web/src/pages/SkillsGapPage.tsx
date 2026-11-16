@@ -7,7 +7,8 @@ import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import GalleryDialog from '../components/ui/GalleryDialog';
 import Modal from '../components/ui/Modal';
-import { LEVEL_LABEL, LEVEL_VALUE, SKILL_LEVELS, levelLabel, mergeJobGap, skillsGapService } from '../services/skillsGapService';
+import { LEVEL_LABEL, LEVEL_VALUE, SKILL_LEVELS, levelLabel, mergeJobGap, skillsGapService, uniqueRecommendationCourses } from '../services/skillsGapService';
+import { projectCvForJob } from '../services/jobGapProjection';
 import type { ContextualGap, CourseSuggestion, SkillLevel } from '../services/skillsGapService';
 import { cvService, withAddedSkill } from '../services/cvService';
 import { jobService } from '../services/otherServices';
@@ -234,7 +235,11 @@ function AnalysisPanel({ cvId, jobId, onSaving }: { cvId: string; jobId: string;
     const assessments = result?.skillLevelAssessments ?? [];
     const radar = assessments.filter(a => a.cvLevel && a.requiredLevel && a.status.startsWith('documented_skill_'))
         .map(a => ({ name: a.name, userLevel: LEVEL_VALUE[a.cvLevel!], marketLevel: LEVEL_VALUE[a.requiredLevel!] }));
-    const allCourses: CourseWithSkill[] = (result?.recommendations ?? []).flatMap(g => g.courses.map(c => ({ ...c, skillName: g.skillName })));
+    const allCourses: CourseWithSkill[] = uniqueRecommendationCourses(result?.recommendations ?? []);
+    // Incluye habilidades del CV e idiomas requeridos incorporados únicamente a la proyección HTTP.
+    const projectedCompetenceCount = result && context
+        ? projectCvForJob(context.cv, context.job.skills ?? []).skills.length
+        : 0;
     const closeSkill = () => { if (!saving) setSkill(null); };
     return <>
         <div className="flex flex-wrap gap-2">
@@ -254,7 +259,7 @@ function AnalysisPanel({ cvId, jobId, onSaving }: { cvId: string; jobId: string;
                 <dl className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4 text-sm">
                     <div><dt className="text-muted">Habilidades exigidas</dt><dd className="text-xl font-bold text-primary">{result.requiredSkillsCount}</dd></div>
                     <div><dt className="text-muted">Documentadas de la oferta</dt><dd className="text-xl font-bold text-primary">{result.documentedMatchesCount}</dd></div>
-                    <div><dt className="text-muted">Habilidades en el CV</dt><dd className="text-xl font-bold text-primary">{context?.cv.skills.length}</dd></div>
+                    <div><dt className="text-muted">Competencias consideradas</dt><dd className="text-xl font-bold text-primary">{projectedCompetenceCount}</dd></div>
                     <div><dt className="text-muted">Cobertura documental</dt><dd className="text-xl font-bold text-primary">{result.documentedCoveragePercent == null ? 'Sin información suficiente' : `${result.documentedCoveragePercent.toLocaleString('es-CR', { maximumFractionDigits: 2 })} %`}</dd></div>
                 </dl>
                 <p className="mt-4 text-sm text-body dark:text-gray-300">Estado: {({ complete: 'Todas las habilidades de la oferta están documentadas', partial: 'Hay habilidades no documentadas', insufficient_information: 'La oferta no tiene habilidades identificables' })[result.status]}.</p>
@@ -307,7 +312,8 @@ function AnalysisPanel({ cvId, jobId, onSaving }: { cvId: string; jobId: string;
                     {allCourses.length > COURSES_PREVIEW && <Button variant="secondary" size="sm" onClick={() => setCoursesOpen(true)}>Ver más</Button>}
                 </div>
                 <p className="text-sm text-muted">{data?.catalogStatus ? 'Cursos asociados por el catálogo a habilidades no documentadas. No certifican dominio ni garantizan cubrir un nivel.' : 'No se consultaron recomendaciones de cursos en esta evaluación.'}</p>
-                {allCourses.length > 0 && <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">{allCourses.slice(0, COURSES_PREVIEW).map(c => <CourseCard key={`${c.skillName}:${c.id}`} course={c} />)}</div>}
+                {(data?.excludedCourses ?? 0) > 0 && <p role="status" className="text-sm text-muted">Se omitieron {data?.excludedCourses} cursos inválidos, de ejemplo o repetidos. El análisis de habilidades permanece disponible.</p>
+                {allCourses.length > 0 && <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">{allCourses.slice(0, COURSES_PREVIEW).map(c => <CourseCard key={c.id} course={c} />)}</div>}
                 {result.recommendations?.filter(g => g.courses.length === 0).map(g => <p key={g.skillName} className="text-sm text-muted">{g.skillName}: {g.catalogMatch === 'ambiguous' ? 'nombre ambiguo en el catálogo' : g.catalogMatch === 'not_found' ? 'habilidad no encontrada en el catálogo' : 'sin cursos elegibles asociados'}.</p>)}
                 {data?.catalogStatus === 'not_needed' && <p className="text-sm text-muted">No hay habilidades no documentadas que requieran consultar cursos.</p>}
                 {assessments.filter(a => a.status === 'documented_skill_below_required' && a.detectionStatus === 'explicit' && (a.deficitSteps ?? 0) > 0)
@@ -318,7 +324,7 @@ function AnalysisPanel({ cvId, jobId, onSaving }: { cvId: string; jobId: string;
                     <Link className="font-medium hover:underline" to="/courses">Explorar todos los cursos</Link>
                 </div>
             </div>
-            <GalleryDialog open={coursesOpen} title="Cursos de Mejora" description={`${allCourses.length} recomendaciones asociadas a habilidades`} items={allCourses} perPage={COURSES_PER_PAGE} onClose={() => setCoursesOpen(false)} keyOf={c => `${c.skillName}:${c.id}`} renderItem={c => <CourseCard course={c} />} />
+            <GalleryDialog open={coursesOpen} title="Cursos de Mejora" description={`${allCourses.length} recomendaciones asociadas a habilidades`} items={allCourses} perPage={COURSES_PER_PAGE} onClose={() => setCoursesOpen(false)} keyOf={c => c.id} renderItem={c => <CourseCard course={c} />} />
         </>}
         <Modal open={skill !== null} title="Agregar habilidad al CV" description={context?.cv.title} onClose={closeSkill}>
             <div className="flex flex-col gap-4">

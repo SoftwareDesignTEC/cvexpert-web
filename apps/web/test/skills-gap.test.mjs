@@ -17,7 +17,7 @@ function loadService(name, http = {}) {
         : path.startsWith('./') ? loadService(path.slice(2), http) : require(path), exports);
     return exports;
 }
-const { jobGapInput, readJobGap, mergeJobGap, skillsGapService } = loadService('skillsGapService', {
+const { jobGapInput, readJobGap, mergeJobGap, skillsGapService, uniqueRecommendationCourses } = loadService('skillsGapService', {
     post: async (path, body) => {
         assert.equal(body.cv.id, 'cv1');
         assert.equal(path, '/skills-gap/evaluate');
@@ -104,7 +104,40 @@ test('solo se muestran cursos reales del contrato y se combinan respuestas del m
     assert.equal(mergeJobGap(courses, evaluation).result.recommendations[0].courses[0].durationHours, null);
     assert.throws(() => mergeJobGap(courses, { ...evaluation, cvId: 'otro' }), /incompatible/);
     raw.results[0].recommendations[0].courses[0].url = 'javascript:alert(1)';
-    assert.throws(() => readJobGap(raw, 'cv1', 'job1', true), /incompatible/);
+    const sanitized = readJobGap(raw, 'cv1', 'job1', true);
+    assert.equal(sanitized.excludedCourses, 1);
+    assert.deepEqual(sanitized.result.recommendations[0].courses, []);
+    assert.equal(sanitized.result.documentedCoveragePercent, 50);
+});
+
+test('cursos defectuosos y duplicados se omiten sin invalidar el análisis', () => {
+    const good = { id: '1', title: 'Git', platform: 'Plataforma',
+        url: 'https://www.coursera.org/learn/git', logoUrl: null, durationHours: 4,
+        isPaid: false, skills: ['Git'] };
+    const raw = response();
+    raw.catalogStatus = 'consulted';
+    raw.results[0].recommendations = [{ skillName: 'Git', catalogMatch: 'matched', courses: [
+        good, { ...good }, { ...good, id: '2', title: '[DEMO] Curso' },
+        { ...good, id: '3', url: 'javascript:alert(1)' },
+    ] }];
+    const parsed = readJobGap(raw, 'cv1', 'job1', true);
+    assert.equal(parsed.excludedCourses, 3);
+    assert.deepEqual(parsed.result.recommendations[0].courses, [good]);
+    assert.equal(parsed.result.documentedCoveragePercent, 50);
+});
+
+test('la misma recomendación solo aparece una vez y conserva todas las habilidades asociadas', () => {
+    const course = { id: '1', title: 'Git y GitHub', platform: 'Plataforma',
+        url: 'https://www.coursera.org/learn/git', logoUrl: null, durationHours: 4,
+        isPaid: false, skills: ['Git', 'GitHub'] };
+    const grouped = uniqueRecommendationCourses([
+        { skillName: 'Git', catalogMatch: 'matched', courses: [course] },
+        { skillName: 'GitHub', catalogMatch: 'matched', courses: [course, { ...course, id: '2', title: 'GitHub avanzado' }] },
+    ]);
+    assert.deepEqual(grouped.map(c => [c.id, c.skillName]), [
+        ['1', 'Git, GitHub'], ['2', 'GitHub'],
+    ]);
+    assert.equal(grouped[0].url, course.url);
 });
 
 test('cursos por déficit usan el filtro real del catálogo y excluyen ejemplos', async () => {

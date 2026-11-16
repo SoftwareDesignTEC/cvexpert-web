@@ -204,7 +204,24 @@ export interface JobGapResult {
 export interface ContextualGap {
     cvId: string;
     catalogStatus?: 'consulted' | 'not_needed';
+    /** Cursos descartados por datos inválidos, enlaces inseguros o ID repetido dentro de un grupo. */
+    excludedCourses?: number;
     result: JobGapResult;
+}
+
+/** Un curso aparece una sola vez, conservando todas las habilidades que lo recomendaron. */
+export function uniqueRecommendationCourses(groups: NonNullable<JobGapResult['recommendations']>): (CourseSuggestion & { skillName: string })[] {
+    const byId = new Map<string, { course: CourseSuggestion; skills: Set<string> }>();
+    for (const group of groups) {
+        for (const course of group.courses) {
+            const existing = byId.get(course.id);
+            if (existing) existing.skills.add(group.skillName);
+            else byId.set(course.id, { course, skills: new Set([group.skillName]) });
+        }
+    }
+    return [...byId.values()].map(({ course, skills }) => ({
+        ...course, skillName: [...skills].join(', '),
+    }));
 }
 
 function compatible(condition: unknown): asserts condition {
@@ -268,16 +285,27 @@ export function readJobGap(raw: unknown, cvId: string, jobId: string, courses: b
         Number.isFinite(r.documentedCoveragePercent) && r.documentedCoveragePercent >= 0 && r.documentedCoveragePercent <= 100 &&
         Math.abs(r.documentedCoveragePercent - r.documentedMatchesCount * 100 / names.length) <= 0.0051 &&
         (r.status === 'complete') === (r.notDocumentedSkills.length === 0));
+    let excludedCourses = 0;
+    let cleanedRecommendations: NonNullable<JobGapResult['recommendations']> | undefined;
     if (courses) {
         compatible(['consulted', 'not_needed'].includes(String(raw.catalogStatus)) && Array.isArray(r.recommendations) &&
             r.recommendations.length === r.notDocumentedSkills.length &&
             (raw.catalogStatus === 'not_needed') === (r.notDocumentedSkills.length === 0));
-        r.recommendations.forEach((g, i) => {
+        cleanedRecommendations = r.recommendations.map((g, i) => {
             compatible(object(g) && g.skillName === notDocumentedSkills[i] &&
                 ['matched', 'not_found', 'ambiguous'].includes(String(g.catalogMatch)) && Array.isArray(g.courses) && g.courses.length <= 5);
             compatible(g.catalogMatch === 'matched' || g.courses.length === 0);
-            compatible(new Set(g.courses.map(c => c?.id)).size === g.courses.length);
-            g.courses.forEach(c => compatible(validCourse(c) && publishedCourse(c)));
+            const seen = new Set<string>();
+            const safeCourses: CourseSuggestion[] = [];
+            for (const course of g.courses) {
+                if (!validCourse(course) || !publishedCourse(course) || seen.has(course.id)) {
+                    excludedCourses++;
+                    continue;
+                }
+                seen.add(course.id);
+                safeCourses.push(course);
+            }
+            return { skillName: g.skillName as string, catalogMatch: g.catalogMatch as 'matched' | 'not_found' | 'ambiguous', courses: safeCourses };
         });
     }
     compatible((r.skillLevelAssessments === undefined) === (r.levelAnalysis === undefined));
@@ -313,8 +341,8 @@ export function readJobGap(raw: unknown, cvId: string, jobId: string, courses: b
         compatible(Object.entries(counters).every(([k, n]) => l[k] === n) &&
             l.comparedSkillsCount === counters.belowRequiredCount + counters.meetsRequiredCount);
     }
-    return { cvId, result: r as unknown as JobGapResult,
-        ...(courses ? { catalogStatus: raw.catalogStatus as ContextualGap['catalogStatus'] } : {}) };
+    return { cvId, result: { ...r, ...(courses ? { recommendations: cleanedRecommendations } : {}) } as JobGapResult,
+        ...(courses ? { catalogStatus: raw.catalogStatus as ContextualGap['catalogStatus'], excludedCourses } : {}) };
 }
 
 export function mergeJobGap(courses: ContextualGap, evaluation: ContextualGap): ContextualGap {

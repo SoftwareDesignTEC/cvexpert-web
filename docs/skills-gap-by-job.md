@@ -35,6 +35,12 @@ Política de niveles:
 
 Precedencia determinista: una entrada en `skills` prevalece sobre `languages`, incluso cuando usan alias distintos. Entre entradas del mismo idioma prevalece la primera, sin elegir un nivel máximo. Las habilidades técnicas conservan nombre y nivel; si se repiten con niveles contradictorios, se bloquea el análisis en lugar de ocultar el conflicto. La adaptación no cambia el mapeo Kotlin de Android.
 
+## Presentación de resultados y calidad del catálogo
+
+«Competencias consideradas» cuenta las habilidades de la proyección HTTP, incluyendo idiomas exigidos por la oferta, en lugar de limitarse a `cv.skills.length`. Este número no equivale al total de requisitos de la oferta.
+
+Si una recomendación contiene un curso inválido, inseguro, de demostración o repetido dentro de su grupo, se descarta solamente ese curso y se informa el número de exclusiones: la cobertura, los niveles y las otras recomendaciones siguen visibles. Se continúa rechazando una estructura de análisis o un sobre de recomendaciones incompatibles. En la vista resumida y en la galería, cursos repetidos entre varias habilidades se presentan una sola vez por ID y conservan los nombres de todas las habilidades asociadas.
+
 ## Catálogo independiente
 
 `/courses` es una ruta protegida accesible desde el menú Cursos. Reutiliza las tarjetas de brechas y los componentes de cabecera, botones, feedback y paginación existentes. Ofrece filtros de plataforma, habilidad y precio (todos/gratis/de pago), aplicación y limpieza de filtros, páginas de 20 registros y reintento ante errores.
