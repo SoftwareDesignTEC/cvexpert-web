@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import {
-    Menu, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
+    Menu, LayoutDashboard, FileText, User, TrendingUp, GraduationCap, Layout, Briefcase, Kanban, MessageSquareText, Settings,
 } from 'lucide-react';
 import { useNotificationAdmin } from '../../context/NotificationAdminContext';
 
@@ -11,6 +11,7 @@ const navItems = [
     { to: '/cvs',          icon: FileText,         label: 'Mis Currículums'      },
     { to: '/profile',      icon: User,             label: 'Mi Perfil'            },
     { to: '/skills-gap',   icon: TrendingUp,       label: 'Análisis de Brechas'  },
+    { to: '/courses',      icon: GraduationCap,    label: 'Cursos'               },
     { to: '/templates',    icon: Layout,           label: 'Plantillas / Offline' },
     { to: '/jobs',         icon: Briefcase,        label: 'Ofertas Laborales'    },
     { to: '/applications', icon: Kanban,           label: 'Postulaciones'        },

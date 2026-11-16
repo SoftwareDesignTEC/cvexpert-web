@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Briefcase, CalendarDays, Check, ExternalLink, MapPin, Percent } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
@@ -90,6 +91,7 @@ export default function JobDetailDialog(props: JobDetailDialogProps) {
 }
 
 function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps) {
+    const navigate = useNavigate();
     const posted = formatDate(job?.postedAt);
     const [applying, setApplying] = useState(false);
     const [applied, setApplied] = useState(false);
@@ -242,6 +244,10 @@ function JobDetailDialogContent({ job, onClose, onAdded }: JobDetailDialogProps)
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                        <Button variant="secondary" size="sm" onClick={() => {
+                            onClose();
+                            navigate(`/skills-gap?${new URLSearchParams({ jobId: job.id })}`);
+                        }}>Analizar con mi CV</Button>
 
                         {/* Sin applyUrl no hay a dónde mandar al usuario; se omite */}
                         {job.applyUrl && (
