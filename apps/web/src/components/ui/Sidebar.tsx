@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import {
-    Menu, LayoutDashboard, FileText, User, TrendingUp, Layout, Briefcase, Kanban, MessageSquareText, Settings,
+    Menu, LayoutDashboard, FileText, User, TrendingUp, GraduationCap, Layout, Briefcase, Kanban, MessageSquareText, Settings,
 } from 'lucide-react';
 import { useNotificationAdmin } from '../../context/NotificationAdminContext';
 import { useLocale } from '../../i18n/LocaleContext';
@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
     { to: '/cvs',          icon: FileText,         key: 'cvs'        },
     { to: '/profile',      icon: User,             key: 'profile'    },
     { to: '/skills-gap',   icon: TrendingUp,       key: 'skillsGap'  },
+    { to: '/courses',      icon: GraduationCap,    key: 'courses'    },
     { to: '/templates',    icon: Layout,           key: 'templates'  },
     { to: '/jobs',         icon: Briefcase,        key: 'jobs'       },
     { to: '/applications', icon: Kanban,           key: 'applications' },

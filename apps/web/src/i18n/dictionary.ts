@@ -39,6 +39,7 @@ const es = {
         cvs: 'Mis Currículums',
         profile: 'Mi Perfil',
         skillsGap: 'Análisis de Brechas',
+        courses: 'Cursos',
         templates: 'Plantillas / Offline',
         jobs: 'Ofertas Laborales',
         applications: 'Postulaciones',
@@ -251,6 +252,7 @@ const es = {
     },
 
     dialogs: {
+        analyzeWithCv: 'Analizar con mi CV',
         close: 'Cerrar',
         pagination: 'Paginación',
         prevPage: 'Página anterior',
@@ -556,6 +558,7 @@ const en: Dict = {
         cvs: 'My Resumes',
         profile: 'My Profile',
         skillsGap: 'Skills Gap',
+        courses: 'Courses',
         templates: 'Templates / Offline',
         jobs: 'Job Offers',
         applications: 'Applications',
@@ -768,6 +771,7 @@ const en: Dict = {
     },
 
     dialogs: {
+        analyzeWithCv: 'Analyse with my resume',
         close: 'Close',
         pagination: 'Pagination',
         prevPage: 'Previous page',

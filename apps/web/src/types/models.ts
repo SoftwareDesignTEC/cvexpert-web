@@ -23,6 +23,25 @@ export interface UserProfile {
 // respuestas viejas; para formatearlas usar los ayudantes de components/cv/cvLabels.
 export type EpochMillis = number | string;
 
+export interface CvPersonalInfo {
+    id?: string;
+    // fullName y email son los dos obligatorios del bloque (required en el
+    // esquema del servicio). Ojo: el backend ignora en silencio las claves que
+    // no conoce, así que mandar `name` en vez de `fullName` termina en un 400
+    // por campo faltante, no en un error descriptivo.
+    fullName: string;
+    email: string;
+    phone?: string;
+    /** Opcional, a diferencia de fullName y email */
+    address?: string;
+    photoUrl?: string;
+    bio?: string;
+    birthDate?: number | null;
+    types?: ('full-time' | 'part-time' | 'freelance' | 'internship')[];
+    modalities?: ('remote' | 'on-site' | 'hybrid')[];
+    sectors?: string[];
+}
+
 export interface CV {
     id: string;
     userId: string;
@@ -32,7 +51,7 @@ export interface CV {
     createdAt: EpochMillis;
     updatedAt: EpochMillis;
 
-    personalInfo: UserProfile;
+    personalInfo: CvPersonalInfo;
     workExperiences: WorkExperience[];
     education: Education[];
     skills: Skill[];
