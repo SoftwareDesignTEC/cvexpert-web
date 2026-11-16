@@ -10,9 +10,22 @@ interface ModalProps {
     size?: 'md' | 'lg' | 'xl';
     onClose: () => void;
     children: React.ReactNode;
+    /**
+     * Franjas que no se desplazan con el contenido: `toolbar` queda bajo el
+     * título y `footer` al pie, con los botones de acción.
+     *
+     * Son ranuras propias y no elementos pegados con `sticky` dentro del
+     * contenido porque un elemento pegado no puede salirse del relleno de su
+     * contenedor: quedaba una franja de unos pocos píxeles por donde se veía
+     * pasar el texto por debajo de los botones.
+     */
+    toolbar?: React.ReactNode;
+    footer?: React.ReactNode;
 }
 
-export default function Modal({ open, title, description, size = 'md', onClose, children }: ModalProps) {
+export default function Modal({
+    open, title, description, size = 'md', onClose, children, toolbar, footer,
+}: ModalProps) {
     // Escape cierra el diálogo y el fondo deja de desplazarse mientras está abierto
     useEffect(() => {
         if (!open) return;
@@ -66,7 +79,19 @@ export default function Modal({ open, title, description, size = 'md', onClose, 
                     </button>
                 </div>
 
+                {toolbar && (
+                    <div className="shrink-0 border-b border-line px-5 py-3 dark:border-gray-800">
+                        {toolbar}
+                    </div>
+                )}
+
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+
+                {footer && (
+                    <div className="shrink-0 border-t border-line bg-surface px-5 py-3 dark:border-gray-800 dark:bg-gray-900">
+                        {footer}
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -355,6 +355,35 @@ export default function CvEditorDialog({
             title={cv ? 'Editar currículum' : 'Nuevo currículum'}
             description={cv ? undefined : 'Los datos los completás vos; no se copian del perfil automáticamente.'}
             onClose={intentarCerrar}
+            // En qué fase se está y cómo avanzar: las dos cosas tienen que
+            // quedar a la vista mientras se recorre un formulario largo, así
+            // que van en las franjas fijas del diálogo y no con el contenido.
+            toolbar={tab === 'form'
+                ? <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
+                : undefined}
+            footer={
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>
+                        Cancelar
+                    </Button>
+
+                    {tab === 'form' && fase > 0 && (
+                        <Button type="button" variant="secondary" size="sm" onClick={() => irA(fase - 1)}>
+                            <ChevronLeft size={14} /> Atrás
+                        </Button>
+                    )}
+
+                    {tab === 'form' && !esUltima ? (
+                        <Button type="button" size="sm" onClick={() => irA(fase + 1)}>
+                            Siguiente <ChevronRight size={14} />
+                        </Button>
+                    ) : (
+                        <Button type="button" size="sm" disabled={!canSave} onClick={save}>
+                            {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}
+                        </Button>
+                    )}
+                </div>
+            }
         >
             <div className="flex flex-col gap-4">
                 <div className="flex gap-2">
@@ -375,14 +404,6 @@ export default function CvEditorDialog({
                         <Eye size={14} /> Vista previa
                     </Button>
                 </div>
-
-                {/* Pegada arriba: dice en qué fase se está, y si se fuera de
-                    pantalla al desplazarse habría que subir para saberlo. */}
-                {tab === 'form' && (
-                    <div className="sticky top-0 z-10 -mx-5 -mt-4 bg-surface px-5 pb-2 pt-4 dark:bg-gray-900">
-                        <PhaseTimeline phases={fases} current={fase} onSelect={irA} />
-                    </div>
-                )}
 
                 {/* Sin zona desplazable propia: la del diálogo alcanza, y dos
                     barras una al lado de la otra se leen como un error. */}
@@ -540,32 +561,6 @@ export default function CvEditorDialog({
                     </div>
                 )}
 
-                {/* Pegado abajo: al desplazarse con la barra del diálogo, los
-                    botones de avanzar tienen que quedar siempre a la vista, que
-                    es lo que antes conseguía la zona desplazable interna. Los
-                    márgenes negativos lo estiran hasta los bordes del diálogo
-                    para que nada se vea pasar por detrás. */}
-                <div className="sticky bottom-0 z-10 -mx-5 -mb-4 flex flex-col gap-2 border-t border-line bg-surface px-5 py-3 sm:flex-row sm:items-center sm:justify-end dark:border-gray-800 dark:bg-gray-900">
-                    <Button type="button" variant="secondary" size="sm" onClick={intentarCerrar}>
-                        Cancelar
-                    </Button>
-
-                    {tab === 'form' && fase > 0 && (
-                        <Button type="button" variant="secondary" size="sm" onClick={() => irA(fase - 1)}>
-                            <ChevronLeft size={14} /> Atrás
-                        </Button>
-                    )}
-
-                    {tab === 'form' && !esUltima ? (
-                        <Button type="button" size="sm" onClick={() => irA(fase + 1)}>
-                            Siguiente <ChevronRight size={14} />
-                        </Button>
-                    ) : (
-                        <Button type="button" size="sm" disabled={!canSave} onClick={save}>
-                            {saving ? 'Guardando…' : cv ? 'Guardar cambios' : 'Crear currículum'}
-                        </Button>
-                    )}
-                </div>
             </div>
         </Modal>
 
