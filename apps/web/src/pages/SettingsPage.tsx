@@ -1,10 +1,9 @@
-import { ChevronRight, HelpCircle, KeyRound, Mail, MonitorSmartphone, Download, Trash2, Shield, FileText, Bell, GraduationCap, Briefcase } from 'lucide-react';
+import { ChevronRight, HelpCircle, KeyRound, Mail, MonitorSmartphone, Download, Trash2, Shield, FileText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import {
-    ApplicationAlertsDialog, ChangeEmailDialog, ChangePasswordDialog,
-    CourseAlertsDialog, DeleteAccountDialog, JobAlertsDialog,
+    ChangeEmailDialog, ChangePasswordDialog, DeleteAccountDialog,
 } from '../components/ui/SettingsDialogs';
 import SupportDialog from '../components/ui/SupportDialog';
 import LegalDialog from '../components/ui/LegalDialog';
@@ -13,6 +12,8 @@ import type { LegalKind } from '../services/legalService';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { LOCALES, useLocale } from '../i18n/LocaleContext';
+import { useNotificationPrefs } from '../hooks/useNotificationPrefs';
+import { Toggle } from '../components/ui/FormBits';
 import type { Locale } from '../components/cv/cvLabels';
 import { useTheme } from '../context/ThemeContext';
 
@@ -111,13 +112,14 @@ function DisabledSelect({ label, value }: { label: string; value: string }) {
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
-type OpenDialog = 'password' | 'email' | 'delete' | 'applications' | 'courses' | 'jobs' | 'support' | 'sessions' | 'export' | null;
+type OpenDialog = 'password' | 'email' | 'delete' | 'support' | 'sessions' | 'export' | null;
 
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const { profile, userId } = useAuth();
     const { setNotificationLanguage } = useLanguage();
     const { locale, setLocale, t } = useLocale();
+    const { prefs, set: setPref } = useNotificationPrefs();
 
     /**
      * Un solo control para los dos idiomas.
@@ -155,9 +157,23 @@ export default function SettingsPage() {
                     title={t.settings.notifications}
                     subtitle={t.settings.notificationsSubtitle}
                 >
-                    <ActionRow label={t.settings.applicationStatus} icon={Bell} onClick={() => setDialog('applications')} />
-                    <ActionRow label={t.settings.courseRecommendation} icon={GraduationCap} onClick={() => setDialog('courses')} />
-                    <ActionRow label={t.settings.jobAlerts} icon={Briefcase} onClick={() => setDialog('jobs')} />
+                    {/* Interruptores en la propia tarjeta: entrar a un diálogo
+                        para mover una sola palanca es un paso de más. El estado de
+                        las postulaciones ya no está: lo cambia la persona desde su
+                        tablero, así que avisarle de algo que acaba de hacer ella
+                        misma no le dice nada nuevo. */}
+                    <Toggle
+                        label={t.settings.courseRecommendation}
+                        description={t.settings.courseRecommendationDesc}
+                        checked={prefs.courses}
+                        onChange={v => setPref('courses', v)}
+                    />
+                    <Toggle
+                        label={t.settings.jobAlerts}
+                        description={t.settings.jobAlertsDesc}
+                        checked={prefs.jobs}
+                        onChange={v => setPref('jobs', v)}
+                    />
 
                 </SettingsCard>
 
@@ -243,9 +259,6 @@ export default function SettingsPage() {
                 currentEmail={profile?.email}
             />
             <DeleteAccountDialog open={dialog === 'delete'} onClose={() => setDialog(null)} />
-            <ApplicationAlertsDialog open={dialog === 'applications'} onClose={() => setDialog(null)} />
-            <CourseAlertsDialog open={dialog === 'courses'} onClose={() => setDialog(null)} />
-            <JobAlertsDialog open={dialog === 'jobs'} onClose={() => setDialog(null)} />
             <SupportDialog open={dialog === 'support'} onClose={() => setDialog(null)} />
             <LegalDialog kind={legal} onClose={() => setLegal(null)} />
             <ActiveSessionsDialog open={dialog === 'sessions'} userId={userId} onClose={() => setDialog(null)} />
