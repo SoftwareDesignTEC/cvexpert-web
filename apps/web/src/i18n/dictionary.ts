@@ -86,6 +86,13 @@ const es = {
     },
 
 
+    availability: {
+        'full-time': 'Tiempo completo',
+        'part-time': 'Medio tiempo',
+        freelance: 'Freelance',
+        internship: 'Práctica profesional',
+    },
+
     modality: {
         remote: 'Remoto',
         'on-site': 'Presencial',
@@ -170,6 +177,73 @@ const es = {
         statusRejected: 'Rechazado',
         updateError: 'actualizar el estado de la postulación',
     },
+
+    settingsExtra: {
+        security: 'Seguridad de la Cuenta',
+        securitySubtitle: 'Administra el acceso y protege tu información.',
+        changePassword: 'Cambiar Contraseña',
+        changeEmail: 'Cambiar Correo Electrónico',
+        activeSessions: 'Sesiones Activas',
+        systemPrefs: 'Preferencias del Sistema',
+        systemPrefsSubtitle: 'Personaliza CVExpert para trabajar a tu manera.',
+        needHelp: '¿Necesitas ayuda?',
+        needHelpSubtitle: 'Contacta a nuestro equipo de soporte técnico.',
+        sendEmail: 'Enviar Correo Electrónico',
+    },
+
+    home: {
+        title: 'Panel Principal',
+        welcome: '¡Bienvenido! Aquí está tu resumen...',
+        createCv: 'Crear Nuevo Currículum',
+        createCvHint: 'Empieza desde cero o usa una plantilla',
+        createCvSubtitle: 'Elige cómo quieres comenzar tu próxima oportunidad.',
+        aiMode: 'Modo IA',
+        offlineMode: 'Offline / Plantilla',
+        ai: 'IA',
+    },
+
+    profile: {
+        eyebrow: 'Perfil profesional',
+        title: 'Información Personal',
+        personalInfo: 'Información Personal',
+        noBio: 'Todavía no hay una descripción en tu perfil.',
+        editProfile: 'Editar Perfil',
+        skillsAnalysis: 'Análisis de Habilidades',
+        noSkills: 'Aún no hay análisis de habilidades.',
+        seeImprovements: 'Ver Áreas de Mejora',
+        contact: 'Datos de Contacto',
+        phone: 'Número de teléfono',
+        email: 'Correo Electrónico',
+        residence: 'Residencia',
+        notSpecified: 'No especificado',
+        editContact: 'Editar Contacto',
+        preferences: 'Preferencias',
+        availability: 'Disponibilidad',
+        modality: 'Modalidad',
+        editPreferences: 'Editar Preferencias',
+        notFound: 'No encontramos tu perfil.',
+        skillsError: 'No se pudo cargar el análisis de habilidades.',
+    },
+
+    skillsGap: {
+        eyebrow: 'Crecimiento profesional',
+        title: 'Análisis de Brecha',
+        mySkills: 'Mis habilidades',
+        tellUs: 'Contanos qué sabés hacer',
+        tellUsBody1: 'Todavía no guardaste tus habilidades, así que no hay nada con qué comparar.',
+        tellUsBody2: 'Cargalas una vez y calculamos tu brecha frente a la vacante de referencia.',
+        loadSkills: 'Cargar mis habilidades',
+    },
+
+    templates: {
+        eyebrow: 'Crea donde quieras',
+        title: 'Plantillas sin conexión',
+        store: 'Tienda de plantillas',
+        storeSubtitle: 'Explora diseños premium para destacar tu experiencia.',
+        useTemplate: 'Usar esta plantilla',
+        downloadTemplate: 'Descargar Plantilla',
+        sample: 'Ejemplo',
+    },
     languages: {
         es: 'Español',
         en: 'Inglés',
@@ -247,6 +321,13 @@ const en: Dict = {
         notAvailable: 'Not available yet',
     },
 
+
+    availability: {
+        'full-time': 'Full-time',
+        'part-time': 'Part-time',
+        freelance: 'Freelance',
+        internship: 'Internship',
+    },
 
     modality: {
         remote: 'Remote',
@@ -331,6 +412,73 @@ const en: Dict = {
         statusInterview: 'Interview',
         statusRejected: 'Rejected',
         updateError: 'update the application status',
+    },
+
+    settingsExtra: {
+        security: 'Account Security',
+        securitySubtitle: 'Manage access and protect your information.',
+        changePassword: 'Change Password',
+        changeEmail: 'Change Email',
+        activeSessions: 'Active Sessions',
+        systemPrefs: 'System Preferences',
+        systemPrefsSubtitle: 'Set up CVExpert to work your way.',
+        needHelp: 'Need help?',
+        needHelpSubtitle: 'Get in touch with our support team.',
+        sendEmail: 'Send Email',
+    },
+
+    home: {
+        title: 'Dashboard',
+        welcome: 'Welcome! Here is your summary…',
+        createCv: 'Create New Resume',
+        createCvHint: 'Start from scratch or use a template',
+        createCvSubtitle: 'Choose how you want to start your next opportunity.',
+        aiMode: 'AI Mode',
+        offlineMode: 'Offline / Template',
+        ai: 'AI',
+    },
+
+    profile: {
+        eyebrow: 'Professional profile',
+        title: 'Personal Information',
+        personalInfo: 'Personal Information',
+        noBio: 'There is no description in your profile yet.',
+        editProfile: 'Edit Profile',
+        skillsAnalysis: 'Skills Analysis',
+        noSkills: 'No skills analysis yet.',
+        seeImprovements: 'See Areas to Improve',
+        contact: 'Contact Details',
+        phone: 'Phone number',
+        email: 'Email',
+        residence: 'Residence',
+        notSpecified: 'Not specified',
+        editContact: 'Edit Contact',
+        preferences: 'Preferences',
+        availability: 'Availability',
+        modality: 'Work mode',
+        editPreferences: 'Edit Preferences',
+        notFound: 'We could not find your profile.',
+        skillsError: 'We could not load the skills analysis.',
+    },
+
+    skillsGap: {
+        eyebrow: 'Professional growth',
+        title: 'Skills Gap',
+        mySkills: 'My skills',
+        tellUs: 'Tell us what you can do',
+        tellUsBody1: 'You have not saved your skills yet, so there is nothing to compare against.',
+        tellUsBody2: 'Add them once and we will work out your gap against the reference role.',
+        loadSkills: 'Add my skills',
+    },
+
+    templates: {
+        eyebrow: 'Build anywhere',
+        title: 'Offline templates',
+        store: 'Template store',
+        storeSubtitle: 'Explore premium designs to showcase your experience.',
+        useTemplate: 'Use this template',
+        downloadTemplate: 'Download Template',
+        sample: 'Sample',
     },
     languages: {
         es: 'Spanish',

@@ -15,23 +15,8 @@ import {
     skillsGapService,
 } from '../services/skillsGapService';
 import type { SkillGapApiItem } from '../services/skillsGapService';
-import type { UserProfile } from '../types/models';
+import { useLocale } from '../i18n/LocaleContext';
 
-// Etiquetas en español de los enums que devuelve APIM
-const availabilityLabel: Record<UserProfile['types'][number], string> = {
-    'full-time':  'Tiempo completo',
-    'part-time':  'Medio tiempo',
-    'freelance':  'Freelance',
-    'internship': 'Práctica profesional',
-};
-
-const modalityLabel: Record<UserProfile['modalities'][number], string> = {
-    'remote':  'Remoto',
-    'on-site': 'Presencial',
-    'hybrid':  'Híbrido',
-};
-
-const EMPTY = 'No especificado';
 
 // Tarjeta blanca con el título acentuado en azul, como en los mockups
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -85,6 +70,7 @@ type OpenDialog = 'profile' | 'contact' | 'preferences' | null;
 export default function ProfilePage() {
     const navigate = useNavigate();
     const { profile, loadingProfile, profileError, reloadProfile } = useAuth();
+    const { t } = useLocale();
     const [dialog, setDialog] = useState<OpenDialog>(null);
 
     const [skills, setSkills] = useState<SkillGapApiItem[]>([]);
@@ -107,7 +93,7 @@ export default function ProfilePage() {
                 setErrorSkills(
                     isSkillsInputRequired(err)
                         ? null
-                        : 'No se pudo cargar el análisis de habilidades.',
+                        : t.profile.skillsError,
                 );
             } finally {
                 if (!cancelled) setLoadingSkills(false);
@@ -116,27 +102,28 @@ export default function ProfilePage() {
         load();
 
         return () => { cancelled = true; };
-    }, []);
+    }, [t.profile.skillsError]);
 
     if (loadingProfile) return <LoadingSpinner />;
 
     // Si el perfil no llega, la pantalla se dibuja igual con los campos vacíos y un
     // aviso arriba: es más útil que una pantalla en blanco, y el análisis de
     // habilidades no depende del perfil, así que puede mostrarse de todos modos.
-    const availability = profile?.types?.map(t => availabilityLabel[t]) ?? [];
-    const modalities   = profile?.modalities?.map(m => modalityLabel[m]) ?? [];
-    const joined       = (values: string[]) => (values.length > 0 ? values.join(', ') : EMPTY);
+    const availability = profile?.types?.map(v => t.availability[v]) ?? [];
+    const modalities   = profile?.modalities?.map(m => t.modality[m]) ?? [];
+    const joined       = (values: string[]) =>
+        (values.length > 0 ? values.join(', ') : t.profile.notSpecified);
 
     return (
         <div className="flex flex-col gap-4 sm:gap-6">
 
-            <PageHeader eyebrow="Perfil profesional" title="Información Personal" />
+            <PageHeader eyebrow={t.profile.eyebrow} title={t.profile.title} />
 
             {(profileError || !profile) && (
                 <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/30">
                     <AlertCircle size={18} className="text-amber-500 shrink-0" />
                     <p className="flex-1 text-sm text-amber-800 dark:text-amber-200">
-                        {profileError ?? 'No encontramos tu perfil.'}
+                        {profileError ?? t.profile.notFound}
                     </p>
                     <button
                         onClick={reloadProfile}
@@ -152,12 +139,12 @@ export default function ProfilePage() {
 
                 {/* Información personal */}
                 <div className="order-1 lg:flex-1 lg:min-w-0">
-                    <Panel title="Información Personal">
+                    <Panel title={t.profile.personalInfo}>
                         <div className="flex items-center gap-4 min-w-0">
                             <Avatar src={profile?.photoUrl} name={profile?.name} size={64} />
                             <div className="min-w-0">
                                 <h3 className="text-xl font-bold text-ink dark:text-white truncate sm:text-2xl">
-                                    {profile?.name ?? EMPTY}
+                                    {profile?.name ?? t.profile.notSpecified}
                                 </h3>
                                 <p className="text-sm text-muted truncate">{profile?.email ?? ''}</p>
                             </div>
@@ -172,25 +159,25 @@ export default function ProfilePage() {
 
                         <div className="rounded-xl bg-canvas/70 dark:bg-gray-800/60 p-4">
                             <p className="text-sm text-body dark:text-gray-300 whitespace-pre-line">
-                                {profile?.bio ?? 'Todavía no hay una descripción en tu perfil.'}
+                                {profile?.bio ?? t.profile.noBio}
                             </p>
                         </div>
 
                         <div>
-                            <Button size="sm" onClick={() => setDialog('profile')}>Editar Perfil</Button>
+                            <Button size="sm" onClick={() => setDialog('profile')}>{t.profile.editProfile}</Button>
                         </div>
                     </Panel>
                 </div>
 
                 {/* Análisis de habilidades */}
                 <div className="order-3 lg:order-2 lg:w-80 lg:shrink-0">
-                    <Panel title="Análisis de Habilidades">
+                    <Panel title={t.profile.skillsAnalysis}>
                         {loadingSkills ? (
                             <LoadingSpinner />
                         ) : errorSkills ? (
                             <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
                         ) : skills.length === 0 ? (
-                            <p className="text-xs text-muted text-center py-4">Aún no hay análisis de habilidades.</p>
+                            <p className="text-xs text-muted text-center py-4">{t.profile.noSkills}</p>
                         ) : (
                             <div className="flex justify-center">
                                 {/* SkillsRadar espera `name`; APIM devuelve `skillName` */}
@@ -219,24 +206,24 @@ export default function ProfilePage() {
 
                 {/* Contacto y preferencias */}
                 <div className="order-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:order-3 lg:w-72 lg:shrink-0 lg:grid-cols-1 lg:gap-6">
-                    <Panel title="Datos de Contacto">
+                    <Panel title={t.profile.contact}>
                         <DataList
                             onEdit={() => setDialog('contact')}
-                            actionLabel="Editar Contacto"
+                            actionLabel={t.profile.editContact}
                             items={[
-                                { label: 'Número de teléfono', value: profile?.phone ?? EMPTY },
-                                { label: 'Correo Electrónico', value: profile?.email ?? EMPTY },
-                                { label: 'Residencia',         value: profile?.location || EMPTY },
+                                { label: t.profile.phone,     value: profile?.phone ?? t.profile.notSpecified },
+                                { label: t.profile.email,     value: profile?.email ?? t.profile.notSpecified },
+                                { label: t.profile.residence, value: profile?.location || t.profile.notSpecified },
                             ]}
                         />
                     </Panel>
-                    <Panel title="Preferencias">
+                    <Panel title={t.profile.preferences}>
                         <DataList
                             onEdit={() => setDialog('preferences')}
-                            actionLabel="Editar Preferencias"
+                            actionLabel={t.profile.editPreferences}
                             items={[
-                                { label: 'Disponibilidad',    value: joined(availability) },
-                                { label: 'Modalidad',         value: joined(modalities) },
+                                { label: t.profile.availability, value: joined(availability) },
+                                { label: t.profile.modality,     value: joined(modalities) },
                             ]}
                         />
                     </Panel>

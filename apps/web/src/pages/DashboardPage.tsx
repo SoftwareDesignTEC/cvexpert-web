@@ -94,10 +94,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
-                        Panel Principal
+                        {t.home.title}
                     </h1>
                     <p className="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">
-                        ¡Bienvenido! Aquí está tu resumen...
+                        {t.home.welcome}
                     </p>
                 </div>
             </div>
@@ -226,14 +226,14 @@ export default function DashboardPage() {
                         <FilePlus2 size={18} />
                     </span>
                     <div className="min-w-0">
-                        <p className="text-sm font-bold text-ink dark:text-white">Crear Nuevo Currículum</p>
-                        <p className="text-xs text-muted">Empieza desde cero o usa una plantilla</p>
+                        <p className="text-sm font-bold text-ink dark:text-white">{t.home.createCv}</p>
+                        <p className="text-xs text-muted">{t.home.createCvHint}</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
                     <Button size="sm" onClick={() => navigate('/cvs')} className="px-8 sm:px-10">
                         <Sparkles size={15} />
-                        IA
+                        {t.home.ai}
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => navigate('/templates')} className="px-8 sm:px-10">
                         Manual

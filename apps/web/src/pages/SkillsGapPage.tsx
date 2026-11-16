@@ -14,6 +14,7 @@ import {
     skillsGapService,
 } from '../services/skillsGapService';
 import { describeError } from '../services/http';
+import { useLocale } from '../i18n/LocaleContext';
 import type { CourseSuggestion, SkillsGapResponse } from '../services/skillsGapService';
 
 // Cuántos cursos se ven en la pantalla y cuántos entran por página en el panel
@@ -86,6 +87,7 @@ function CourseCard({ course }: { course: CourseWithSkill }) {
 }
 
 export default function SkillsGapPage() {
+    const { t } = useLocale();
     const [data, setData] = useState<SkillsGapResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -154,11 +156,11 @@ export default function SkillsGapPage() {
 
     const header = (
         <PageHeader
-            eyebrow="Crecimiento profesional"
-            title="Análisis de Brecha"
+            eyebrow={t.skillsGap.eyebrow}
+            title={t.skillsGap.title}
             action={
                 <Button variant="secondary" size="sm" onClick={() => setInputOpen(true)}>
-                    <Pencil size={14} /> Mis habilidades
+                    <Pencil size={14} /> {t.skillsGap.mySkills}
                 </Button>
             }
         />
@@ -181,14 +183,14 @@ export default function SkillsGapPage() {
                 {header}
                 <div className="bg-surface dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-sm p-6 flex flex-col items-start gap-3">
                     <h2 className="text-lg font-bold text-ink dark:text-white">
-                        Contanos qué sabés hacer
+                        {t.skillsGap.tellUs}
                     </h2>
                     <p className="text-sm text-body dark:text-gray-300 max-w-prose">
-                        Todavía no guardaste tus habilidades, así que no hay nada con qué comparar.
-                        Cargalas una vez y calculamos tu brecha frente a la vacante de referencia.
+                        {t.skillsGap.tellUsBody1}
+                        {t.skillsGap.tellUsBody2}
                     </p>
                     <Button size="sm" onClick={() => setInputOpen(true)}>
-                        Cargar mis habilidades
+                        {t.skillsGap.loadSkills}
                     </Button>
                 </div>
                 {dialog}

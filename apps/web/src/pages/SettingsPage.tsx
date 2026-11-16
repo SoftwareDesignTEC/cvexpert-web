@@ -138,45 +138,45 @@ export default function SettingsPage() {
     return (
         <div className="flex flex-col gap-4 sm:gap-6">
 
-            <PageHeader eyebrow="Tu cuenta" title="Configuración" />
+            <PageHeader eyebrow={t.settings.eyebrow} title={t.settings.title} />
 
             {/* Tres bloques en escritorio, apilados en móvil */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                 <SettingsCard
-                    title="Seguridad de la Cuenta"
-                    subtitle="Administra el acceso y protege tu información."
+                    title={t.settingsExtra.security}
+                    subtitle={t.settingsExtra.securitySubtitle}
                 >
-                    <ActionRow label="Cambiar Contraseña" icon={KeyRound} onClick={() => setDialog('password')} />
-                    <ActionRow label="Cambiar Correo Electrónico" icon={Mail} onClick={() => setDialog('email')} />
-                    <ActionRow label="Sesiones Activas" icon={MonitorSmartphone} onClick={() => setDialog('sessions')} />
+                    <ActionRow label={t.settingsExtra.changePassword} icon={KeyRound} onClick={() => setDialog('password')} />
+                    <ActionRow label={t.settingsExtra.changeEmail} icon={Mail} onClick={() => setDialog('email')} />
+                    <ActionRow label={t.settingsExtra.activeSessions} icon={MonitorSmartphone} onClick={() => setDialog('sessions')} />
                 </SettingsCard>
 
                 <SettingsCard
-                    title="Notificaciones"
-                    subtitle="Elige qué novedades quieres recibir."
+                    title={t.settings.notifications}
+                    subtitle={t.settings.notificationsSubtitle}
                 >
-                    <ActionRow label="Estado de Postulación" icon={Bell} onClick={() => setDialog('applications')} />
-                    <ActionRow label="Recomendación de Curso" icon={GraduationCap} onClick={() => setDialog('courses')} />
-                    <ActionRow label="Alertas de Empleo" icon={Briefcase} onClick={() => setDialog('jobs')} />
+                    <ActionRow label={t.settings.applicationStatus} icon={Bell} onClick={() => setDialog('applications')} />
+                    <ActionRow label={t.settings.courseRecommendation} icon={GraduationCap} onClick={() => setDialog('courses')} />
+                    <ActionRow label={t.settings.jobAlerts} icon={Briefcase} onClick={() => setDialog('jobs')} />
 
                 </SettingsCard>
 
                 <SettingsCard
-                    title="Datos"
-                    subtitle="Controla tus datos y documentos legales."
+                    title={t.settings.data}
+                    subtitle={t.settings.dataSubtitle}
                 >
-                    <ActionRow label="Descargar mis datos" icon={Download} onClick={() => setDialog('export')} />
-                    <ActionRow label="Eliminar Cuenta" icon={Trash2} danger onClick={() => setDialog('delete')} />
-                    <ActionRow label="Políticas de Privacidad" icon={Shield} onClick={() => setLegal('privacy')} />
-                    <ActionRow label="Términos y Condiciones" icon={FileText} onClick={() => setLegal('terms')} />
+                    <ActionRow label={t.settings.exportData} icon={Download} onClick={() => setDialog('export')} />
+                    <ActionRow label={t.settings.deleteAccount} icon={Trash2} danger onClick={() => setDialog('delete')} />
+                    <ActionRow label={t.settings.privacy} icon={Shield} onClick={() => setLegal('privacy')} />
+                    <ActionRow label={t.settings.terms} icon={FileText} onClick={() => setLegal('terms')} />
                 </SettingsCard>
             </div>
 
             {/* Preferencias y soporte */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                 <SettingsCard
-                    title="Preferencias del Sistema"
-                    subtitle="Personaliza CVExpert para trabajar a tu manera."
+                    title={t.settingsExtra.systemPrefs}
+                    subtitle={t.settingsExtra.systemPrefsSubtitle}
                     className="lg:col-span-2"
                 >
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -223,15 +223,15 @@ export default function SettingsPage() {
                             <HelpCircle size={18} />
                         </span>
                         <div className="min-w-0">
-                            <h2 className="text-base font-bold text-white">¿Necesitas ayuda?</h2>
-                            <p className="text-sm text-white/60">Contacta a nuestro equipo de soporte técnico.</p>
+                            <h2 className="text-base font-bold text-white">{t.settingsExtra.needHelp}</h2>
+                            <p className="text-sm text-white/60">{t.settingsExtra.needHelpSubtitle}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => setDialog('support')}
                         className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
                     >
-                        Enviar Correo Electrónico
+                        {t.settingsExtra.sendEmail}
                     </button>
                 </div>
             </div>

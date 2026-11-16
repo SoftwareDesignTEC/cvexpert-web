@@ -12,6 +12,7 @@ import { DownloadTemplateDialog, TemplateViewerDialog } from '../components/ui/T
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { templateService } from '../services/otherServices';
 import { describeError } from '../services/http';
+import { useLocale } from '../i18n/LocaleContext';
 import type { CVTemplate } from '../types/models';
 
 // Cuántas plantillas entran en cada página
@@ -42,6 +43,8 @@ function TemplateCard({
     actionLabel: string;
     onAction: (t: CVTemplate) => void;
 }) {
+    const { t } = useLocale();
+
     // El alto de la tarjeta va fijo. La vista previa se dibuja con `h-full`, y
     // sin un alto definido acá eso no tiene contra qué resolverse: la hoja
     // entera estira la tarjeta a lo largo de toda la página. De paso, todas las
@@ -60,7 +63,7 @@ function TemplateCard({
                     fallbackImageUrl={template.previewUrl}
                 />
                 <span className="absolute bottom-1.5 left-1.5 rounded-md bg-surface/90 dark:bg-gray-900/90 px-1.5 py-0.5 text-[10px] font-medium text-body dark:text-gray-300 shadow-sm">
-                    Ejemplo
+                    {t.templates.sample}
                 </span>
             </div>
 
@@ -148,6 +151,7 @@ function TemplateSection({
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function TemplatesPage() {
+    const { t } = useLocale();
     const isOnline = useOnlineStatus();
     const navigate = useNavigate();
     const { profile } = useAuth();
@@ -194,15 +198,15 @@ export default function TemplatesPage() {
     return (
         <div className="flex flex-col gap-6 sm:gap-8">
             <PageHeader
-                eyebrow="Crea donde quieras"
-                title="Plantillas sin conexión"
+                eyebrow={t.templates.eyebrow}
+                title={t.templates.title}
             />
 
             <TemplateSection
                 main
-                title="Plantillas sin conexión"
+                title={t.templates.title}
                 items={offlineTemplates}
-                cardActionLabel="Usar esta plantilla"
+                cardActionLabel={t.templates.useTemplate}
                 emptyText="No hay plantillas disponibles sin conexión."
                 onShowAll={() => setGalleryFor('offline')}
                 onCardAction={setViewing}
@@ -211,10 +215,10 @@ export default function TemplatesPage() {
             {/* La tienda requiere conexión: desaparece si el usuario está offline */}
             {isOnline && (
                 <TemplateSection
-                    title="Tienda de plantillas"
-                    subtitle="Explora diseños premium para destacar tu experiencia."
+                    title={t.templates.store}
+                    subtitle={t.templates.storeSubtitle}
                     items={storeTemplates}
-                    cardActionLabel="Descargar Plantilla"
+                    cardActionLabel={t.templates.downloadTemplate}
                     emptyText="No hay plantillas disponibles en la tienda."
                     onShowAll={() => setGalleryFor('store')}
                     onCardAction={setDownloading}
@@ -225,16 +229,16 @@ export default function TemplatesPage() {
                 interno (error de imagen, avisos) arranca limpio cada vez. */}
             <GalleryDialog
                 open={galleryFor !== null}
-                title={galleryFor === 'store' ? 'Tienda de plantillas' : 'Plantillas sin conexión'}
+                title={galleryFor === 'store' ? t.templates.store : t.templates.title}
                 description={`${(galleryFor === 'store' ? storeTemplates : offlineTemplates).length} plantillas`}
                 items={galleryFor === 'store' ? storeTemplates : offlineTemplates}
                 perPage={PER_PAGE}
                 onClose={() => setGalleryFor(null)}
-                keyOf={t => t.id}
-                renderItem={t => (
+                keyOf={plantilla => plantilla.id}
+                renderItem={plantilla => (
                     <TemplateCard
-                        template={t}
-                        actionLabel={galleryFor === 'store' ? 'Descargar Plantilla' : 'Usar esta plantilla'}
+                        template={plantilla}
+                        actionLabel={galleryFor === 'store' ? t.templates.downloadTemplate : t.templates.useTemplate}
                         onAction={template => {
                             setGalleryFor(null);
                             if (galleryFor === 'store') setDownloading(template);

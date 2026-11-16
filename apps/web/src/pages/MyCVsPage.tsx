@@ -193,18 +193,18 @@ export default function MyCVsPage() {
             {/* Bloque de creación, en alto contraste como en el mockup */}
             <div className="rounded-2xl bg-gradient-to-r from-ink via-ink to-deep px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                    <h2 className="text-base font-bold text-white sm:text-lg">Crear Nuevo Currículum</h2>
-                    <p className="text-xs text-white/60 sm:text-sm">Elige cómo quieres comenzar tu próxima oportunidad.</p>
+                    <h2 className="text-base font-bold text-white sm:text-lg">{t.home.createCv}</h2>
+                    <p className="text-xs text-white/60 sm:text-sm">{t.home.createCvSubtitle}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
                     <Button size="sm" onClick={() => setAiOpen(true)}>
-                        Modo IA
+                        {t.home.aiMode}
                     </Button>
                     <button
                         onClick={() => setEditing({ cv: null })}
                         className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 transition-colors"
                     >
-                        Offline / Plantilla
+                        {t.home.offlineMode}
                     </button>
                 </div>
             </div>
