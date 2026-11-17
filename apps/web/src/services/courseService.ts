@@ -11,6 +11,7 @@ export interface Course {
     skills: string[];
 }
 
+/** Plataforma y habilidad usan coincidencia exacta del servidor, sensible a mayúsculas y acentos. */
 export interface CourseFilters {
     platform?: string;
     isPaid?: boolean;
@@ -84,7 +85,7 @@ export function readCoursePage(raw: unknown, page: number, pageSize: number): Co
 }
 
 export const courseService = {
-    getAll: async ({ page = 1, pageSize = 20, ...filters }: CourseFilters & { page?: number; pageSize?: number } = {}): Promise<CoursePage> => {
+    getAll: async ({ page = 1, pageSize = 8, ...filters }: CourseFilters & { page?: number; pageSize?: number } = {}): Promise<CoursePage> => {
         const query = coursesQuery(page, pageSize, filters);
         return readCoursePage(await http.get<unknown>(`/courses?${query}`), page, pageSize);
     },

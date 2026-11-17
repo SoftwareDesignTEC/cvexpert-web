@@ -1,5 +1,6 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import Button from './Button';
+import { useLocale } from '../../i18n/LocaleContext';
 
 // Componente de error — aparece cuando el APIM no responde
 interface ErrorMessageProps {
@@ -8,6 +9,7 @@ interface ErrorMessageProps {
 }
 
 export function ErrorMessage({ message, onRetry }: ErrorMessageProps) {
+    const { t } = useLocale();
     return (
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
             <AlertCircle size={36} className="text-red-400" />
@@ -17,7 +19,7 @@ export function ErrorMessage({ message, onRetry }: ErrorMessageProps) {
             {onRetry && (
                 <Button variant="secondary" size="sm" onClick={onRetry}>
                     <RefreshCw size={14} />
-                    Reintentar
+                    {t.common.retry}
                 </Button>
             )}
         </div>

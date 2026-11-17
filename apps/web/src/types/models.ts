@@ -133,6 +133,8 @@ export interface JobOffer {
     location: string;
     modality: 'remote' | 'on-site' | 'hybrid';
     type: 'full-time' | 'part-time' | 'freelance' | 'internship';
+    /** Distingue datos reales del valor de compatibilidad usado por respuestas antiguas. */
+    typeProvided?: boolean;
     sector: string;
     description: string;
     requirements: string[];

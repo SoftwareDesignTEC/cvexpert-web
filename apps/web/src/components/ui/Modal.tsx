@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useLocale } from '../../i18n/LocaleContext';
 
 interface ModalProps {
     open: boolean;
@@ -26,6 +27,7 @@ interface ModalProps {
 export default function Modal({
     open, title, description, size = 'md', onClose, children, toolbar, footer,
 }: ModalProps) {
+    const { t } = useLocale();
     // Escape cierra el diálogo y el fondo deja de desplazarse mientras está abierto
     useEffect(() => {
         if (!open) return;
@@ -72,7 +74,7 @@ export default function Modal({
                     </div>
                     <button
                         onClick={onClose}
-                        aria-label="Cerrar"
+                        aria-label={t.common.close}
                         className="shrink-0 rounded-lg p-1 text-muted hover:bg-canvas dark:hover:bg-gray-800 transition-colors"
                     >
                         <X size={18} />

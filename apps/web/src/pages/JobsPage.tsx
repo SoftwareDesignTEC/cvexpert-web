@@ -1,3 +1,4 @@
+import { formatMessage } from '../i18n/formatMessage';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Filter, MapPin, Search } from 'lucide-react';
@@ -10,24 +11,20 @@ import Modal from '../components/ui/Modal';
 import { ChipGroup } from '../components/ui/FormBits';
 import JobDetailDialog from '../components/ui/JobDetailDialog';
 import Pagination from '../components/ui/Pagination';
-import { jobService } from '../services/otherServices';
-import { describeError } from '../services/http';
+import { loadCompleteJobCatalog } from '../services/jobCatalogService';
+import { JOBS_PER_PAGE, matchesJobSearch } from '../services/jobSearch';
+import { jobErrorMessage } from '../i18n/jobErrorMessage';
 import { hayPreferencias, leerPreferencias, ordenarPorPreferencias } from '../services/jobRanking';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import type { JobOffer } from '../types/models';
 
-// El APIM todavía no filtra, así que se descarga el catálogo completo una vez y
-// los filtros trabajan sobre todas las ofertas, no sólo sobre las que están a la vista.
-// 100 es el tope que acepta el servicio. El catálogo ronda las 80 ofertas y
-// crece con cada importación, así que pedir el máximo evita un segundo viaje.
-const FETCH_PAGE_SIZE = 100;
-const MAX_PAGES = 20;   // salvavidas contra bucles si el endpoint ignora la paginación
-const PER_PAGE = 6;
+// Los filtros y el orden por preferencias necesitan un catálogo completo verificable.
+// Se carga una vez; escribir una búsqueda nunca vuelve a descargarlo.
+const PER_PAGE = JOBS_PER_PAGE;
 const MAX_REQUIREMENTS = 3;
 
-// Accesos rapidos del mockup. Filtran sobre las ofertas ya cargadas: el mock de APIM
-// todavia no acepta filtros, asi que hacerlo aqui es lo unico que da un resultado real.
+// Filtros sobre el catálogo completo, sin depender de filtros publicados en APIM.
 const QUICK_FILTERS = [
     { id: 'recommended', key: 'quickRecommended' },
     { id: 'remote',      key: 'quickRemote' },
@@ -39,17 +36,6 @@ type QuickFilter = typeof QUICK_FILTERS[number]['id'];
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-
-
-async function fetchAllJobs(search?: string): Promise<JobOffer[]> {
-    const all: JobOffer[] = [];
-    for (let page = 1; page <= MAX_PAGES; page++) {
-        const res = await jobService.getAll({ page, pageSize: FETCH_PAGE_SIZE, search });
-        all.push(...(res.items ?? []));
-        if (!res.items?.length || all.length >= (res.totalRecords ?? 0)) break;
-    }
-    return all;
-}
 
 
 
@@ -164,11 +150,11 @@ export default function JobsPage() {
 
     const goToPage = (next: number) => {
         setPage(next);
-        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        requestAnimationFrame(() => { topRef.current?.focus({ preventScroll: true }); topRef.current?.scrollIntoView({ block: 'start' }); });
     };
 
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown>(null);
 
     const [detailJob, setDetailJob] = useState<JobOffer | null>(null);
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -182,13 +168,13 @@ export default function JobsPage() {
     const [recentCutoff] = useState(() => Date.now() - SEVEN_DAYS_MS);
     const [reloadKey, setReloadKey] = useState(0); // sube al presionar "Reintentar"
 
-    // Debounce del buscador para no pegarle a APIM en cada tecla
+    // Debounce de la búsqueda local; no solicita datos por cada tecla.
     useEffect(() => {
-        const t = setTimeout(() => setSearch(searchInput.trim()), 400);
+        const t = setTimeout(() => { setSearch(searchInput.trim()); setPage(1); }, 350);
         return () => clearTimeout(t);
     }, [searchInput]);
 
-    // Se descarga el catálogo entero para que los filtros vean todas las ofertas
+    // Se verifica el catálogo completo antes de aplicar filtros y preferencias globales.
     useEffect(() => {
         let cancelled = false;
 
@@ -196,13 +182,13 @@ export default function JobsPage() {
             setLoading(true);
             setError(null);
             try {
-                const all = await fetchAllJobs(search || undefined);
+                const all = await loadCompleteJobCatalog(undefined, () => !cancelled);
                 if (cancelled) return;
                 setItems(all);
                 setPage(1);
             } catch (err) {
                 if (!cancelled) {
-                    setError(describeError(err, 'cargar las ofertas laborales'));
+                    setError(err);
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -211,7 +197,7 @@ export default function JobsPage() {
         load();
 
         return () => { cancelled = true; };
-    }, [search, reloadKey]);
+    }, [reloadKey]);
 
     const toggle = <T,>(list: T[], value: T) =>
         list.includes(value) ? list.filter(v => v !== value) : [...list, value];
@@ -221,11 +207,11 @@ export default function JobsPage() {
 
     const activeFilters = modalities.length + (minMatch > 0 ? 1 : 0);
 
-    const clearFilters = () => { setModalities([]); setMinMatch(0); };
+    const clearFilters = () => { setModalities([]); setMinMatch(0); setPage(1); };
 
     // Primero el panel de filtros, después el chip, y al final el orden
     const filtered = useMemo(() => {
-        let list = items;
+        let list = items.filter(job => matchesJobSearch(job, search));
 
         if (modalities.length) list = list.filter(j => modalities.includes(j.modality));
         if (minMatch > 0)      list = list.filter(j => (j.matchScore ?? 0) >= minMatch);
@@ -244,7 +230,7 @@ export default function JobsPage() {
                 // compatibilidad de siempre.
                 return ordenarPorPreferencias(list, prefs);
         }
-    }, [items, quickFilter, recentCutoff, modalities, minMatch, prefs]);
+    }, [items, search, quickFilter, recentCutoff, modalities, minMatch, prefs]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
     // Si los filtros reducen la lista, la página actual puede quedar fuera de rango
@@ -252,7 +238,7 @@ export default function JobsPage() {
     const visibleItems = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
     return (
-        <div ref={topRef} className="flex flex-col gap-3 sm:gap-6 scroll-mt-4">
+        <div className="flex flex-col gap-3 sm:gap-6">
 
             <PageHeader
                 eyebrow={t.jobs.eyebrow}
@@ -274,7 +260,7 @@ export default function JobsPage() {
                         type="text"
                         value={searchInput}
                         onChange={e => setSearchInput(e.target.value)}
-                        placeholder={t.jobs.searchPlaceholder}
+                        aria-label={t.offerPicker.searchPlaceholder} placeholder={t.offerPicker.searchPlaceholder}
                         className="w-full rounded-full border border-line dark:border-gray-800 bg-surface dark:bg-gray-900 py-3 pl-12 pr-4 text-sm text-ink dark:text-white placeholder:text-muted shadow-sm focus:outline-none focus:border-primary"
                     />
                 </div>
@@ -301,7 +287,7 @@ export default function JobsPage() {
                 {QUICK_FILTERS.map(f => (
                     <button
                         key={f.id}
-                        onClick={() => setQuickFilter(f.id)}
+                        onClick={() => { setQuickFilter(f.id); setPage(1); }}
                         className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors
                             ${quickFilter === f.id
                             ? 'bg-primary text-white border-primary'
@@ -332,10 +318,11 @@ export default function JobsPage() {
             )}
 
             {/* ── Contenido ───────────────────────────────────────────────────── */}
+            <div ref={topRef} tabIndex={-1} className="scroll-mt-4">
             {loading ? (
                 <LoadingSpinner />
             ) : error ? (
-                <ErrorMessage message={error} onRetry={() => setReloadKey(k => k + 1)} />
+                <ErrorMessage message={jobErrorMessage(error, t, t.ux.loadOffers)} onRetry={() => setReloadKey(k => k + 1)} />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-start gap-3">
                     <p className="text-sm text-muted">
@@ -344,7 +331,7 @@ export default function JobsPage() {
                     </p>
                     {activeFilters > 0 && (
                         <Button variant="secondary" size="sm" onClick={clearFilters}>
-                            Quitar filtros
+                            {t.ux.removeFilters}
                         </Button>
                     )}
                 </div>
@@ -354,17 +341,19 @@ export default function JobsPage() {
                         <JobRow key={job.id} job={job} onOpen={() => setDetailJob(job)} />
                     ))}
 
+                    <p className="text-xs text-muted" role="status">{formatMessage(t.ux.pageOf, { page: currentPage, total: totalPages })} · {t.ux.fullCatalog}</p>
                     <Pagination page={currentPage} totalPages={totalPages} onChange={goToPage} />
                 </div>
             )}
 
+            </div>
             <JobDetailDialog job={detailJob} onClose={() => setDetailJob(null)} />
 
             {/* Panel de filtros */}
             <Modal
                 open={filtersOpen}
                 title={t.jobs.filterTitle}
-                description="Se combina con los accesos rápidos y la búsqueda."
+                description={t.ux.filtersHint}
                 onClose={() => setFiltersOpen(false)}
             >
                 <div className="flex flex-col gap-5">
@@ -373,7 +362,7 @@ export default function JobsPage() {
                         options={(['remote', 'on-site', 'hybrid'] as const)
                             .map(v => ({ value: v, label: t.modality[v] }))}
                         selected={modalities}
-                        onToggle={v => setModalities(prev => toggle(prev, v))}
+                        onToggle={v => { setModalities(prev => toggle(prev, v)); setPage(1); }}
                     />
 
                     <div className="flex flex-col gap-2">
@@ -382,7 +371,7 @@ export default function JobsPage() {
                                 {t.jobs.minMatch}
                             </label>
                             <span className="text-sm font-bold text-primary">
-                                {minMatch === 0 ? 'Cualquiera' : `${minMatch}%`}
+                                {minMatch === 0 ? t.ux.anyMatch : `${minMatch}%`}
                             </span>
                         </div>
                         <input
@@ -392,17 +381,17 @@ export default function JobsPage() {
                             max={100}
                             step={5}
                             value={minMatch}
-                            onChange={e => setMinMatch(Number(e.target.value))}
+                            onChange={e => { setMinMatch(Number(e.target.value)); setPage(1); }}
                             className="w-full accent-[var(--color-primary)]"
                         />
                     </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                         <Button variant="secondary" size="sm" onClick={clearFilters} disabled={activeFilters === 0}>
-                            Quitar filtros
+                            {t.ux.removeFilters}
                         </Button>
                         <Button size="sm" onClick={() => setFiltersOpen(false)}>
-                            Ver {filtered.length} {filtered.length === 1 ? 'oferta' : 'ofertas'}
+                            {formatMessage(t.ux.viewOffers, { count: filtered.length })}
                         </Button>
                     </div>
                 </div>

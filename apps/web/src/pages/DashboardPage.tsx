@@ -9,24 +9,17 @@ import { layoutFor, useTemplates } from '../hooks/useTemplates';
 import { downloadCvPdf } from '../components/cv/cvPdf';
 import CvEditorDialog from '../components/cv/CvEditorDialog';
 import { useAuth } from '../context/AuthContext';
-import SkillsRadar from '../components/ui/SkillsRadar';
-import { MapPin, FilePlus2, Sparkles } from 'lucide-react';
+import { MapPin, FilePlus2, Sparkles, TrendingUp } from 'lucide-react';
 import {
-    RecentCvsSkeleton, RecommendedJobsSkeleton, SkillsGapSkeleton,
+    RecentCvsSkeleton, RecommendedJobsSkeleton,
 } from '../components/ui/DashboardSkeletons';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { CV, JobOffer } from '../types/models';
 import Badge from '../components/ui/Badge';
 import { cvService, porUltimaEdicion } from '../services/cvService';
 import { useLocale } from '../i18n/LocaleContext';
 import { jobService } from '../services/otherServices';
-import {
-    SKILL_SCALE_MAX,
-    isSkillsInputRequired,
-    levelLabel,
-    skillsGapService,
-} from '../services/skillsGapService';
-import type { SkillGapApiItem } from '../services/skillsGapService';
+
 
 
 
@@ -52,10 +45,6 @@ export default function DashboardPage() {
     const [detailJob, setDetailJob]     = useState<JobOffer | null>(null);
     const [viewingCv, setViewingCv]     = useState<CV | null>(null);
     const [editingCv, setEditingCv]     = useState<CV | null>(null);
-    const [skills, setSkills]           = useState<SkillGapApiItem[]>([]);
-    const [loadingSkills, setLoadingSkills] = useState(true);
-    const [errorSkills, setErrorSkills]     = useState(false);
-    const [needsSkills, setNeedsSkills]     = useState(false);
     const { templates, loading: loadingTemplates } = useTemplates();
 
     useEffect(() => {
@@ -75,17 +64,7 @@ export default function DashboardPage() {
             .finally(() => setLoadingJobs(false));
     }, []);
 
-    useEffect(() => {
-        skillsGapService.getAll()
-            .then(res => setSkills(res.items))
-            .catch(err => {
-                // Un 409 significa que faltan las habilidades, no que algo falló:
-                // en vez de un error rojo se invita a cargarlas desde su pantalla.
-                if (isSkillsInputRequired(err)) setNeedsSkills(true);
-                else setErrorSkills(true);
-            })
-            .finally(() => setLoadingSkills(false));
-    }, []);
+
 
     return (
         <div className="flex flex-col gap-3 sm:gap-6">
@@ -102,8 +81,8 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* ── Fila 1: CVs + Radar ────────────────────────────────────────── */}
-            <div className="flex flex-col gap-3 lg:h-[24rem] lg:flex-row lg:items-stretch lg:gap-6">
+            {/* ── Fila 1: CVs + acceso al análisis ────────────────────────────────────────── */}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-6">
 
                 {/* CVs */}
                 <div className="flex-1 min-w-0">
@@ -125,9 +104,9 @@ export default function DashboardPage() {
                             ) : errorCvs ? (
                                 <p className="text-xs text-red-500 text-center py-4">{t.dashboard.cvsError}</p>
                             ) : cvs.length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-4">No tienes currículums aún.</p>
+                                <p className="text-xs text-gray-400 text-center py-4">{t.dashboard.noCvs}</p>
                             ) : (
-                                <div className="grid grid-cols-3 gap-2 sm:gap-4 h-full min-h-0">
+                                <div className="grid grid-cols-3 gap-2 sm:gap-4 h-[18rem] sm:h-[20rem] min-h-0">
                                     {cvs.map(cv => (
                                         <CVCard
                                             key={cv.id}
@@ -154,71 +133,19 @@ export default function DashboardPage() {
                     </Card>
                 </div>
 
-                {/* Radar */}
-                <div className="w-full lg:w-80 shrink-0">
-                    <Card className="h-full flex flex-col">
-                        <CardHeader
-                            title={t.dashboard.skillsGap}
-                            action={
-                                <Button variant="secondary" size="sm" onClick={() => navigate('/skills-gap')}>
-                                    {t.dashboard.seeAnalysis}
-                                </Button>
-                            }
-                        />
-                        <CardBody className="flex-1 min-h-0 flex flex-col justify-center">
-                            {loadingSkills ? (
-                                <SkillsGapSkeleton />
-                            ) : errorSkills ? (
-                                <p className="text-xs text-red-500 text-center py-4">{t.dashboard.skillsError}</p>
-                            ) : needsSkills ? (
-                                <div className="flex flex-col items-center gap-2 py-4 text-center">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        Cargá tus habilidades para ver tu brecha.
-                                    </p>
-                                    <Link to="/skills-gap" className="text-xs font-medium text-primary hover:underline">
-                                        Cargarlas ahora
-                                    </Link>
-                                </div>
-                            ) : skills.length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-4">Aún no hay análisis de brecha.</p>
-                            ) : (
-                                <div className="flex h-full items-center gap-3 lg:flex-col lg:items-stretch">
-                                    <div className="flex flex-1 min-h-0 items-center justify-center min-w-0">
-                                        {/* SkillsRadar espera `name`; APIM devuelve `skillName` */}
-                                        <SkillsRadar
-                                            skills={skills.map(s => ({
-                                                name: s.skillName,
-                                                userLevel: s.userLevel,
-                                                marketLevel: s.marketLevel,
-                                            }))}
-                                            size={200}
-                                            max={SKILL_SCALE_MAX}
-                                            formatValue={levelLabel}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col gap-1 flex-1 min-w-0 lg:flex-none">
-                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                            Habilidades por mejorar
-                                        </p>
-                                        {/* items[] ya trae sólo brechas positivas. El faltante se
-                                            cuenta en niveles ordinales, no en porcentaje. */}
-                                        {skills.map(s => (
-                                            <div key={s.skillName} className="flex items-center justify-between gap-1 text-xs">
-                                                <span className="text-gray-700 dark:text-gray-300 truncate">{s.skillName}</span>
-                                                <span className="text-amber-500 font-medium shrink-0">
-                                                    -{s.deficitSteps} {s.deficitSteps === 1 ? t.dashboard.levelSingular : t.dashboard.levelPlural}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                {/* Acceso al análisis contextual, sin consulta histórica adicional */}
+                <div className="w-full shrink-0 lg:w-80">
+                    <Card>
+                        <CardHeader title={t.nav.skillsGap} />
+                        <CardBody className="flex flex-col items-start gap-3">
+                            <TrendingUp size={24} className="text-primary" aria-hidden="true" />
+                            <h2 className="text-base font-bold text-ink dark:text-white">{t.ux.ctaTitle}</h2>
+                            <p className="text-sm text-muted">{t.ux.ctaBody}</p>
+                            <Button size="sm" onClick={() => navigate('/skills-gap')}>{t.ux.ctaAction}</Button>
                         </CardBody>
                     </Card>
                 </div>
-
             </div>
-
             {/* ── Barra de creación ───────────────────────────────────────────── */}
             <div className="rounded-2xl border border-primary/20 bg-primary-tint px-4 py-3 flex flex-col gap-3 dark:border-primary/20 dark:bg-primary/10 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3 min-w-0">
