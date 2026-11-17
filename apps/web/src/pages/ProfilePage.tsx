@@ -1,20 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
-import SkillsRadar from '../components/ui/SkillsRadar';
 import { LoadingSpinner } from '../components/ui/Feedback';
 import { EditContactDialog, EditPreferencesDialog, EditProfileDialog } from '../components/ui/ProfileDialogs';
 import { useAuth } from '../context/AuthContext';
-import {
-    SKILL_SCALE_MAX,
-    isSkillsInputRequired,
-    levelLabel,
-    skillsGapService,
-} from '../services/skillsGapService';
-import type { SkillGapApiItem } from '../services/skillsGapService';
 import { useLocale } from '../i18n/LocaleContext';
 
 
@@ -68,47 +59,14 @@ function DataList({
 type OpenDialog = 'profile' | 'contact' | 'preferences' | null;
 
 export default function ProfilePage() {
-    const navigate = useNavigate();
     const { profile, loadingProfile, profileError, reloadProfile } = useAuth();
     const { t } = useLocale();
     const [dialog, setDialog] = useState<OpenDialog>(null);
 
-    const [skills, setSkills] = useState<SkillGapApiItem[]>([]);
-    const [loadingSkills, setLoadingSkills] = useState(true);
-    const [errorSkills, setErrorSkills] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const load = async () => {
-            setLoadingSkills(true);
-            setErrorSkills(null);
-            try {
-                const res = await skillsGapService.getAll();
-                if (!cancelled) setSkills(res.items);
-            } catch (err) {
-                // 409: faltan las habilidades. No es un fallo, así que no se pinta
-                // en rojo; la pantalla de brecha es la que las pide.
-                if (cancelled) return;
-                setErrorSkills(
-                    isSkillsInputRequired(err)
-                        ? null
-                        : t.profile.skillsError,
-                );
-            } finally {
-                if (!cancelled) setLoadingSkills(false);
-            }
-        };
-        load();
-
-        return () => { cancelled = true; };
-    }, [t.profile.skillsError]);
-
     if (loadingProfile) return <LoadingSpinner />;
 
-    // Si el perfil no llega, la pantalla se dibuja igual con los campos vacíos y un
-    // aviso arriba: es más útil que una pantalla en blanco, y el análisis de
-    // habilidades no depende del perfil, así que puede mostrarse de todos modos.
+    // Si el perfil no llega, se conservan los campos vacíos y se muestra un
+    // aviso para reintentar la carga sin dejar la pantalla en blanco.
     const availability = profile?.types?.map(v => t.availability[v]) ?? [];
     const modalities   = profile?.modalities?.map(m => t.modality[m]) ?? [];
     const joined       = (values: string[]) =>
@@ -134,11 +92,11 @@ export default function ProfilePage() {
                 </div>
             )}
 
-            {/* En móvil se apila; en escritorio son tres columnas y el radar va al medio */}
+            {/* En móvil se apila; en escritorio se muestran perfil y datos complementarios */}
             <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start">
 
                 {/* Información personal */}
-                <div className="order-1 lg:flex-1 lg:min-w-0">
+                <div className="lg:flex-1 lg:min-w-0">
                     <Panel title={t.profile.personalInfo}>
                         <div className="flex items-center gap-4 min-w-0">
                             <Avatar src={profile?.photoUrl} name={profile?.name} size={64} />
@@ -169,43 +127,8 @@ export default function ProfilePage() {
                     </Panel>
                 </div>
 
-                {/* Análisis de habilidades */}
-                <div className="order-3 lg:order-2 lg:w-80 lg:shrink-0">
-                    <Panel title={t.profile.skillsAnalysis}>
-                        {loadingSkills ? (
-                            <LoadingSpinner />
-                        ) : errorSkills ? (
-                            <p className="text-xs text-red-500 text-center py-4">{errorSkills}</p>
-                        ) : skills.length === 0 ? (
-                            <p className="text-xs text-muted text-center py-4">{t.profile.noSkills}</p>
-                        ) : (
-                            <div className="flex justify-center">
-                                {/* SkillsRadar espera `name`; APIM devuelve `skillName` */}
-                                <SkillsRadar
-                                    skills={skills.map(s => ({
-                                        name: s.skillName,
-                                        userLevel: s.userLevel,
-                                        marketLevel: s.marketLevel,
-                                    }))}
-                                    size={200}
-                                    max={SKILL_SCALE_MAX}
-                                    formatValue={levelLabel}
-                                />
-                            </div>
-                        )}
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => navigate('/skills-gap')}
-                        >
-                            Ver Áreas de Mejora
-                        </Button>
-                    </Panel>
-                </div>
-
                 {/* Contacto y preferencias */}
-                <div className="order-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:order-3 lg:w-72 lg:shrink-0 lg:grid-cols-1 lg:gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:w-72 lg:shrink-0 lg:grid-cols-1 lg:gap-6">
                     <Panel title={t.profile.contact}>
                         <DataList
                             onEdit={() => setDialog('contact')}
