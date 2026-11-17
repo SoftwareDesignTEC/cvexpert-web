@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useLocale } from '../../i18n/LocaleContext';
+import { formatMessage } from '../../i18n/formatMessage';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import Pagination from './Pagination';
 
@@ -18,7 +20,9 @@ interface GalleryDialogProps<T> {
 export default function GalleryDialog<T>({
     open, title, description, items, perPage, onClose, renderItem, keyOf,
 }: GalleryDialogProps<T>) {
+    const { t } = useLocale();
     const [page, setPage] = useState(1);
+    const list = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!open) return;
@@ -63,7 +67,7 @@ export default function GalleryDialog<T>({
                     </div>
                     <button
                         onClick={onClose}
-                        aria-label="Cerrar"
+                        aria-label={t.common.close}
                         className="shrink-0 rounded-lg p-1.5 text-muted hover:bg-canvas dark:hover:bg-gray-800 transition-colors"
                     >
                         <X size={20} />
@@ -71,9 +75,9 @@ export default function GalleryDialog<T>({
                 </div>
 
                 {/* Tres columnas en escritorio: con 6 por página quedan dos filas */}
-                <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+                <div ref={list} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
                     {items.length === 0 ? (
-                        <p className="text-sm text-muted text-center py-10">No hay nada que mostrar.</p>
+                        <p className="text-sm text-muted text-center py-10">{t.ux.emptyList}</p>
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {visible.map(item => (
@@ -84,7 +88,8 @@ export default function GalleryDialog<T>({
                 </div>
 
                 <div className="border-t border-line dark:border-gray-800 px-5 py-3 shrink-0">
-                    <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
+                    <p className="mb-2 text-center text-xs text-muted" role="status">{formatMessage(t.ux.pageOf, { page: currentPage, total: totalPages })}</p>
+                    <Pagination page={currentPage} totalPages={totalPages} onChange={next => { setPage(next); list.current?.scrollTo({ top: 0 }); list.current?.focus({ preventScroll: true }); }} />
                 </div>
             </div>
         </div>

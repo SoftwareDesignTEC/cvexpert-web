@@ -1,3 +1,5 @@
+import { useLocale } from '../../i18n/LocaleContext';
+import { formatMessage } from '../../i18n/formatMessage';
 import { MapPin } from 'lucide-react';
 import type { JobOffer } from '../../types/models';
 import { CompanyLogo } from './Avatar';
@@ -7,22 +9,11 @@ import Button from './Button';
 interface JobCardProps {
     job: JobOffer;
     onViewDetails?: () => void;
+    preview?: boolean;
 }
 
-const modalityLabel: Record<JobOffer['modality'], string> = {
-    'remote':   'Remoto',
-    'on-site':  'Presencial',
-    'hybrid':   'Híbrido',
-};
-
-const typeLabel: Record<JobOffer['type'], string> = {
-    'full-time':  'Tiempo completo',
-    'part-time':  'Medio tiempo',
-    'freelance':  'Freelance',
-    'internship': 'Pasantía',
-};
-
-export default function JobCard({ job, onViewDetails }: JobCardProps) {
+export default function JobCard({ job, onViewDetails, preview = false }: JobCardProps) {
+    const { locale, t } = useLocale();
     return (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col gap-3">
             {/* Header: logo + empresa + match */}
@@ -43,23 +34,29 @@ export default function JobCard({ job, onViewDetails }: JobCardProps) {
                 {/* % de compatibilidad */}
                 {job.matchScore !== undefined && (
                     <span className="shrink-0 text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
-            {job.matchScore}% match
+            {job.matchScore}% {t.jobs.match}
           </span>
                 )}
             </div>
 
             {/* Detalles */}
             <div className="flex flex-wrap gap-2">
-                <Badge label={modalityLabel[job.modality]} variant="info" />
-                <Badge label={typeLabel[job.type]} variant="gray" />
+                {t.modality[job.modality] && <Badge label={t.modality[job.modality]} variant="info" />}
+                {job.typeProvided !== false && t.availability[job.type] && <Badge label={t.availability[job.type]} variant="gray" />}
                 <div className="flex items-center gap-1 text-xs text-gray-400">
                     <MapPin size={12} />
                     <span>{job.location}</span>
                 </div>
             </div>
 
+            {preview && <>
+                {job.description && <p className="text-xs text-muted line-clamp-2">{job.description}</p>}
+                {(job.skills?.length || job.requirements?.length) ? <p className="text-xs text-muted line-clamp-2">{(job.skills?.length ? job.skills : job.requirements)?.slice(0, 3).join(' · ')}</p> : null}
+                {job.postedAt && !Number.isNaN(Date.parse(job.postedAt)) && <p className="text-[11px] text-muted">{formatMessage(t.offerPicker.publishedOn, { date: new Date(job.postedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-CR') })}</p>}
+            </>}
+
             <Button variant="secondary" size="sm" onClick={onViewDetails}>
-                Ver detalles
+                {t.offerPicker.viewDetails}
             </Button>
         </div>
     );

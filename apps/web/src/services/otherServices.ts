@@ -1,3 +1,4 @@
+import { JobListingError } from './jobSearch';
 import { http, toPaginated } from './http';
 import type { CVTemplate, JobOffer, JobApplication, ApplicationStatus } from '../types/models';
 import type { PaginationParams } from '../types/api';
@@ -20,9 +21,8 @@ export const templateService = {
 
 // OFERTAS LABORALES
 
-// El APIM nombra distinto algunos campos (compatibility, createdAt) y no envía
-// `type`, `sector` ni `description`. Se traduce acá para no esparcir esa diferencia
-// por las pantallas, igual que se hace con el perfil.
+// Se conservan los alias de APIM y se distingue la paginación real de respuestas
+// antiguas sin metadatos. La disponibilidad de filtros se valida en integración.
 interface JobApiResponse {
     id: string;
     title: string;
@@ -53,6 +53,7 @@ function toJobOffer(res: JobApiResponse): JobOffer {
         location: res.location,
         modality: res.modality,
         type: res.type ?? 'full-time',
+        typeProvided: res.type != null,
         sector: res.sector ?? '',
         description: res.description ?? '',
         requirements: res.requirements ?? [],
@@ -74,12 +75,19 @@ export const jobService = {
         });
         return http.get<unknown>(`/jobs?${params}`).then(r => {
             const paged = toPaginated<JobApiResponse>(r, pageSize, page);
-            return { ...paged, items: paged.items.map(toJobOffer) };
+            const raw = r as Partial<typeof paged> | null;
+            const paginationVerified = !Array.isArray(r) && raw?.page === page && raw?.pageSize === pageSize &&
+                Number.isSafeInteger(raw?.totalRecords) && Number(raw?.totalRecords) >= 0 &&
+                Array.isArray(raw?.items) && raw.items.length <= pageSize && raw.items.length <= Number(raw.totalRecords);
+            return { ...paged, items: paged.items.map(toJobOffer), paginationVerified };
         });
     },
 
     getById: (id: string) =>
-        http.get<JobApiResponse>(`/jobs/${id}`).then(toJobOffer),
+        http.get<JobApiResponse>(`/jobs/${encodeURIComponent(id)}`).then(res => {
+            if (res.id !== id) throw new JobListingError('wrongDetail', 'El detalle recibido corresponde a otra oferta.');
+            return toJobOffer(res);
+        }),
 };
 
 // ─── TRACKER DE POSTULACIONES ─────────────────────────────────────────────────

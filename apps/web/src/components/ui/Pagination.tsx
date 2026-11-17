@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatMessage } from '../../i18n/formatMessage';
 import { useLocale } from '../../i18n/LocaleContext';
 
 interface PaginationProps {
@@ -35,8 +36,9 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
     const arrowClass = 'inline-flex items-center justify-center w-9 h-9 rounded-lg border border-line dark:border-gray-800 text-body dark:text-gray-300 transition-colors enabled:hover:border-primary enabled:hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed';
 
     return (
-        <nav className="flex items-center justify-center gap-1.5" aria-label={t.dialogs.pagination}>
+        <nav className="flex flex-wrap items-center justify-center gap-1.5" aria-label={t.dialogs.pagination}>
             <button
+                type="button"
                 onClick={() => go(page - 1)}
                 disabled={page === 1}
                 aria-label={t.dialogs.prevPage}
@@ -50,9 +52,11 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
                     <span key={`gap-${i}`} className="px-1 text-sm text-muted select-none">…</span>
                 ) : (
                     <button
+                        type="button"
                         key={p}
                         onClick={() => go(p)}
                         aria-current={p === page ? 'page' : undefined}
+                        aria-label={formatMessage(t.ux.pageNumber, { page: p })}
                         className={`inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-medium transition-colors
                             ${p === page
                             ? 'bg-primary text-white'
@@ -65,6 +69,7 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
             )}
 
             <button
+                type="button"
                 onClick={() => go(page + 1)}
                 disabled={page === totalPages}
                 aria-label={t.dialogs.nextPage}

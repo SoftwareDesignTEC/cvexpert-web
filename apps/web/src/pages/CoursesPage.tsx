@@ -10,7 +10,7 @@ import { courseService } from '../services/courseService';
 import type { CourseFilters, CoursePage } from '../services/courseService';
 import { describeError } from '../services/http';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 8;
 const field = 'mt-1 w-full rounded-lg border border-line bg-surface p-2 text-sm text-ink dark:border-gray-700 dark:bg-gray-800 dark:text-white';
 
 export default function CoursesPage() {
