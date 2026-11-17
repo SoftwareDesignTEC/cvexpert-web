@@ -97,10 +97,10 @@ test('offer details translate labels, preserve text safely and do not invent emp
     assert.doesNotMatch(html, /<script>|Full-time/);
 });
 
-test('Courses keeps exact-match translated guidance while offering eight-item pages', () => {
+test('Courses keeps partial-search translated guidance while offering eight-item pages', () => {
     const l = loader();
     const html = l.render('pages/CoursesPage.tsx');
-    assert.ok(html.includes(l.dictionary.en.courses.exactNames));
+    assert.ok(html.includes(l.dictionary.en.courses.partialNames));
     assert.doesNotMatch(html, /parte del nombre|texto más corto|partial match/);
     const { courseService } = l.get('services/courseService.ts');
     assert.equal(typeof courseService.getAll, 'function');

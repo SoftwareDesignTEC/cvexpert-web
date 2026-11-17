@@ -66,7 +66,7 @@ function CourseFiltersForm({ filters, onApply }: { filters: CourseFilters; onApp
                 </select>
             </label>
         </div>
-        <p className="text-xs text-muted">{t.courses.exactNames}</p>
+        <p className="text-xs text-muted">{t.courses.partialNames}</p>
         <div className="flex flex-wrap gap-2">
             <Button size="sm" type="submit">{t.courses.applyFilters}</Button>
             <Button size="sm" type="button" variant="secondary" onClick={() => {
